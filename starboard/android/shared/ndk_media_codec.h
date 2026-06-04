@@ -32,6 +32,14 @@ namespace starboard {
 // Android NDK AMediaCodec API. It uses asynchronous callbacks for buffer
 // availability and is preferred on supported devices (API 28+) for reduced JNI
 // overhead.
+//
+// Lifetime and Ownership:
+// Objects of this class are typically owned and managed by the media player
+// pipeline (e.g., via std::unique_ptr).
+//
+// Threading Model:
+// This class is not thread-safe and is expected to be called on a single
+// media/decoder thread (Thread-affine).
 class NdkMediaCodec : public MediaCodec {
  public:
   using Handler = MediaCodec::Handler;

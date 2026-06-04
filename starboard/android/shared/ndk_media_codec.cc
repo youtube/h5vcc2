@@ -96,6 +96,12 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
 
   AMediaFormat* format = AMediaFormat_new();
   const char* mime = SupportedVideoCodecToMimeType(video_codec);
+  if (!mime) {
+    SB_LOG(ERROR) << "Unsupported video codec: " << video_codec;
+    AMediaFormat_delete(format);
+    AMediaCodec_delete(codec);
+    return nullptr;
+  }
   AMediaFormat_setString(format, AMEDIAFORMAT_KEY_MIME, mime);
   AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_WIDTH, frame_size_hint.width);
   AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_HEIGHT,
@@ -112,21 +118,28 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
                           max_video_input_size);
   }
 
-  ANativeWindow* native_window = nullptr;
-  if (j_surface) {
-    native_window = ANativeWindow_fromSurface(env, j_surface);
+  std::unique_ptr<ANativeWindow, void (*)(ANativeWindow*)> native_window(
+      j_surface ? ANativeWindow_fromSurface(env, j_surface) : nullptr,
+      [](ANativeWindow* w) {
+        if (w) {
+          ANativeWindow_release(w);
+        }
+      });
+
+  if (j_surface && !native_window) {
+    SB_LOG(ERROR) << "Failed to get ANativeWindow from jobject surface.";
+    AMediaFormat_delete(format);
+    AMediaCodec_delete(codec);
+    return nullptr;
   }
 
   media_status_t status = AMediaCodec_configure(
-      codec, format, native_window, /*crypto=*/nullptr, /*flags=*/0);
+      codec, format, native_window.get(), /*crypto=*/nullptr, /*flags=*/0);
   AMediaFormat_delete(format);
 
   if (status != AMEDIA_OK) {
     SB_LOG(ERROR) << "AMediaCodec_configure failed with status " << status;
     AMediaCodec_delete(codec);
-    if (native_window) {
-      ANativeWindow_release(native_window);
-    }
     return nullptr;
   }
 
@@ -143,18 +156,12 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
   if (status != AMEDIA_OK) {
     SB_LOG(ERROR) << "AMediaCodec_setAsyncNotifyCallback failed with status "
                   << status;
-    if (native_window) {
-      ANativeWindow_release(native_window);
-    }
     return nullptr;
   }
 
   status = AMediaCodec_start(codec);
   if (status != AMEDIA_OK) {
     SB_LOG(ERROR) << "AMediaCodec_start failed with status " << status;
-    if (native_window) {
-      ANativeWindow_release(native_window);
-    }
     return nullptr;
   }
 
@@ -174,10 +181,6 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
   } else if (enable_frame_renderer_listener) {
     SB_LOG(WARNING) << "AMediaCodec_setOnFrameRenderedCallback fn not "
                        "found in libmediandk.so.";
-  }
-
-  if (native_window) {
-    ANativeWindow_release(native_window);
   }
 
   SB_LOG(INFO) << "NdkMediaCodec created: dedoder=" << decoder_name
@@ -277,10 +280,26 @@ std::optional<FrameSize> NdkMediaCodec::GetOutputSize() {
   }
   int32_t width = 0;
   int32_t height = 0;
-  AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_WIDTH, &width);
-  AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_HEIGHT, &height);
+  int32_t crop_left = 0;
+  int32_t crop_right = 0;
+  int32_t crop_top = 0;
+  int32_t crop_bottom = 0;
+
+  bool has_crop = AMediaFormat_getInt32(format, "crop-left", &crop_left) &&
+                  AMediaFormat_getInt32(format, "crop-right", &crop_right) &&
+                  AMediaFormat_getInt32(format, "crop-top", &crop_top) &&
+                  AMediaFormat_getInt32(format, "crop-bottom", &crop_bottom);
+
+  if (has_crop && crop_right >= crop_left && crop_bottom >= crop_top) {
+    width = crop_right - crop_left + 1;
+    height = crop_bottom - crop_top + 1;
+  } else {
+    AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_WIDTH, &width);
+    AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_HEIGHT, &height);
+  }
+
   AMediaFormat_delete(format);
-  return FrameSize({width, height}, /*has_crop_values=*/false);
+  return FrameSize({width, height}, has_crop);
 }
 
 std::optional<AudioOutputFormatResult> NdkMediaCodec::GetAudioOutputFormat() {
@@ -305,7 +324,9 @@ void NdkMediaCodec::OnFormatChanged(AMediaFormat* format) {
 void NdkMediaCodec::OnError(media_status_t error,
                             int32_t actionCode,
                             const char* detail) {
-  handler_->OnMediaCodecError(/*is_recoverable=*/true, /*is_transient=*/false,
+  bool is_recoverable = (actionCode == 2);
+  bool is_transient = (actionCode == 1);
+  handler_->OnMediaCodecError(is_recoverable, is_transient,
                               detail ? detail : "NDK MediaCodec Error");
 }
 
