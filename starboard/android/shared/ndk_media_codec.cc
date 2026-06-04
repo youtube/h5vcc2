@@ -278,11 +278,10 @@ void NdkMediaCodec::SetPlaybackRate(double playback_rate) {
   if (!codec_) {
     return;
   }
-  AMediaFormat* params = AMediaFormat_new();
-  AMediaFormat_setFloat(params, AMEDIAFORMAT_KEY_OPERATING_RATE,
+  ScopedAMediaFormat params(AMediaFormat_new(), AMediaFormatDeleter());
+  AMediaFormat_setFloat(params.get(), AMEDIAFORMAT_KEY_OPERATING_RATE,
                         static_cast<float>(playback_rate));
-  media_status_t status = AMediaCodec_setParameters(codec_, params);
-  AMediaFormat_delete(params);
+  media_status_t status = AMediaCodec_setParameters(codec_, params.get());
   if (status != AMEDIA_OK) {
     SB_LOG(WARNING)
         << "AMediaCodec_setParameters failed to set operating-rate to "
@@ -301,7 +300,8 @@ jint NdkMediaCodec::Flush() {
 }
 
 std::optional<FrameSize> NdkMediaCodec::GetOutputSize() {
-  AMediaFormat* format = AMediaCodec_getOutputFormat(codec_);
+  ScopedAMediaFormat format(AMediaCodec_getOutputFormat(codec_),
+                            AMediaFormatDeleter());
   if (!format) {
     return std::nullopt;
   }
@@ -312,19 +312,19 @@ std::optional<FrameSize> NdkMediaCodec::GetOutputSize() {
   int32_t crop_top = 0;
   int32_t crop_bottom = 0;
 
-  bool has_crop = AMediaFormat_getInt32(format, "crop-left", &crop_left) &&
-                  AMediaFormat_getInt32(format, "crop-right", &crop_right) &&
-                  AMediaFormat_getInt32(format, "crop-top", &crop_top) &&
-                  AMediaFormat_getInt32(format, "crop-bottom", &crop_bottom);
+  bool has_crop =
+      AMediaFormat_getInt32(format.get(), "crop-left", &crop_left) &&
+      AMediaFormat_getInt32(format.get(), "crop-right", &crop_right) &&
+      AMediaFormat_getInt32(format.get(), "crop-top", &crop_top) &&
+      AMediaFormat_getInt32(format.get(), "crop-bottom", &crop_bottom);
   if (has_crop && crop_right >= crop_left && crop_bottom >= crop_top) {
     width = crop_right - crop_left + 1;
     height = crop_bottom - crop_top + 1;
   } else {
-    AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_WIDTH, &width);
-    AMediaFormat_getInt32(format, AMEDIAFORMAT_KEY_HEIGHT, &height);
+    AMediaFormat_getInt32(format.get(), AMEDIAFORMAT_KEY_WIDTH, &width);
+    AMediaFormat_getInt32(format.get(), AMEDIAFORMAT_KEY_HEIGHT, &height);
   }
 
-  AMediaFormat_delete(format);
   return FrameSize({width, height}, has_crop);
 }
 

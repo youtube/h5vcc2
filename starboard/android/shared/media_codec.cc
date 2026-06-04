@@ -111,8 +111,7 @@ DefaultMediaCodecFactory::CreateVideoMediaCodec(
   if (decoder_name.empty()) {
     return Failure(
         FormatString("Failed to find decoder: mime=%s, mustSupportSecure=%s",
-                     static_cast<const char*>(mime),
-                     starboard::ToString(!!j_media_crypto).data()));
+                     mime, starboard::ToString(!!j_media_crypto).data()));
   }
 
   if (CanUseNdkMediaCodec(platform_options.tunnel_mode_audio_session_id,
