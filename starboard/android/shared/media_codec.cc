@@ -23,12 +23,40 @@
 #include "starboard/android/shared/media_capabilities_cache.h"
 #include "starboard/android/shared/media_codec_bridge.h"
 #include "starboard/android/shared/media_common.h"
+#include "starboard/android/shared/ndk_media_codec.h"
 #include "starboard/common/check_op.h"
 #include "starboard/common/log.h"
 #include "starboard/common/media.h"
 #include "starboard/common/string.h"
+#include "starboard/shared/starboard/features.h"
 
 namespace starboard {
+namespace {
+
+bool CanUseNdkMediaCodec(std::optional<int> tunnel_mode_audio_session_id,
+                         bool require_secured_decoder,
+                         jobject j_media_crypto) {
+  if (!features::FeatureList::IsEnabled(features::kEnableNdkVideo)) {
+    return false;
+  }
+
+  // We do not use NDK AMediaCodec for DRM, since it requires architectural
+  // changes.
+  if (require_secured_decoder || j_media_crypto) {
+    return false;
+  }
+  // NDK AMediaCodec does not support tunnel mode.
+  if (tunnel_mode_audio_session_id) {
+    return false;
+  }
+  // NDK AMediaCodec requires API level >= 28.
+  if (android_get_device_api_level() < 28) {
+    return false;
+  }
+
+  return true;
+}
+}  // namespace
 
 std::unique_ptr<MediaCodec> DefaultMediaCodecFactory::CreateAudioMediaCodec(
     const AudioStreamInfo& audio_stream_info,
@@ -83,10 +111,27 @@ DefaultMediaCodecFactory::CreateVideoMediaCodec(
   if (decoder_name.empty()) {
     return Failure(
         FormatString("Failed to find decoder: mime=%s, mustSupportSecure=%s",
-                     mime, starboard::ToString(!!j_media_crypto).data()));
+                     static_cast<const char*>(mime),
+                     starboard::ToString(!!j_media_crypto).data()));
   }
 
-  // We only use Java MediaCodec (JNI) for now.
+  if (CanUseNdkMediaCodec(platform_options.tunnel_mode_audio_session_id,
+                          platform_options.require_secured_decoder,
+                          j_media_crypto)) {
+    auto ndk_bridge = NdkMediaCodec::Create(
+        video_codec, decoder_name, frame_size_hint, fps, max_frame_size,
+        handler, j_surface, j_media_crypto, color_metadata,
+        platform_options.enable_frame_renderer_listener,
+        platform_options.require_secured_decoder,
+        platform_options.require_software_codec,
+        platform_options.max_input_size);
+    if (ndk_bridge) {
+      return ndk_bridge;
+    }
+    SB_LOG(WARNING)
+        << "Failed to create NdkMediaCodec. Falling back to Java MediaCodec.";
+  }
+
   auto jni_result = MediaCodecBridge::CreateVideoMediaCodec(
       video_codec, decoder_name, mime, frame_size_hint, fps, max_frame_size,
       handler, j_surface, j_media_crypto, color_metadata, platform_options);
