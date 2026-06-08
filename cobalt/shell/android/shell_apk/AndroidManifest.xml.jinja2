@@ -96,6 +96,16 @@
             </intent-filter>
         </activity>
         {% endblock %}
+
+        <activity android:name="dev.cobalt.coat.CobaltPictureInPictureActivity"
+                  android:exported="false"
+                  android:noHistory="true"
+                  android:theme="@style/CobaltTheme"
+                  android:excludeFromRecents="true"
+                  android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+                  android:supportsPictureInPicture="true">
+        </activity>
+
         <!-- The following service entries exist in order to allow us to
              start more than one sandboxed process. -->
 

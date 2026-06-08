@@ -27,6 +27,7 @@ generate_jni("jni_headers") {
   sources = [
     "apk/app/src/main/java/dev/cobalt/coat/AudioPermissionRequester.java",
     "apk/app/src/main/java/dev/cobalt/coat/CaptionSettings.java",
+    "apk/app/src/main/java/dev/cobalt/coat/CobaltPictureInPictureActivity.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltService.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltSystemConfigChangeReceiver.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltTextToSpeechHelper.java",
@@ -124,6 +125,7 @@ android_library("cobalt_main_java") {
     "apk/app/src/main/java/dev/cobalt/coat/CaptionSettings.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltA11yHelper.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltActivity.java",
+    "apk/app/src/main/java/dev/cobalt/coat/CobaltPictureInPictureActivity.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltHttpHelper.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltMediaSession.java",
     "apk/app/src/main/java/dev/cobalt/coat/CobaltService.java",

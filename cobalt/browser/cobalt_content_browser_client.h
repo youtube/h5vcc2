@@ -78,6 +78,8 @@ class CobaltContentBrowserClient : public content::ShellContentBrowserClient {
   static CobaltContentBrowserClient* Get();
 
   // ShellContentBrowserClient overrides.
+  std::unique_ptr<content::VideoOverlayWindow> CreateWindowForVideoPictureInPicture(
+    content::VideoPictureInPictureWindowController* controller) override;
   std::unique_ptr<content::BrowserMainParts> CreateBrowserMainParts(
       bool is_integration_test) override;
   std::unique_ptr<content::DevToolsManagerDelegate>

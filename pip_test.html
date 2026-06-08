@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PiP Test</title>
+</head>
+<body>
+  <h1>PiP Test</h1>
+  <video id="video" controls width="320" height="240" src="https://www.w3schools.com/html/mov_bbb.webm" type="video/webm"></video>
+  <br>
+  <button id="togglePipButton">Toggle PiP</button>
+  <script>
+    const video = document.getElementById('video');
+    const button = document.getElementById('togglePipButton');
+
+    button.addEventListener('click', async () => {
+      console.log('Button clicked');
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+          console.log('Exited PiP');
+        } else {
+          await video.requestPictureInPicture();
+          console.log('Entered PiP');
+        }
+      } catch (error) {
+        console.error('Failed to toggle PiP:', error);
+      }
+    });
+  </script>
+</body>
+</html>

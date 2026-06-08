@@ -39,6 +39,8 @@ source_set("browser") {
     sources += [
       "android/mojo/cobalt_interface_registrar_android.cc",
       "android/mojo/cobalt_interface_registrar_android.h",
+      "android/overlay/cobalt_video_overlay_window.cc",
+      "android/overlay/cobalt_video_overlay_window.h",
     ]
   }
 
