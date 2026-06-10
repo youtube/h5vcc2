@@ -1038,7 +1038,7 @@ bool Shell::ShouldAllowRunningInsecureContent(WebContents* web_contents,
 }
 
 PictureInPictureResult Shell::EnterPictureInPicture(WebContents* web_contents) {
-  return PictureInPictureResult::kNotSupported;
+  return PictureInPictureResult::kSuccess;
 }
 
 bool Shell::ShouldResumeRequestsForCreatedWindow() {
