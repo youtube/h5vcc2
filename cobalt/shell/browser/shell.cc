@@ -50,6 +50,9 @@
 #include "content/public/browser/browser_thread.h"
 #include "content/public/browser/devtools_agent_host.h"
 #include "content/public/browser/document_picture_in_picture_window_controller.h"
+#include "content/public/browser/picture_in_picture_window_controller.h"
+#include "content/public/browser/overlay_window.h"
+#include "content/public/browser/video_picture_in_picture_window_controller.h"
 #include "content/public/browser/media_capture_devices.h"
 #include "content/public/browser/navigation_controller.h"
 #include "content/public/browser/navigation_entry.h"
@@ -61,6 +64,7 @@
 #include "content/public/browser/render_widget_host_view.h"
 #include "content/public/browser/renderer_preferences_util.h"
 #include "content/public/browser/web_contents.h"
+#include "content/public/browser/web_contents_delegate.h"
 #include "content/public/common/content_switches.h"
 #include "media/media_buildflags.h"
 #include "net/base/url_util.h"
@@ -1040,7 +1044,22 @@ bool Shell::ShouldAllowRunningInsecureContent(WebContents* web_contents,
 
 PictureInPictureResult Shell::EnterPictureInPicture(WebContents* web_contents) {
 
-  return PictureInPictureWindowManager::GetInstance()->EnterVideoPictureInPicture(web_contents);
+  //return PictureInPictureWindowManager::GetInstance()->EnterVideoPictureInPicture(web_contents);
+  return PictureInPictureResult::kSuccess;
+}
+
+
+void Shell::ExitPictureInPicture() {
+  if (web_contents()) {
+    auto* controller = content::PictureInPictureWindowController::GetOrCreateVideoPictureInPictureController(web_contents());
+    if (controller->GetWindowForTesting()) {
+      controller->GetWindowForTesting()->Close();
+    }
+    
+    // Use OnWindowDestroyed instead of Close. This forces the controller to set 
+    // its internal window_ pointer to nullptr!
+    controller->OnWindowDestroyed(false /* should_pause_video */);
+  }
 }
 
 bool Shell::ShouldResumeRequestsForCreatedWindow() {

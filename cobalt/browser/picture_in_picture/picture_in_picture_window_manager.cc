@@ -16,6 +16,11 @@ PictureInPictureWindowManager* PictureInPictureWindowManager::GetInstance() {
   return base::Singleton<PictureInPictureWindowManager>::get();
 }
 
+content::PictureInPictureResult PictureInPictureWindowManager::EnterVideoPictureInPicture(
+      content::WebContents*){
+      }
+
+
 void PictureInPictureWindowManager::EnterPictureInPictureWithController(
       content::PictureInPictureWindowController* pip_window_controller){
         
@@ -25,3 +30,14 @@ void PictureInPictureWindowManager::EnterPictureInPictureWithController(
 
 class PictureInPictureWindowManager::VideoWebContentsObserver final
     : public content::WebContentsObserver {};
+
+void PictureInPictureWindowManager::ExitPictureInPicture() {
+  CloseWindowInternal();
+}
+
+void PictureInPictureWindowManager::CloseWindowInternal() {
+  if (pip_window_controller_) {
+    pip_window_controller_->Close(false /* should_pause_video */);
+    pip_window_controller_ = nullptr;
+  }
+}
