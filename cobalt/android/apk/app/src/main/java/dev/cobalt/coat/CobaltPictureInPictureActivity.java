@@ -73,6 +73,7 @@ public class CobaltPictureInPictureActivity extends Activity {
 
   @CalledByNative
   public void closeActivity() {
+    mNativeCobaltVideoOverlayWindow = 0;
     finish();
   }
 

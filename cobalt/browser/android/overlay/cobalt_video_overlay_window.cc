@@ -59,6 +59,16 @@ void CobaltVideoOverlayWindow::ShowInactive() {
 void CobaltVideoOverlayWindow::Hide() {
   LOG(INFO) << "CobaltVideoOverlayWindow::Hide called";
   is_visible_ = false;
+
+  if (!java_activity_ref_.is_null()) {
+    JNIEnv* env = base::android::AttachCurrentThread();
+    Java_CobaltPictureInPictureActivity_closeActivity(env, java_activity_ref_);
+    java_activity_ref_.Reset();
+  }
+
+  if (controller_) {
+    controller_->OnWindowDestroyed(false /* should_pause_video */);
+  }
 }
 
 bool CobaltVideoOverlayWindow::IsVisible() const {
@@ -115,6 +125,10 @@ void CobaltVideoOverlayWindow::OnActivityDestroyed(JNIEnv* env) {
   LOG(INFO) << "CobaltVideoOverlayWindow::OnActivityDestroyed called, clearing reference";
   java_activity_ref_.Reset();
   is_visible_ = false;
+
+  if (controller_) {
+    controller_->OnWindowDestroyed(false /* should_pause_video */);
+  }
 }
 
 void CobaltVideoOverlayWindow::CreateJavaActivity() {

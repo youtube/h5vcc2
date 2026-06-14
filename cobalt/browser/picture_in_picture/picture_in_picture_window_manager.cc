@@ -16,14 +16,37 @@ PictureInPictureWindowManager* PictureInPictureWindowManager::GetInstance() {
   return base::Singleton<PictureInPictureWindowManager>::get();
 }
 
-content::PictureInPictureResult PictureInPictureWindowManager::EnterVideoPictureInPicture(
-      content::WebContents*){
-      }
+PictureInPictureWindowManager::PictureInPictureWindowManager() = default;
 
+PictureInPictureWindowManager::~PictureInPictureWindowManager() = default;
+
+content::WebContents* PictureInPictureWindowManager::GetWebContents() const {
+  if (!pip_window_controller_)
+    return nullptr;
+  return pip_window_controller_->GetWebContents();
+}
+
+content::PictureInPictureResult PictureInPictureWindowManager::EnterVideoPictureInPicture(
+    content::WebContents* web_contents) {
+  if (!pip_window_controller_ ||
+      pip_window_controller_->GetWebContents() != web_contents ||
+      !pip_window_controller_->GetWebContents()->HasPictureInPictureVideo()) {
+    if (pip_window_controller_)
+      CloseWindowInternal();
+
+    pip_window_controller_ = content::PictureInPictureWindowController::
+        GetOrCreateVideoPictureInPictureController(web_contents);
+  }
+
+  return content::PictureInPictureResult::kSuccess;
+}
 
 void PictureInPictureWindowManager::EnterPictureInPictureWithController(
-      content::PictureInPictureWindowController* pip_window_controller){
-        
+    content::PictureInPictureWindowController* pip_window_controller) {
+  if (pip_window_controller_)
+    CloseWindowInternal();
+
+  pip_window_controller_ = pip_window_controller;
 }
 
 

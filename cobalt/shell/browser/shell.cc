@@ -1044,22 +1044,12 @@ bool Shell::ShouldAllowRunningInsecureContent(WebContents* web_contents,
 
 PictureInPictureResult Shell::EnterPictureInPicture(WebContents* web_contents) {
 
-  //return PictureInPictureWindowManager::GetInstance()->EnterVideoPictureInPicture(web_contents);
-  return PictureInPictureResult::kSuccess;
+  return PictureInPictureWindowManager::GetInstance()->EnterVideoPictureInPicture(web_contents);
 }
 
 
 void Shell::ExitPictureInPicture() {
-  if (web_contents()) {
-    auto* controller = content::PictureInPictureWindowController::GetOrCreateVideoPictureInPictureController(web_contents());
-    if (controller->GetWindowForTesting()) {
-      controller->GetWindowForTesting()->Close();
-    }
-    
-    // Use OnWindowDestroyed instead of Close. This forces the controller to set 
-    // its internal window_ pointer to nullptr!
-    controller->OnWindowDestroyed(false /* should_pause_video */);
-  }
+  PictureInPictureWindowManager::GetInstance()->ExitPictureInPicture();
 }
 
 bool Shell::ShouldResumeRequestsForCreatedWindow() {
