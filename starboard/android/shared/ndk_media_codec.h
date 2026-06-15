@@ -25,6 +25,7 @@
 #include "starboard/common/pass_key.h"
 #include "starboard/common/result.h"
 #include "starboard/common/size.h"
+#include "starboard/common/span.h"
 
 namespace starboard {
 
@@ -64,7 +65,7 @@ class NdkMediaCodec : public MediaCodec {
                          AMediaCodec* codec);
   ~NdkMediaCodec() override;
 
-  DataSpan GetInputBufferAddress(jint index) override;
+  Span<uint8_t> GetInputBufferAddress(jint index) override;
   jint QueueInputBuffer(jint index,
                         jint offset,
                         jint size,
@@ -77,7 +78,7 @@ class NdkMediaCodec : public MediaCodec {
                               jlong presentation_time_microseconds,
                               jboolean is_decode_only) override;
 
-  DataSpan GetOutputBufferAddress(jint index) override;
+  Span<uint8_t> GetOutputBufferAddress(jint index) override;
   void ReleaseOutputBuffer(jint index, jboolean render) override;
   void ReleaseOutputBufferAtTimestamp(jint index,
                                       jlong render_timestamp_ns) override;
