@@ -111,10 +111,6 @@ STARBOARD_FEATURE(kEnableAv1StartupOptimization,
                   "EnableAv1StartupOptimization",
                   false)
 
-// By default, NDK Video (NDK MediaCodec) backend is disabled. Set the following
-// variable to true to enable NDK Video.
-STARBOARD_FEATURE(kEnableNdkVideo, "EnableNdkVideo", false)
-
 // By default, Cobalt destroys and recreates AudioTrack during Seek().
 // Set the following variable to true to force it to Flush() AudioTrack
 // during Seek().
@@ -142,6 +138,10 @@ STARBOARD_FEATURE(kForceResetAudioDecoder, "ForceResetAudioDecoder", false)
 // mime attribute "tunnelmode=true". Set the following variable to true to force
 // enabling tunnel mode on all playbacks.
 STARBOARD_FEATURE(kForceTunnelMode, "ForceTunnelMode", false)
+
+// By default, NDK Video (NDK MediaCodec) backend is disabled. Set the following
+// variable to true to enable NDK Video.
+STARBOARD_FEATURE(kNdkVideo, "NdkVideo", false)
 
 // By default, software video codec can be selected when software codec is not
 // required. Set the following variable to true to prevent using low performance

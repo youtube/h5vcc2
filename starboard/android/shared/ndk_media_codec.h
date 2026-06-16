@@ -21,11 +21,13 @@
 #include <optional>
 #include <string>
 
+#include "starboard/android/shared/frame_rate_estimator.h"
 #include "starboard/android/shared/media_codec.h"
 #include "starboard/common/pass_key.h"
 #include "starboard/common/result.h"
 #include "starboard/common/size.h"
 #include "starboard/common/span.h"
+#include "starboard/shared/starboard/player/job_thread.h"
 
 namespace starboard {
 
@@ -52,18 +54,19 @@ class NdkMediaCodec : public MediaCodec {
       int fps,
       const std::optional<Size>& max_frame_size,
       Handler* handler,
-      jobject j_surface,
-      jobject j_media_crypto,
-      const SbMediaColorMetadata* color_metadata,
+      const jni_zero::JavaRef<jobject>& j_surface,
       bool enable_frame_renderer_listener,
-      bool require_secured_decoder,
-      bool require_software_codec,
       int max_video_input_size);
 
   explicit NdkMediaCodec(PassKey<NdkMediaCodec>,
                          Handler* handler,
-                         AMediaCodec* codec);
+                         AMediaCodec* codec,
+                         int fps);
   ~NdkMediaCodec() override;
+
+  // Disallow copy and assignment.
+  NdkMediaCodec(const NdkMediaCodec&) = delete;
+  NdkMediaCodec& operator=(const NdkMediaCodec&) = delete;
 
   Span<uint8_t> GetInputBufferAddress(jint index) override;
   jint QueueInputBuffer(jint index,
@@ -89,16 +92,58 @@ class NdkMediaCodec : public MediaCodec {
   std::optional<FrameSize> GetOutputSize() override;
   std::optional<AudioOutputFormatResult> GetAudioOutputFormat() override;
 
+ private:
+  static void OnInputBufferAvailableCallback(AMediaCodec* codec,
+                                             void* user_data,
+                                             int32_t index);
+  static void OnOutputBufferAvailableCallback(AMediaCodec* codec,
+                                              void* user_data,
+                                              int32_t index,
+                                              AMediaCodecBufferInfo* info);
+  static void OnFormatChangedCallback(AMediaCodec* codec,
+                                      void* user_data,
+                                      AMediaFormat* format);
+  static void OnErrorCallback(AMediaCodec* codec,
+                              void* user_data,
+                              media_status_t error,
+                              int32_t action_code,
+                              const char* detail);
+  static void OnFrameRenderedCallback(AMediaCodec* codec,
+                                      void* user_data,
+                                      int64_t media_time_us,
+                                      int64_t system_time_ns);
+
   void OnInputBufferAvailable(int32_t index);
-  void OnOutputBufferAvailable(int32_t index, AMediaCodecBufferInfo* info);
-  void OnFormatChanged(AMediaFormat* format);
-  void OnError(media_status_t error, int32_t actionCode, const char* detail);
+  void OnOutputBufferAvailable(int32_t index, AMediaCodecBufferInfo info);
+  void OnFormatChanged();
+  void OnError(media_status_t error,
+               int32_t action_code,
+               const std::string& detail);
   void OnFrameRendered(int64_t presentation_time_us);
 
- private:
+  void UpdateOperatingRate();
+  void UpdateFrameRate(int64_t presentation_time_us);
+
   Handler* const handler_;
   AMediaCodec* codec_ = nullptr;
   bool is_frame_rendered_callback_enabled_ = false;
+
+  struct OperatingRateState {
+    // The requested playback speed multiplier (e.g., 1.0, 2.0).
+    double playback_speed = 1.0;
+
+    // The nominal frame rate of the video (in fps), updated dynamically.
+    int base_fps;
+
+    // The calculated target operating rate (playback_speed * base_fps) last
+    // set on MediaCodec, used to avoid redundant updates.
+    double operating_fps = 0.0;
+  };
+  OperatingRateState rate_state_;
+
+  FrameRateEstimator frame_rate_estimator_;
+
+  std::unique_ptr<JobThread> job_thread_;
 };
 
 }  // namespace starboard

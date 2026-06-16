@@ -15,7 +15,6 @@
 #include "starboard/android/shared/ndk_media_codec.h"
 
 #include <android/native_window_jni.h>
-#include <dlfcn.h>
 #include <media/NdkMediaFormat.h>
 
 #include "starboard/android/shared/media_common.h"
@@ -29,6 +28,10 @@
 namespace starboard {
 
 namespace {
+
+// Default fallback frame rate (in fps) if the player doesn't provide a valid
+// frame rate hint. Matches the default in Java MediaCodecBridge.
+constexpr int kDefaultFps = 30;
 
 struct AMediaCodecDeleter {
   void operator()(AMediaCodec* c) const { AMediaCodec_delete(c); }
@@ -54,45 +57,6 @@ constexpr int32_t kActionTransient = 1;
 // https://developer.android.com/reference/android/media/MediaCodec.CodecException#ACTION_RECOVERABLE
 constexpr int32_t kActionRecoverable = 2;
 
-void OnFrameRenderedCallback(AMediaCodec* codec,
-                             void* userdata,
-                             int64_t mediaTimeUs,
-                             int64_t systemNano) {
-  auto* bridge = reinterpret_cast<NdkMediaCodec*>(userdata);
-  bridge->OnFrameRendered(mediaTimeUs);
-}
-
-void OnInputBufferAvailableCallback(AMediaCodec* codec,
-                                    void* userdata,
-                                    int32_t index) {
-  auto* bridge = reinterpret_cast<NdkMediaCodec*>(userdata);
-  bridge->OnInputBufferAvailable(index);
-}
-
-void OnOutputBufferAvailableCallback(AMediaCodec* codec,
-                                     void* userdata,
-                                     int32_t index,
-                                     AMediaCodecBufferInfo* info) {
-  auto* bridge = reinterpret_cast<NdkMediaCodec*>(userdata);
-  bridge->OnOutputBufferAvailable(index, info);
-}
-
-void OnFormatChangedCallback(AMediaCodec* codec,
-                             void* userdata,
-                             AMediaFormat* format) {
-  auto* bridge = reinterpret_cast<NdkMediaCodec*>(userdata);
-  bridge->OnFormatChanged(format);
-}
-
-void OnErrorCallback(AMediaCodec* codec,
-                     void* userdata,
-                     media_status_t error,
-                     int32_t actionCode,
-                     const char* detail) {
-  auto* bridge = reinterpret_cast<NdkMediaCodec*>(userdata);
-  bridge->OnError(error, actionCode, detail);
-}
-
 }  // namespace
 
 std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
@@ -102,12 +66,8 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
     int fps,
     const std::optional<Size>& max_frame_size,
     Handler* handler,
-    jobject j_surface,
-    jobject j_media_crypto,
-    const SbMediaColorMetadata* color_metadata,
+    const jni_zero::JavaRef<jobject>& j_surface,
     bool enable_frame_renderer_listener,
-    bool require_secured_decoder,
-    bool require_software_codec,
     int max_video_input_size) {
   const char* mime = SupportedVideoCodecToMimeType(video_codec);
   if (!mime) {
@@ -127,6 +87,7 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
   }
 
   ScopedAMediaFormat format(AMediaFormat_new(), AMediaFormatDeleter());
+  SB_CHECK(format);
   AMediaFormat_setString(format.get(), AMEDIAFORMAT_KEY_MIME, mime);
   AMediaFormat_setInt32(format.get(), AMEDIAFORMAT_KEY_WIDTH,
                         frame_size_hint.width);
@@ -145,7 +106,7 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
   }
 
   ScopedANativeWindow native_window(
-      j_surface ? ANativeWindow_fromSurface(env, j_surface) : nullptr,
+      j_surface ? ANativeWindow_fromSurface(env, j_surface.obj()) : nullptr,
       ANativeWindowDeleter());
 
   if (j_surface && !native_window) {
@@ -163,8 +124,8 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
   }
 
   AMediaCodec* codec = scoped_codec.release();
-  auto bridge =
-      std::make_unique<NdkMediaCodec>(PassKey<NdkMediaCodec>(), handler, codec);
+  auto bridge = std::make_unique<NdkMediaCodec>(PassKey<NdkMediaCodec>(),
+                                                handler, codec, fps);
 
   AMediaCodecOnAsyncNotifyCallback callbacks = {
       OnInputBufferAvailableCallback,
@@ -203,7 +164,7 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
                        "found in libmediandk.so.";
   }
 
-  SB_LOG(INFO) << "NdkMediaCodec created: dedoder=" << decoder_name
+  SB_LOG(INFO) << "NdkMediaCodec created: decoder=" << decoder_name
                << ", codec=" << GetMediaVideoCodecName(video_codec)
                << ", frame_size_hint=" << frame_size_hint
                << ", max_frame_size=" << ToString(max_frame_size);
@@ -212,8 +173,12 @@ std::unique_ptr<NdkMediaCodec> NdkMediaCodec::Create(
 
 NdkMediaCodec::NdkMediaCodec(PassKey<NdkMediaCodec>,
                              Handler* handler,
-                             AMediaCodec* codec)
-    : handler_(handler), codec_(codec) {
+                             AMediaCodec* codec,
+                             int fps)
+    : handler_(handler),
+      codec_(codec),
+      rate_state_{1.0, fps > 0 ? fps : kDefaultFps, 0.0},
+      job_thread_(JobThread::Create("NdkMediaCodecCallbacks")) {
   SB_CHECK(handler_);
 }
 
@@ -222,13 +187,15 @@ NdkMediaCodec::~NdkMediaCodec() {
   // In-flight background callbacks can outlive AMediaCodec_delete,
   // risking a crash if they attempt to access a partially destroyed `this`.
   AMediaCodec_setAsyncNotifyCallback(codec_, /*callback=*/{},
-                                     /*userdata=*/nullptr);
+                                     /*user_data=*/nullptr);
   if (is_frame_rendered_callback_enabled_) {
     AMediaCodec_setOnFrameRenderedCallback(codec_, /*callback=*/nullptr,
-                                           /*userdata=*/nullptr);
+                                           /*user_data=*/nullptr);
   }
   AMediaCodec_stop(codec_);
   AMediaCodec_delete(codec_);
+
+  job_thread_->Stop();
 }
 
 Span<uint8_t> NdkMediaCodec::GetInputBufferAddress(jint index) {
@@ -278,15 +245,8 @@ void NdkMediaCodec::SetPlaybackRate(double playback_rate) {
   if (!codec_) {
     return;
   }
-  ScopedAMediaFormat params(AMediaFormat_new(), AMediaFormatDeleter());
-  AMediaFormat_setFloat(params.get(), AMEDIAFORMAT_KEY_OPERATING_RATE,
-                        static_cast<float>(playback_rate));
-  media_status_t status = AMediaCodec_setParameters(codec_, params.get());
-  if (status != AMEDIA_OK) {
-    SB_LOG(WARNING)
-        << "AMediaCodec_setParameters failed to set operating-rate to "
-        << playback_rate << " with status " << status;
-  }
+  rate_state_.playback_speed = playback_rate;
+  UpdateOperatingRate();
 }
 
 bool NdkMediaCodec::Restart() {
@@ -333,31 +293,119 @@ std::optional<AudioOutputFormatResult> NdkMediaCodec::GetAudioOutputFormat() {
   return std::nullopt;
 }
 
+void NdkMediaCodec::OnInputBufferAvailableCallback(AMediaCodec* codec,
+                                                   void* user_data,
+                                                   int32_t index) {
+  auto* self = static_cast<NdkMediaCodec*>(user_data);
+  self->job_thread_->Schedule(
+      [self, index]() { self->OnInputBufferAvailable(index); });
+}
+
+void NdkMediaCodec::OnOutputBufferAvailableCallback(
+    AMediaCodec* codec,
+    void* user_data,
+    int32_t index,
+    AMediaCodecBufferInfo* info) {
+  auto* self = static_cast<NdkMediaCodec*>(user_data);
+  self->job_thread_->Schedule([self, index, info_val = *info]() {
+    self->OnOutputBufferAvailable(index, info_val);
+  });
+}
+
+void NdkMediaCodec::OnFormatChangedCallback(AMediaCodec* codec,
+                                            void* user_data,
+                                            AMediaFormat* format) {
+  auto* self = static_cast<NdkMediaCodec*>(user_data);
+  self->job_thread_->Schedule([self]() { self->OnFormatChanged(); });
+}
+
+void NdkMediaCodec::OnErrorCallback(AMediaCodec* codec,
+                                    void* user_data,
+                                    media_status_t error,
+                                    int32_t action_code,
+                                    const char* detail) {
+  auto* self = static_cast<NdkMediaCodec*>(user_data);
+  std::string detail_str = detail ? detail : "";
+  self->job_thread_->Schedule([self, error, action_code, detail_str]() {
+    self->OnError(error, action_code, detail_str);
+  });
+}
+
+void NdkMediaCodec::OnFrameRenderedCallback(AMediaCodec* codec,
+                                            void* user_data,
+                                            int64_t media_time_us,
+                                            int64_t system_time_ns) {
+  auto* self = static_cast<NdkMediaCodec*>(user_data);
+  self->job_thread_->Schedule(
+      [self, media_time_us]() { self->OnFrameRendered(media_time_us); });
+}
+
 void NdkMediaCodec::OnInputBufferAvailable(int32_t index) {
   handler_->OnMediaCodecInputBufferAvailable(index);
 }
 
 void NdkMediaCodec::OnOutputBufferAvailable(int32_t index,
-                                            AMediaCodecBufferInfo* info) {
+                                            AMediaCodecBufferInfo info) {
+  if (info.size > 0) {
+    UpdateFrameRate(info.presentationTimeUs);
+  }
   handler_->OnMediaCodecOutputBufferAvailable(
-      index, info->flags, info->offset, info->presentationTimeUs, info->size);
+      index, info.flags, info.offset, info.presentationTimeUs, info.size);
 }
 
-void NdkMediaCodec::OnFormatChanged(AMediaFormat* format) {
+void NdkMediaCodec::OnFormatChanged() {
   handler_->OnMediaCodecOutputFormatChanged();
 }
 
 void NdkMediaCodec::OnError(media_status_t error,
-                            int32_t actionCode,
-                            const char* detail) {
-  bool is_recoverable = (actionCode == kActionRecoverable);
-  bool is_transient = (actionCode == kActionTransient);
+                            int32_t action_code,
+                            const std::string& detail) {
+  bool is_recoverable = (action_code == kActionRecoverable);
+  bool is_transient = (action_code == kActionTransient);
   handler_->OnMediaCodecError(is_recoverable, is_transient,
-                              detail ? detail : "NDK MediaCodec Error");
+                              detail.empty() ? "NDK MediaCodec Error" : detail);
 }
 
 void NdkMediaCodec::OnFrameRendered(int64_t presentation_time_us) {
   handler_->OnMediaCodecFrameRendered(presentation_time_us);
+}
+
+void NdkMediaCodec::UpdateFrameRate(int64_t presentation_time_us) {
+  frame_rate_estimator_.OnNewOutput(presentation_time_us);
+  std::optional<int> estimated_fps =
+      frame_rate_estimator_.GetEstimatedFrameRate();
+  if (!estimated_fps.has_value() ||
+      rate_state_.base_fps == estimated_fps.value()) {
+    return;
+  }
+
+  rate_state_.base_fps = estimated_fps.value();
+  UpdateOperatingRate();
+}
+
+void NdkMediaCodec::UpdateOperatingRate() {
+  if (rate_state_.playback_speed <= 0.0) {
+    return;
+  }
+  double operating_fps = rate_state_.playback_speed * rate_state_.base_fps;
+  if (rate_state_.operating_fps == operating_fps) {
+    return;
+  }
+
+  rate_state_.operating_fps = operating_fps;
+  ScopedAMediaFormat params(AMediaFormat_new(), AMediaFormatDeleter());
+  SB_CHECK(params);
+
+  AMediaFormat_setFloat(params.get(), AMEDIAFORMAT_KEY_OPERATING_RATE,
+                        static_cast<float>(rate_state_.operating_fps));
+  media_status_t status = AMediaCodec_setParameters(codec_, params.get());
+  if (status != AMEDIA_OK) {
+    SB_LOG(WARNING) << "AMediaCodec_setParameters failed: operating_fps="
+                    << rate_state_.operating_fps << ", status=" << status;
+    return;
+  }
+
+  SB_LOG(INFO) << "Set operating rate to " << rate_state_.operating_fps;
 }
 
 }  // namespace starboard
