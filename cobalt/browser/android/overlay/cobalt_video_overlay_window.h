@@ -12,6 +12,9 @@
 #include "content/public/browser/overlay_window.h"
 #include "ui/gfx/geometry/rect.h" 
 #include "ui/gfx/geometry/size.h"
+#include "components/thin_webview/compositor_view.h"
+#include "ui/android/window_android.h"
+#include "cc/slim/surface_layer.h"
 
 namespace content {
 class VideoPictureInPictureWindowController;
@@ -59,6 +62,10 @@ class CobaltVideoOverlayWindow : public content::VideoOverlayWindow {
   // JNI callbacks from CobaltPictureInPictureActivity.java
   void SetJavaActivity(JNIEnv* env, const base::android::JavaParamRef<jobject>& activity);
   void OnActivityDestroyed(JNIEnv* env);
+  void OnViewSizeChanged(JNIEnv* env, int width, int height);
+  void CompositorViewCreated(JNIEnv* env, const base::android::JavaParamRef<jobject>& compositor_view);
+
+
 
  private:
   // Pointer to the controller that owns this window.
@@ -69,6 +76,11 @@ class CobaltVideoOverlayWindow : public content::VideoOverlayWindow {
 
   // Reference to the Java Activity instance.
   base::android::ScopedJavaGlobalRef<jobject> java_activity_ref_;
+
+  ui::WindowAndroid* window_android_ = nullptr;
+  thin_webview::android::CompositorView* compositor_view_ = nullptr;
+  scoped_refptr<cc::slim::SurfaceLayer> surface_layer_;
+  gfx::Size bounds_;
 
   // Helper method to trigger the Java Activity creation via JNI.
   void CreateJavaActivity();

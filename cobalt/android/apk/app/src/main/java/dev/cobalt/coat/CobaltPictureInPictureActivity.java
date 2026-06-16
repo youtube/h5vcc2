@@ -18,6 +18,14 @@ import org.chromium.base.ContextUtils;
 import org.chromium.content_public.browser.WebContents;
 import org.chromium.ui.base.WindowAndroid;
 
+import org.chromium.components.thinwebview.CompositorView;
+import org.chromium.components.thinwebview.CompositorViewFactory;
+import org.chromium.components.thinwebview.ThinWebViewConstraints;
+import android.view.View;
+import android.view.ViewGroup;
+import org.chromium.ui.base.ActivityWindowAndroid;
+import org.chromium.ui.base.IntentRequestTracker;
+
 /**
  * A simple Activity to host the Video Picture-in-Picture window on Android TV.
  * This Activity is launched by C++ CobaltVideoOverlayWindow and immediately
@@ -28,6 +36,8 @@ public class CobaltPictureInPictureActivity extends Activity {
 
   private static final String TAG = "CobaltPiPActivity";
   private long mNativeCobaltVideoOverlayWindow = 0;
+  private CompositorView mCompositorView;
+  private ActivityWindowAndroid mWindowAndroid;
 
   @CalledByNative
   public static void launchActivity(WebContents webContents, long nativePointer) {
@@ -42,7 +52,6 @@ public class CobaltPictureInPictureActivity extends Activity {
     Intent intent = new Intent(context, CobaltPictureInPictureActivity.class);
     intent.putExtra("native_pointer", nativePointer);
     intent.putExtra("web_contents", webContents);
-    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
     context.startActivity(intent);
   }
 
@@ -59,6 +68,30 @@ public class CobaltPictureInPictureActivity extends Activity {
           mNativeCobaltVideoOverlayWindow, CobaltPictureInPictureActivity.this);
     }
 
+    mWindowAndroid = new ActivityWindowAndroid(
+        this, /* listenToActivityState= */ false,
+        IntentRequestTracker.createFromActivity(this), null, /* trackOcclusion= */ false);
+
+    mCompositorView = CompositorViewFactory.create(this, mWindowAndroid, new ThinWebViewConstraints());
+    addContentView(mCompositorView.getView(),
+        new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+    mCompositorView.getView().addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+      @Override
+      public void onLayoutChange(View v, int left, int top, int right, int bottom,
+                                 int oldLeft, int oldTop, int oldRight, int oldBottom) {
+        if (mNativeCobaltVideoOverlayWindow == 0) return;
+        if (top == bottom || left == right) return;
+        CobaltPictureInPictureActivityJni.get().onViewSizeChanged(
+            mNativeCobaltVideoOverlayWindow, right - left, bottom - top);
+      }
+    });
+
+    if (mNativeCobaltVideoOverlayWindow != 0) {
+      CobaltPictureInPictureActivityJni.get().compositorViewCreated(
+          mNativeCobaltVideoOverlayWindow, mCompositorView);
+    }
+
     // Attempt to enter PiP mode immediately.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       PictureInPictureParams params = new PictureInPictureParams.Builder()
@@ -72,6 +105,11 @@ public class CobaltPictureInPictureActivity extends Activity {
   }
 
   @CalledByNative
+  public WindowAndroid getWindowAndroid() {
+    return mWindowAndroid;
+  }
+
+  @CalledByNative
   public void closeActivity() {
     mNativeCobaltVideoOverlayWindow = 0;
     finish();
@@ -80,6 +118,14 @@ public class CobaltPictureInPictureActivity extends Activity {
   @Override
   protected void onDestroy() {
     super.onDestroy();
+    if (mCompositorView != null) {
+      mCompositorView.destroy();
+      mCompositorView = null;
+    }
+    if (mWindowAndroid != null) {
+      mWindowAndroid.destroy();
+      mWindowAndroid = null;
+    }
     if (mNativeCobaltVideoOverlayWindow != 0) {
       CobaltPictureInPictureActivityJni.get().onActivityDestroyed(mNativeCobaltVideoOverlayWindow);
       mNativeCobaltVideoOverlayWindow = 0;
@@ -90,5 +136,7 @@ public class CobaltPictureInPictureActivity extends Activity {
   interface Interface {
     void setJavaActivity(long nativeCobaltVideoOverlayWindow, CobaltPictureInPictureActivity caller);
     void onActivityDestroyed(long nativeCobaltVideoOverlayWindow);
+    void onViewSizeChanged(long nativeCobaltVideoOverlayWindow, int width, int height);
+    void compositorViewCreated(long nativeCobaltVideoOverlayWindow, CompositorView compositorView);
   }
 }

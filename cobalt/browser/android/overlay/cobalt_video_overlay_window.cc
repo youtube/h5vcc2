@@ -11,6 +11,9 @@
 #include "content/public/browser/video_picture_in_picture_window_controller.h"
 #include "ui/android/view_android.h"
 #include "ui/android/window_android.h"
+#include "ui/android/window_android_compositor.h"
+#include "cc/slim/surface_layer.h"
+#include "components/viz/common/surfaces/surface_id.h"
 
 // Include the generated JNI header.
 #include "cobalt/android/jni_headers/CobaltPictureInPictureActivity_jni.h"
@@ -29,11 +32,18 @@ CobaltVideoOverlayWindow::CobaltVideoOverlayWindow(
     content::VideoPictureInPictureWindowController* controller)
     : controller_(controller) {
   LOG(INFO) << "CobaltVideoOverlayWindow constructor called";
+  surface_layer_ = cc::slim::SurfaceLayer::Create();
+  surface_layer_->SetIsDrawable(true);
+  surface_layer_->SetStretchContentToFillBounds(true);
+  surface_layer_->SetBackgroundColor(SkColors::kBlack);
   CreateJavaActivity();
 }
 
 CobaltVideoOverlayWindow::~CobaltVideoOverlayWindow() {
   LOG(INFO) << "CobaltVideoOverlayWindow destructor called";
+  if (window_android_) {
+    window_android_ = nullptr;
+  }
   Close();
 }
 
@@ -76,8 +86,7 @@ bool CobaltVideoOverlayWindow::IsVisible() const {
 }
 
 gfx::Rect CobaltVideoOverlayWindow::GetBounds() {
-  // Return dummy bounds for now
-  return gfx::Rect(0, 0, 100, 100);
+  return gfx::Rect(bounds_);
 }
 
 void CobaltVideoOverlayWindow::UpdateNaturalSize(const gfx::Size& natural_size) {
@@ -110,7 +119,22 @@ void CobaltVideoOverlayWindow::SetFaviconImages(
     const std::vector<media_session::MediaImage>& images) {}
 
 void CobaltVideoOverlayWindow::SetSurfaceId(const viz::SurfaceId& surface_id) {
-  LOG(INFO) << "CobaltVideoOverlayWindow::SetSurfaceId called";
+  LOG(INFO) << "CobaltVideoOverlayWindow::SetSurfaceId called: " << surface_id.ToString();
+  
+  const viz::SurfaceId& old_surface_id = surface_layer_->surface_id().is_valid()
+                                             ? surface_layer_->surface_id()
+                                             : surface_id;
+  if (window_android_ && window_android_->GetCompositor() &&
+      old_surface_id.frame_sink_id() != surface_id.frame_sink_id()) {
+    // On Android, the new frame sink needs to be added before
+    // removing the previous surface sink.
+    window_android_->GetCompositor()->AddChildFrameSink(
+        surface_id.frame_sink_id());
+    window_android_->GetCompositor()->RemoveChildFrameSink(
+        old_surface_id.frame_sink_id());
+  }
+  // Set the surface after frame sink hierarchy update.
+  surface_layer_->SetSurfaceId(surface_id, cc::DeadlinePolicy::UseDefaultDeadline());
 }
 
 void CobaltVideoOverlayWindow::SetJavaActivity(
@@ -123,11 +147,41 @@ void CobaltVideoOverlayWindow::SetJavaActivity(
 
 void CobaltVideoOverlayWindow::OnActivityDestroyed(JNIEnv* env) {
   LOG(INFO) << "CobaltVideoOverlayWindow::OnActivityDestroyed called, clearing reference";
+  if (window_android_) {
+    window_android_ = nullptr;
+  }
   java_activity_ref_.Reset();
   is_visible_ = false;
 
   if (controller_) {
     controller_->OnWindowDestroyed(false /* should_pause_video */);
+  }
+}
+
+void CobaltVideoOverlayWindow::OnViewSizeChanged(JNIEnv* env, int width, int height) {
+  LOG(INFO) << "CobaltVideoOverlayWindow::OnViewSizeChanged: " << width << "x" << height;
+  bounds_ = gfx::Size(width, height);
+  if (surface_layer_) {
+    surface_layer_->SetBounds(bounds_);
+  }
+}
+
+void CobaltVideoOverlayWindow::CompositorViewCreated(
+    JNIEnv* env,
+    const base::android::JavaParamRef<jobject>& compositor_view) {
+  LOG(INFO) << "CobaltVideoOverlayWindow::CompositorViewCreated called";
+  
+  compositor_view_ =
+      thin_webview::android::CompositorView::FromJavaObject(compositor_view);
+  DCHECK(compositor_view_);
+  compositor_view_->SetRootLayer(surface_layer_);
+
+  base::android::ScopedJavaLocalRef<jobject> j_window_android =
+      Java_CobaltPictureInPictureActivity_getWindowAndroid(env, java_activity_ref_);
+
+  if (!j_window_android.is_null()) {
+    window_android_ = ui::WindowAndroid::FromJavaWindowAndroid(
+        base::android::JavaParamRef<jobject>(env, j_window_android.obj()));
   }
 }
 
