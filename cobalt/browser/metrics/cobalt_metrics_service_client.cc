@@ -42,77 +42,93 @@ namespace cobalt {
 // TODO(b/495528560): Unify CPU and memory polling state into one class.
 class MetricsPollingState {
  public:
-  MetricsPollingState() = default;
-  virtual ~MetricsPollingState() = default;
+  MetricsPollingState(base::RepeatingClosure request_metrics_callback.
+                      base::RepeatingCallback<void(base::OnceClosure)> test_callback,
+                      const base::FeatureParam<int>& interval_param)
+      
+      : request_metrics_callback_(std::move(request_metrics_callback)),
+        test_callback_(std::move(test_callback)),
+        interval_param_(interval_param) {}
 
-  void RecordMetricsAfterDelay(const base::FeatureParam<int>& interval_param) {
+  void RecordMetricsAfterDelay() {
     base::TimeDelta delay = memory_instrumentation::GetDelayForNextMemoryLog();
 
     if (base::FeatureList::IsEnabled(features::kCobaltMetricsIntervalFeature)) {
-      int interval = interval_param.Get();
+      int interval = interval_param_.Get();
       if (interval > 0) {
         delay = base::Seconds(interval);
+        return interval;
       } else {
         LOG(WARNING) << "Invalid metrics interval from feature: " << interval
-                     << ". Falling back to memory_instrumentation default.";
+                      << ". Falling back to memory_instrumentation default.";
       }
     }
 
     timer_.Start(FROM_HERE, delay, this, &MetricsPollingState::RequestMetrics);
   }
 
-  virtual void RequestMetrics() = 0;
+  void RequestMetrics() {
+    request_metrics_callback_.Run();
+    RecordMetricsAfterDelay();
+  }
+
+  void SetCallbackForTesting(base::OnceClosure callback) {
+    test_callback_.Run(std::move(callback));
+  }
 
  private:
   base::OneShotTimer timer_;
+  base::RepeatingClosure request_metrics_callback_;
+  base::RepeatingCallback<void(base::OnceClosure)> test_callback_;
+  const base::FeatureParam<int>& interval_param_;
 };
 
-class CobaltMetricsServiceClient::MemoryPollingState
-    : public MetricsPollingState {
- public:
-  explicit MemoryPollingState(
-      scoped_refptr<CobaltMemoryMetricsEmitter> memory_emitter)
-      : memory_emitter_(std::move(memory_emitter)) {}
+// class CobaltMetricsServiceClient::MemoryPollingState
+//     : public MetricsPollingState {
+//  public:
+//   explicit MemoryPollingState(
+//       scoped_refptr<CobaltMemoryMetricsEmitter> memory_emitter)
+//       : memory_emitter_(std::move(memory_emitter)) {}
 
-  void RecordMetricsAfterDelay() {
-    MetricsPollingState::RecordMetricsAfterDelay(
-        features::kMemoryMetricsIntervalParam);
-  }
+//   void RecordMetricsAfterDelay() {
+//     MetricsPollingState::RecordMetricsAfterDelay(
+//         features::kMemoryMetricsIntervalParam);
+//   }
 
-  void RequestMetrics() override {
-    memory_emitter_->FetchAndEmitProcessMemoryMetrics();
-    RecordMetricsAfterDelay();
-  }
+//   void RequestMetrics() override {
+//     memory_emitter_->FetchAndEmitProcessMemoryMetrics();
+//     RecordMetricsAfterDelay();
+//   }
 
-  void SetCallbackForTesting(base::OnceClosure callback) {
-    memory_emitter_->set_callback_for_testing(std::move(callback));
-  }
+//   void SetCallbackForTesting(base::OnceClosure callback) {
+//     memory_emitter_->set_callback_for_testing(std::move(callback));
+//   }
 
- private:
-  scoped_refptr<CobaltMemoryMetricsEmitter> memory_emitter_;
-};
-class CobaltMetricsServiceClient::CpuPollingState : public MetricsPollingState {
- public:
-  explicit CpuPollingState(scoped_refptr<CobaltCpuMetricsEmitter> cpu_emitter)
-      : cpu_emitter_(std::move(cpu_emitter)) {}
+//  private:
+//   scoped_refptr<CobaltMemoryMetricsEmitter> memory_emitter_;
+// };
+// class CobaltMetricsServiceClient::CpuPollingState : public MetricsPollingState {
+//  public:
+//   explicit CpuPollingState(scoped_refptr<CobaltCpuMetricsEmitter> cpu_emitter)
+//       : cpu_emitter_(std::move(cpu_emitter)) {}
 
-  void RecordMetricsAfterDelay() {
-    MetricsPollingState::RecordMetricsAfterDelay(
-        features::kCpuMetricsIntervalParam);
-  }
+//   void RecordMetricsAfterDelay() {
+//     MetricsPollingState::RecordMetricsAfterDelay(
+//         features::kCpuMetricsIntervalParam);
+//   }
 
-  void RequestMetrics() override {
-    cpu_emitter_->FetchAndEmitCpuMetrics();
-    RecordMetricsAfterDelay();
-  }
+//   void RequestMetrics() override {
+//     cpu_emitter_->FetchAndEmitCpuMetrics();
+//     RecordMetricsAfterDelay();
+//   }
 
-  void SetCallbackForTesting(base::OnceClosure callback) {
-    cpu_emitter_->set_callback_for_testing(std::move(callback));
-  }
+//   void SetCallbackForTesting(base::OnceClosure callback) {
+//     cpu_emitter_->set_callback_for_testing(std::move(callback));
+//   }
 
- private:
-  scoped_refptr<CobaltCpuMetricsEmitter> cpu_emitter_;
-};
+//  private:
+//   scoped_refptr<CobaltCpuMetricsEmitter> cpu_emitter_;
+// };
 
 CobaltMetricsServiceClient::CobaltMetricsServiceClient(
     metrics::MetricsStateManager* state_manager,
@@ -140,15 +156,25 @@ void CobaltMetricsServiceClient::Initialize() {
 
 void CobaltMetricsServiceClient::StartMemoryMetricsLogger() {
   CHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+
+  scoped_refptr<CobaltMemoryMetricsEmitter> memory_emitter = CreateMemoryMetricsEmitter();
+
   memory_state_.emplace(base::ThreadPool::CreateSequencedTaskRunner({}),
-                        CreateMemoryMetricsEmitter());
+                     base::BindRepeating(&CobaltMemoryMetricsEmitter::FetchAndEmitProcessMemoryMetrics, memory_emitter),
+                     base::BindRepeating(&CobaltMemoryMetricsEmitter::set_callback_for_testing, memory_emitter),
+                     features::kMemoryMetricsIntervalParam);
   memory_state_.AsyncCall(&MemoryPollingState::RecordMetricsAfterDelay);
 }
 
 void CobaltMetricsServiceClient::StartCpuMetricsLogger() {
   CHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+
+  scoped_refptr<CobaltCpuMetricsEmitter> cpu_emitter = CreateCpuMetricsEmitter();
+
   cpu_state_.emplace(base::ThreadPool::CreateSequencedTaskRunner({}),
-                     CreateCpuMetricsEmitter());
+                     base::BindRepeating(&CobaltCpuMetricsEmitter::FetchAndEmitCpuMetrics, cpu_emitter),
+                     base::BindRepeating(&CobaltCpuMetricsEmitter::set_callback_for_testing, cpu_emitter),
+                     features::kCpuMetricsIntervalParam);
   cpu_state_.AsyncCall(&CpuPollingState::RecordMetricsAfterDelay);
 }
 
