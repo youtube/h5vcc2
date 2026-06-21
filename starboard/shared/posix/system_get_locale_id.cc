@@ -41,5 +41,7 @@ const char* SbSystemGetLocaleId() {
     }
   }
 
-  return posix_id;
+  // Contract requires non-null (see system_get_locale_id_test.cc); callers
+  // crash on null (e.g. setenv() in environment.cc).
+  return posix_id ? posix_id : "";
 }

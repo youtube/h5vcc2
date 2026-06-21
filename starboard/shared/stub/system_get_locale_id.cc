@@ -15,5 +15,7 @@
 #include "starboard/system.h"
 
 const char* SbSystemGetLocaleId() {
-  return NULL;
+  // The Starboard contract (see starboard/nplb/system_get_locale_id_test.cc)
+  // requires a non-null return.
+  return "";
 }
