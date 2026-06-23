@@ -66,7 +66,7 @@ def main():
   # Don't overwrite existing files, in case we forgot to increment the
   # version.
   version_dir = dirs[0]
-  command = ['gsutil', 'cp', '-Rn', version_dir, DEST_BUCKET]
+  command = ['gcloud', 'storage', 'cp', '--recursive', '--no-clobber', version_dir, DEST_BUCKET]
 
   print('\nGoing to run the following command')
   print('   ', ' '.join(command))

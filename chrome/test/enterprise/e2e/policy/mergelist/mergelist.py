@@ -37,7 +37,7 @@ class MergelistTest(ChromeEnterpriseTestCase):
     token = FLAGS.enrollmentToken
     if token == None:
       path = "gs://%s/secrets/mergelist_enrollmentToken" % self.gsbucket
-      cmd = r'gsutil cat ' + path
+      cmd = r'gcloud storage cat ' + path
       token = self.RunCommand(self.win_config['dc'], cmd).rstrip().decode()
 
     self.SetPolicy(self.win_config['dc'], r'CloudManagementEnrollmentToken',

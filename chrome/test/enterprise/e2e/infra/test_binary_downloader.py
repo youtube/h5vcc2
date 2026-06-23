@@ -62,7 +62,7 @@ def download_chromedriver(version, download_path):
 def download_chrome(version, download_path):
   gsutil_uri = 'gs://chrome-signed/desktop-5c0tCh/{}/win64-clang/mini_installer.exe.outputs/GoogleChromeStandaloneEnterprise.msi'.format(
       version)
-  command = ['gsutil', 'cp', gsutil_uri, download_path]
+  command = ['gcloud', 'storage', 'cp', gsutil_uri, download_path]
   try:
     subprocess.run(command, check=True)
   except subprocess.CalledProcessError as e:

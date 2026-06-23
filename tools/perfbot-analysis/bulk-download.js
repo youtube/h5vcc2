@@ -21,7 +21,7 @@ function printUpdate(msg) {
 
 async function main() {
   if (!gsutil.exists()) {
-    console.error('Command `gsutil` (used to download the files) not found.');
+    console.error('Command `gcloud` (used to download the files) not found.');
     console.error('You may need to install `google-cloud-sdk` package.');
     return;
   }

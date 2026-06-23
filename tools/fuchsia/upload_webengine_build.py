@@ -59,7 +59,7 @@ def StartBuildAndUpload(out_dir, gcs_path, commit=None):
     # not as a directory.
     file = os.path.basename(path)
     remote_path = posixpath.join(gcs_path, file)
-    Run(f'gsutil -m cp {path} {remote_path}')
+    Run(f'gcloud storage cp {path} {remote_path}')
 
   return 0
 

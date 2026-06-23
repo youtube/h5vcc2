@@ -7,7 +7,7 @@
 # that the component update system will pick them up and push them
 # to users.  See README.md before running this.
 #
-# Requires ninja and gsutil to be in the user's path.
+# Requires ninja and gcloud to be in the user's path.
 
 import optparse
 import os
@@ -76,7 +76,7 @@ def main():
     #   {vers}/{platform}/download_file_types.pb
     # Don't overwrite existing files, in case we forgot to increment the
     # version.
-    command = ['gsutil', 'cp', '-Rn', '.', DEST_BUCKET + "/" + str(version_id)]
+    command = ['gcloud', 'storage', 'cp', '--recursive', '--no-clobber', '.', DEST_BUCKET + "/" + str(version_id)]
 
     print('\nGoing to run the following command')
     print('   ', ' '.join(command))
