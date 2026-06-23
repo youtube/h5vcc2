@@ -139,6 +139,10 @@ STARBOARD_FEATURE(kForceResetAudioDecoder, "ForceResetAudioDecoder", false)
 // enabling tunnel mode on all playbacks.
 STARBOARD_FEATURE(kForceTunnelMode, "ForceTunnelMode", false)
 
+// By default, NDK Video (NDK MediaCodec) backend is disabled. Set the following
+// variable to true to enable NDK Video.
+STARBOARD_FEATURE(kNdkVideo, "NdkVideo", false)
+
 // By default, software video codec can be selected when software codec is not
 // required. Set the following variable to true to prevent using low performance
 // software video decoder in MediaCapabilitiesCache when software codec is not
