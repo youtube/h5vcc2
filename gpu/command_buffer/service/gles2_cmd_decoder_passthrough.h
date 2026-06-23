@@ -576,8 +576,15 @@ class GPU_GLES2_EXPORT GLES2DecoderPassthroughImpl
   };
 
   // Use a limit that is at least ANGLE's IMPLEMENTATION_MAX_ACTIVE_TEXTURES
-  // constant
+  // constant.
+#if BUILDFLAG(IS_STARBOARD)
+  // Starboard/RDK's native GL driver (e.g. Mali) reports up to 96 texture
+  // units, exceeding the upstream limit of 64; that fails context init and
+  // forces a new media GPU context (and leaked command buffer) per video.
+  static constexpr size_t kMaxTextureUnits = 128;
+#else
   static constexpr size_t kMaxTextureUnits = 64;
+#endif
   static constexpr size_t kNumTextureTypes =
       static_cast<size_t>(TextureTarget::kCount);
   std::array<std::array<BoundTexture, kMaxTextureUnits>, kNumTextureTypes>
