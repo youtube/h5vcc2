@@ -7,8 +7,13 @@
 #include <utility>
 
 #include "base/memory/discardable_memory.h"
+#include "build/build_config.h"
 #include "content/child/child_process.h"
 #include "content/child/child_thread_impl.h"
+
+#if BUILDFLAG(IS_COBALT)
+#include "cobalt/renderer/cobalt_discardable_shared_memory_manager.h"
+#endif
 
 namespace content {
 
@@ -20,9 +25,14 @@ CreateDiscardableMemoryAllocator() {
       manager_remote;
   ChildThread::Get()->BindHostReceiver(
       manager_remote.InitWithNewPipeAndPassReceiver());
+#if BUILDFLAG(IS_COBALT)
+  return cobalt::CreateCobaltDiscardableSharedMemoryManager(
+      std::move(manager_remote), ChildProcess::current()->io_task_runner());
+#else
   return base::MakeRefCounted<
       discardable_memory::ClientDiscardableSharedMemoryManager>(
       std::move(manager_remote), ChildProcess::current()->io_task_runner());
+#endif
 }
 
 }  // namespace content
