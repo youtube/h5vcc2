@@ -138,7 +138,7 @@ static_library("starboard_platform_sources") {
     "//starboard/shared/posix/system_clear_last_error.cc",
     "//starboard/shared/posix/system_get_error_string.cc",
     "//starboard/shared/posix/system_get_last_error.cc",
-    "//starboard/shared/posix/system_get_locale_id.cc",
+    "system/system_get_locale_id_bcp47.cc",
     "//starboard/shared/posix/system_get_number_of_processors.cc",
     "//starboard/shared/pthread/thread_types_public.h",
     "//starboard/shared/signal/crash_signals.cc",

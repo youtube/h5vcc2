@@ -1626,6 +1626,17 @@ public:
     needs_refresh_ = true;
     subscriptions_.clear();
   }
+
+  bool GetPresentationLanguage(std::string& out) {
+    Core::JSON::String result;
+    uint32_t rc = link_.Get(kDefaultTimeoutMs, "getPresentationLanguage", result);
+    if (Core::ERROR_NONE != rc) {
+      SB_LOG(ERROR) << "UserSettings.getPresentationLanguage failed, rc=" << rc;
+      return false;
+    }
+    out = result.Value();
+    return !out.empty();
+  }
 };
 
 SB_ONCE_INITIALIZE_FUNCTION(UserSettingsImpl, GetUserSettings);
@@ -1769,6 +1780,10 @@ bool DeviceInfo::GetAudioConfiguration(int index, SbMediaAudioConfiguration* out
 
 bool DeviceInfo::GetBrandName(std::string& out) {
   return GetDeviceInfo()->GetBrandName(out);
+}
+
+bool UserSettings::GetPresentationLanguage(std::string& out) {
+  return GetUserSettings()->GetPresentationLanguage(out);
 }
 
 void TeardownJSONRPCLink() {

@@ -115,6 +115,11 @@ public:
   static bool GetBrandName(std::string& out);
 };
 
+class UserSettings {
+public:
+  static bool GetPresentationLanguage(std::string &out);
+};
+
 void TeardownJSONRPCLink();
 
 }  // namespace starboard
