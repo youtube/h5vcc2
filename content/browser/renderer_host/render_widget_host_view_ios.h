@@ -222,6 +222,10 @@ class CONTENT_EXPORT RenderWidgetHostViewIOS
       blink::mojom::FrameWidgetInputHandler::RectForEditFieldCharsCallback
           callback);
 
+#if BUILDFLAG(IS_COBALT)
+  void SetAllowAutomaticViewBoundsUpdates(bool allowed) override;
+#endif  // BUILDFLAG(IS_COBALT)
+
  private:
   friend class MockPointerLockRenderWidgetHostView;
 
@@ -272,6 +276,10 @@ class CONTENT_EXPORT RenderWidgetHostViewIOS
   // This stores the underlying view bounds. The UIView might change size but
   // we do not change its size during scroll.
   gfx::Rect view_bounds_;
+
+#if BUILDFLAG(IS_COBALT)
+  bool allow_view_bounds_updates_ = true;
+#endif  // BUILDFLAG(IS_COBALT)
 
   // Represents a feature of the physical display whose offset and mask_length
   // are expressed in DIPs relative to the view. See display_feature.h for more

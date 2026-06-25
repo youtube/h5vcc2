@@ -1,0 +1,66 @@
+// Copyright 2026 The Cobalt Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+module on_screen_keyboard.mojom;
+
+import "ui/gfx/geometry/mojom/geometry.mojom";
+
+struct BackgroundColor {
+    int32 red;
+    int32 green;
+    int32 blue;
+};
+
+enum ThemeOverride {
+    kLightTheme,
+    kDarkTheme
+};
+
+struct KeyboardOptions {
+    BackgroundColor? background_color;
+    ThemeOverride? theme_override;
+};
+
+// The on-screen keyboard interface that Blink connects to. It is implemented
+// by the browser process, which forwards the actual calls to a
+// platform-specific implementation.
+interface OnScreenKeyboard {
+    Show(string text, KeyboardOptions options) => ();
+    Hide() => ();
+    Focus() => ();
+    Blur() => ();
+    UpdateSuggestions(array<string> suggestions) => ();
+    KeepFocus(bool keep_focus);
+
+    // Registers a client that will be notified whenever the on-screen
+    // keyboard's contents change.
+    RegisterClient(pending_remote<OnScreenKeyboardClient> client);
+
+    // This methods are synchronous for compatibility with the C25
+    // OnScreenKeyboard IDL operations.
+    [Sync]
+    SupportsSuggestions() => (bool supported);
+    [Sync]
+    IsShown() => (bool is_shown);
+    [Sync]
+    BoundingRect() => (gfx.mojom.RectF bounding_rect);
+};
+
+// This interface is implemented by the rendered to receive notifications from
+// an OnScreenKeyboard indicating that its contents have changed.
+interface OnScreenKeyboardClient {
+    KeyboardTextChanged(string text);
+    KeyboardBlurred();
+    KeyboardFocused();
+};

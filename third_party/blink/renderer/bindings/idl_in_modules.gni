@@ -1293,8 +1293,8 @@ if (is_cobalt) {
             "//third_party/blink/renderer/modules/cobalt/h5vcc_accessibility/text_to_speech_change_event.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_accessibility/text_to_speech_change_event_init.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_experiments/h_5_vcc_experiments.idl",
-            "//third_party/blink/renderer/modules/cobalt/h5vcc_metrics/metrics_event.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_metrics/h_5_vcc_metrics.idl",
+            "//third_party/blink/renderer/modules/cobalt/h5vcc_metrics/metrics_event.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_platform_service/h_5_vcc_platform_service.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_runtime/deep_link_event.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_runtime/h_5_vcc_runtime.idl",
@@ -1306,6 +1306,21 @@ if (is_cobalt) {
             "//third_party/blink/renderer/modules/cobalt/window_h_5_vcc.idl",
           ],
           "abspath")
+
+  # In C25, window.cc would dynamically check if the on-screen keyboard
+  # extension was supported and only add the onScreenKeyboard object if so.
+  # In Chrobalt, this is gated by the `enable_native_on_screen_keyboard` GN
+  # flag.
+  # TODO: b/513162150 - Figure out if there should be a way to determine at
+  # runtime if this API should be exposed.
+  if (enable_native_on_screen_keyboard) {
+    static_idl_files_in_modules += get_path_info(
+            [
+              "//third_party/blink/renderer/modules/cobalt/on_screen_keyboard/window_on_screen_keyboard.idl",
+              "//third_party/blink/renderer/modules/cobalt/on_screen_keyboard/on_screen_keyboard.idl",
+            ],
+            "abspath")
+  }
 
   if (use_starboard_media) {
     static_idl_files_in_modules += get_path_info(

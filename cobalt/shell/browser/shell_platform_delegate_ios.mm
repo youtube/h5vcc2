@@ -14,13 +14,22 @@
 
 #include "cobalt/shell/browser/shell_platform_delegate.h"
 
+#include <CoreGraphics/CGGeometry.h>
+#import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
+#include <dispatch/dispatch.h>
 
 #include "base/containers/contains.h"
 #include "base/files/file.h"
+#include "base/functional/callback_helpers.h"
 #include "base/strings/sys_string_conversions.h"
 #include "base/trace_event/trace_config.h"
+#include "cobalt/browser/on_screen_keyboard/platform_on_screen_keyboard.h"
+#include "cobalt/browser/on_screen_keyboard/public/mojom/on_screen_keyboard.mojom.h"
 #include "cobalt/shell/app/resource.h"
+#import "cobalt/shell/browser/on_screen_keyboard/tvos/cobalt_search_container_view_controller.h"
+#import "cobalt/shell/browser/on_screen_keyboard/tvos/cobalt_search_controller.h"
+#import "cobalt/shell/browser/on_screen_keyboard/tvos/cobalt_search_results_controller.h"
 #include "cobalt/shell/browser/shell.h"
 #include "content/public/browser/render_widget_host_view.h"
 #include "content/public/browser/visibility.h"
@@ -32,6 +41,7 @@
 #include "third_party/perfetto/include/perfetto/tracing/tracing.h"
 #include "third_party/skia/include/core/SkColor.h"
 #include "ui/display/screen.h"
+#include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/native_widget_types.h"
 
 #if !defined(__has_feature) || !__has_feature(objc_arc)
@@ -74,9 +84,90 @@ const char kAllTracingCategories[] = "*";
 
 @end
 
-@interface ContentShellWindowDelegate : UIViewController <UITextFieldDelegate> {
+// Protocol used by ContentShellWindowDelegate to notify that certain on-screen
+// keyboard events have occurred.
+@protocol PlatformOnScreenKeyboardDelegate <NSObject>
+
+- (void)keyboardBlurred;
+
+- (void)keyboardFocused;
+
+- (void)keyboardTextChanged:(NSString*)text;
+
+@end
+
+// Translates the notifications sent by PlatformOnScreenKeyboardDelegate to
+// Chromium callbacks.
+@interface OnScreenKeyboardObserver
+    : NSObject <PlatformOnScreenKeyboardDelegate>
+
+- (instancetype)initWithCallbacks:(base::RepeatingClosure)blurredCallback
+                  focusedCallback:(base::RepeatingClosure)focusedCallback
+              textChangedCallback:
+                  (base::RepeatingCallback<void(const std::string&)>)
+                      textChangedCallback;
+
+@end
+
+@implementation OnScreenKeyboardObserver {
+ @private
+  base::RepeatingClosure _blurredCallback;
+  base::RepeatingClosure _focusedCallback;
+  base::RepeatingCallback<void(const std::string&)> _textChangedCallback;
+}
+
+- (instancetype)initWithCallbacks:(base::RepeatingClosure)blurredCallback
+                  focusedCallback:(base::RepeatingClosure)focusedCallback
+              textChangedCallback:
+                  (base::RepeatingCallback<void(const std::string&)>)
+                      textChangedCallback {
+  if (!(self = [super init])) {
+    return nil;
+  }
+  _blurredCallback = std::move(blurredCallback);
+  _focusedCallback = std::move(focusedCallback);
+  _textChangedCallback = std::move(textChangedCallback);
+  return self;
+}
+
+#pragma mark - PlatformOnScreenKeyboardDelegate
+
+- (void)keyboardBlurred {
+  _blurredCallback.Run();
+}
+
+- (void)keyboardFocused {
+  _focusedCallback.Run();
+}
+
+- (void)keyboardTextChanged:(NSString*)text {
+  _textChangedCallback.Run(base::SysNSStringToUTF8(text));
+}
+
+@end
+
+@interface ContentShellWindowDelegate
+    : UIViewController <UITextFieldDelegate,
+                        UISearchResultsUpdating,
+                        CobaltSearchControllerPressesDelegate,
+                        CobaltSearchResultsControllerFocusDelegate,
+                        CobaltSearchContainerViewControllerDelegate> {
  @private
   raw_ptr<content::Shell> _shell;
+
+  CobaltSearchResultsController* _searchResultsViewController;
+  CobaltSearchController* _searchController;
+  CobaltSearchContainerViewController* _searchContainerViewController;
+  enum class SearchKeyboardVisibilityState {
+    // The native search keyboard is not being shown.
+    kHidden,
+    // The native search keyboard is being created but is not visible yet.
+    kCreating,
+    // The native search keyboard has been created and is visible.
+    kVisible,
+  } _keyboardVisibilityState;
+  void (^_showOnScreenKeyboardCompletionHandler)(void);
+  void (^_focusOnScreenKeyboardCompletionHandler)(void);
 }
 // Toolbar containing navigation buttons and |urlField|.
 @property(nonatomic, strong) UIStackView* toolbarBackgroundView;
@@ -92,10 +183,15 @@ const char kAllTracingCategories[] = "*";
 @property(nonatomic, strong) UIButton* menuButton;
 // Text field used for navigating to URLs.
 @property(nonatomic, strong) UITextField* urlField;
+// Container for the native search UI elements.
+@property(nonatomic, strong) UIView* searchView;
 // Container for |webView|.
 @property(nonatomic, strong) UIView* contentView;
 // Manages tracing and tracing state.
 @property(nonatomic, strong) TracingHandler* tracingHandler;
+// PlatformOnScreenKeyboardDelegate implementation.
+@property(nonatomic, weak) id<PlatformOnScreenKeyboardDelegate>
+    platformOnScreenKeyboardDelegate;
 
 + (UIColor*)backgroundColorDefault;
 + (UIColor*)backgroundColorTracing;
@@ -117,6 +213,7 @@ const char kAllTracingCategories[] = "*";
 
 @implementation ContentShellWindowDelegate
 @synthesize backButton = _backButton;
+@synthesize searchView = _searchView;
 @synthesize contentView = _contentView;
 @synthesize urlField = _urlField;
 @synthesize forwardButton = _forwardButton;
@@ -251,6 +348,17 @@ const char kAllTracingCategories[] = "*";
     [_contentView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
   ]];
 
+  // The native search bar, shown only in the main search page.
+  // SBDGetApplication().onScreenKeyboardManager = self;
+  _searchView = [[UIView alloc] initWithFrame:_contentView.bounds];
+  _searchView.accessibilityIdentifier = @"Search Container";
+  // _searchContainer.backgroundColor = [UIColor redColor];
+  // Ensure the view expands when _contentView is resized (using constraints
+  // also works).
+  _searchView.autoresizingMask =
+      UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
+  [_contentView addSubview:_searchView];
+
   // UIView that will contain the video rendered by SbPlayer. The non-tvOS code
   // path renders the video as an underlay, so add it before the web contents
   // view. Each video will be rendered as a subview of this view.
@@ -269,6 +377,7 @@ const char kAllTracingCategories[] = "*";
 - (id)initWithShell:(content::Shell*)shell {
   if ((self = [super init])) {
     _shell = shell;
+    _keyboardVisibilityState = SearchKeyboardVisibilityState::kHidden;
   }
   return self;
 }
@@ -466,6 +575,357 @@ const char kAllTracingCategories[] = "*";
   return alertController;
 }
 
+#pragma mark - SBDOnScreenKeyboardManager
+
+- (void)showOnScreenKeyboard:(NSString*)searchText
+               keyboardStyle:(UIUserInterfaceStyle)keyboardStyle
+               colorOverride:(UIColor*)colorOverride
+           completionHandler:(void (^)())completionHandler {
+  if (_keyboardVisibilityState != SearchKeyboardVisibilityState::kHidden) {
+    // From C25 (b/182076373):
+    // For some languages such as Hebrew, setting the search bar text to the
+    // same value may result in the text being cleared. Work around this bug.
+    if (![_searchController.searchBar.text isEqualToString:searchText]) {
+      _searchController.searchBar.text = searchText;
+    }
+    completionHandler();
+    return;
+  }
+
+  // This block comes from C25. The original commit has no associated bug and
+  // only mentions "make sure show/hide are always done even if when the event
+  // is originally received the keyboard isBeingPresented or Dismissed".
+  if (_searchController.isBeingPresented ||
+      _searchController.isBeingDismissed) {
+    __weak __typeof(self) weakself = self;
+    dispatch_after(
+        dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)),
+        dispatch_get_main_queue(), ^{
+          ContentShellWindowDelegate* strongself = weakself;
+          if (!strongself) {
+            return;
+          }
+          [strongself showOnScreenKeyboard:searchText
+                             keyboardStyle:keyboardStyle
+                             colorOverride:colorOverride
+                         completionHandler:completionHandler];
+        });
+    return;
+  }
+
+  _keyboardVisibilityState = SearchKeyboardVisibilityState::kCreating;
+  _showOnScreenKeyboardCompletionHandler = completionHandler;
+
+  _searchResultsViewController = [[CobaltSearchResultsController alloc] init];
+  _searchResultsViewController.focusDelegate = self;
+  _searchController = [[CobaltSearchController alloc]
+      initWithSearchResultsController:_searchResultsViewController];
+  _searchController.searchBar.text = searchText;
+  _searchController.obscuresBackgroundDuringPresentation = NO;
+  _searchController.hidesNavigationBarDuringPresentation = NO;
+  _searchController.overrideUserInterfaceStyle = keyboardStyle;
+  _searchController.view.backgroundColor = colorOverride;
+  _searchController.searchResultsUpdater = self;
+  _searchController.menuKeyPressDelegate = self;
+
+  _searchContainerViewController = [[CobaltSearchContainerViewController alloc]
+      initWithSearchController:_searchController];
+  _searchContainerViewController.delegate = self;
+
+  [self addChildViewController:_searchContainerViewController];
+  [_searchContainerViewController didMoveToParentViewController:self];
+  [_searchView addSubview:_searchContainerViewController.view];
+  _searchController.active = YES;
+}
+
+- (void)hideOnScreenKeyboard {
+  if (_keyboardVisibilityState == SearchKeyboardVisibilityState::kHidden) {
+    return;
+  }
+
+  // This block comes from C25. The original commit has no associated bug and
+  // only mentions "make sure show/hide are always done even if when the event
+  // is originally received the keyboard isBeingPresented or Dismissed".
+  if (_searchController.isBeingPresented ||
+      _searchController.isBeingDismissed) {
+    __weak __typeof(self) weakself = self;
+    dispatch_after(
+        dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.1 * NSEC_PER_SEC)),
+        dispatch_get_main_queue(), ^{
+          ContentShellWindowDelegate* strongself = weakself;
+          if (!strongself) {
+            return;
+          }
+          [strongself hideOnScreenKeyboard];
+        });
+    return;
+  }
+
+  _keyboardVisibilityState = SearchKeyboardVisibilityState::kHidden;
+  [_searchContainerViewController.view removeFromSuperview];
+  _searchController.active = NO;
+  [_searchContainerViewController willMoveToParentViewController:nil];
+  [_searchContainerViewController removeFromParentViewController];
+}
+
+- (void)focusOnScreenKeyboard:(void (^)(void))completionHandler {
+  if (_keyboardVisibilityState == SearchKeyboardVisibilityState::kHidden) {
+    completionHandler();
+    return;
+  } else if (_keyboardVisibilityState ==
+             SearchKeyboardVisibilityState::kCreating) {
+    _focusOnScreenKeyboardCompletionHandler = completionHandler;
+    return;
+  }
+
+  // Disable user interaction in the web contents view just while updating focus
+  // so that it switches back to the keyboard view.
+  _shell->web_contents()->GetNativeView().Get().userInteractionEnabled = NO;
+  [self setNeedsFocusUpdate];
+  [self updateFocusIfNeeded];
+  _shell->web_contents()->GetNativeView().Get().userInteractionEnabled = YES;
+
+  completionHandler();
+}
+
+- (CGRect)boundingRect {
+  if (_keyboardVisibilityState != SearchKeyboardVisibilityState::kVisible) {
+    return CGRectMake(0, 0, 0, 0);
+  }
+
+  // From C25:
+  // UISearchControl has three different keyboard layouts:
+  //
+  // case 1: Siri remote.
+  // +-------------------------------+
+  // | Searchbar (shows search text) |
+  // +-------------------------------+
+  // |           Keyboard            |
+  // +-------------------------------+
+  // |        Search Results         |
+  // |             ...               |
+  // +-------------------------------+
+  //
+  // case 2: Non-Siri remote, with LTR language in device's general
+  // setting.
+  // +-------------------------------+
+  // | Searchbar (shows search text) |
+  // +--------------+----------------+
+  // |   Keyboard   |     Search     |
+  // |              |     Results    |
+  // |     ...      |       ...      |
+  // +--------------+----------------+
+  //
+  // case 3: Non-Siri remote, with RTL language in device's general
+  // setting.
+  // +-------------------------------+
+  // | Searchbar (shows search text) |
+  // +--------------+----------------+
+  // |   Search     |     Keyboard   |
+  // |   Results    |                |
+  // |     ...      |       ...      |
+  // +--------------+----------------+
+
+  UIView* resultsView = _searchResultsViewController.view;
+  CGRect resultsFrameInMainScreen =
+      [resultsView convertRect:resultsView.frame
+             toCoordinateSpace:UIScreen.mainScreen.coordinateSpace];
+
+  // Infer the keyboard frame based on the search result's frame.
+  CGSize screenSize = UIScreen.mainScreen.bounds.size;
+  CGRect keyboardFrame;
+  CGFloat resultsFrameLeftPadding = resultsFrameInMainScreen.origin.x;
+  CGFloat resultsFrameRightPadding = screenSize.width -
+                                     resultsFrameInMainScreen.origin.x -
+                                     resultsFrameInMainScreen.size.width;
+
+  if (resultsFrameInMainScreen.origin.x == 0) {
+    // This is the horizontal keyboard layout illustrated in case 1.
+    // Specify keyboard frame as including keyboard and search bar.
+    keyboardFrame =
+        CGRectMake(0, 0, screenSize.width, resultsFrameInMainScreen.origin.y);
+  } else {
+    if (resultsFrameLeftPadding > resultsFrameRightPadding) {
+      // This is the LTR grid keyboard layout illustrated in case 2.
+      // Specify keyboard frame as only the keyboard area. This allows the
+      // caller to infer the space taken up by the search bar.
+      keyboardFrame =
+          CGRectMake(0, resultsFrameInMainScreen.origin.y,
+                     resultsFrameInMainScreen.origin.x,
+                     screenSize.height - resultsFrameInMainScreen.origin.y);
+    } else {
+      // This is the RTL grid keyboard layout illustrated in case 3.
+      // Specify keyboard frame as only the keyboard area. This allows the
+      // caller to infer the space taken up by the search bar.
+      keyboardFrame =
+          CGRectMake(resultsFrameInMainScreen.origin.x +
+                         resultsFrameInMainScreen.size.width,
+                     resultsFrameInMainScreen.origin.y,
+                     screenSize.width - resultsFrameInMainScreen.size.width -
+                         resultsFrameInMainScreen.origin.x,
+                     screenSize.height - resultsFrameInMainScreen.origin.y);
+    }
+  }
+
+  // Convert from points to pixels.
+  CGFloat scale = UIScreen.mainScreen.scale;
+  return CGRectMake(static_cast<int>(keyboardFrame.origin.x * scale),
+                    static_cast<int>(keyboardFrame.origin.y * scale),
+                    static_cast<int>(keyboardFrame.size.width * scale),
+                    static_cast<int>(keyboardFrame.size.height * scale));
+}
+
+- (BOOL)isShowingKeyboard {
+  return _keyboardVisibilityState != SearchKeyboardVisibilityState::kHidden;
+}
+
+#pragma mark - CobaltSearchControllerPressesDelegate
+
+- (void)searchControllerMenuPressesBegan:(NSSet<UIPress*>*)presses
+                               withEvent:(UIPressesEvent*)event {
+  if (auto* rwhv = _shell->web_contents()->GetRenderWidgetHostView()) {
+    UIView* native_rwhv = rwhv->GetNativeView().Get();
+    [native_rwhv pressesBegan:presses withEvent:event];
+  }
+}
+
+- (void)searchControllerMenuPressesEnded:(NSSet<UIPress*>*)presses
+                               withEvent:(UIPressesEvent*)event {
+  if (auto* rwhv = _shell->web_contents()->GetRenderWidgetHostView()) {
+    UIView* native_rwhv = rwhv->GetNativeView().Get();
+    [native_rwhv pressesEnded:presses withEvent:event];
+  }
+}
+
+#pragma mark - CobaltSearchResultsControllerFocusDelegate
+
+- (void)resultsDidLoseFocus {
+  LOG(ERROR) << __func__;
+  [_platformOnScreenKeyboardDelegate keyboardFocused];
+}
+
+- (void)resultsDidReceiveFocus {
+  LOG(ERROR) << __func__;
+  [_platformOnScreenKeyboardDelegate keyboardBlurred];
+}
+
+#pragma mark - UISearchResultsUpdating
+
+- (void)updateSearchResultsForSearchController:
+    (UISearchController*)searchController {
+  if (_keyboardVisibilityState == SearchKeyboardVisibilityState::kHidden) {
+    return;
+  }
+
+  if (searchController.searchBar.text.length == 0) {
+    return;
+  }
+
+  // From C25 (b/185122939):
+  // Debouncing searchResults to avoid sending too many intermediate input
+  // events to Kabuki and a bug where voice search queries are cleared.
+  static constexpr NSTimeInterval kSearchResultDebounceTime = 0.5;
+  static NSDate* searchResultLastDate;
+  static NSString* searchResultLastString;
+  searchResultLastDate = [NSDate date];
+  __weak id<PlatformOnScreenKeyboardDelegate> weakDelegate =
+      _platformOnScreenKeyboardDelegate;
+  dispatch_after(
+      dispatch_time(DISPATCH_TIME_NOW,
+                    (int64_t)(kSearchResultDebounceTime * NSEC_PER_SEC)),
+      dispatch_get_main_queue(), ^{
+        if (-searchResultLastDate.timeIntervalSinceNow <=
+            kSearchResultDebounceTime) {
+          return;
+        }
+        NSString* searchString = searchController.searchBar.text;
+        if (searchResultLastString &&
+            [searchResultLastString isEqualToString:searchString]) {
+          return;
+        }
+        searchResultLastString = searchString;
+        LOG(ERROR) << __func__;
+        [weakDelegate keyboardTextChanged:[searchString copy]];
+      });
+}
+
+#pragma mark - CobaltSearchContainerViewControllerDelegate
+
+- (void)searchDidAppear {
+  [_contentView bringSubviewToFront:_searchView];
+  [self setNeedsFocusUpdate];
+  [self updateFocusIfNeeded];
+
+  UIView* web_contents_view = _shell->web_contents()->GetNativeView().Get();
+  [_searchResultsViewController.view addSubview:web_contents_view];
+  // Use constraints instead of an autoresizing mask for more control:
+  // `web_contents_view`'s trailingAnchor needs to follow
+  // `_searchController.view`'s, not `_searchResultsViewController.view`s.
+  //
+  // This makes a difference when using the system keyboard in grid mode (either
+  // because a non-Siri remote is being used or because this was specifically
+  // chosen in system settings), as in this case we follow C25's behavior of
+  // extending the web contents beyond the area allocated to the search results
+  // and making it reach the end of the page's width, in both RTL and LTR modes.
+  web_contents_view.translatesAutoresizingMaskIntoConstraints = NO;
+  [NSLayoutConstraint activateConstraints:@[
+    [web_contents_view.topAnchor
+        constraintEqualToAnchor:_searchResultsViewController.view.topAnchor],
+    [web_contents_view.leadingAnchor
+        constraintEqualToAnchor:_searchResultsViewController.view
+                                    .leadingAnchor],
+    [web_contents_view.trailingAnchor
+        constraintEqualToAnchor:_searchController.view.trailingAnchor],
+    [web_contents_view.bottomAnchor
+        constraintEqualToAnchor:_searchResultsViewController.view.bottomAnchor],
+  ]];
+
+  if (auto* rwhv = _shell->web_contents()->GetRenderWidgetHostView()) {
+    rwhv->SetAllowAutomaticViewBoundsUpdates(false);
+  }
+
+  _keyboardVisibilityState = SearchKeyboardVisibilityState::kVisible;
+  if (_showOnScreenKeyboardCompletionHandler) {
+    _showOnScreenKeyboardCompletionHandler();
+    _showOnScreenKeyboardCompletionHandler = nil;
+  }
+  if (_focusOnScreenKeyboardCompletionHandler) {
+    _focusOnScreenKeyboardCompletionHandler();
+    _focusOnScreenKeyboardCompletionHandler = nil;
+  }
+}
+
+- (void)searchDidDisappear {
+  [_contentView sendSubviewToBack:_searchView];
+
+  [self setNeedsFocusUpdate];
+  [self updateFocusIfNeeded];
+
+  UIView* web_contents_view = _shell->web_contents()->GetNativeView().Get();
+  // Although this should be similar to the setup in -viewDidLoad, using the
+  // original autoresize mask does not seem to have the desired effect (maybe
+  // because `_contentView` itself is not resized in this case).
+  web_contents_view.translatesAutoresizingMaskIntoConstraints = NO;
+  [_contentView addSubview:web_contents_view];
+  [NSLayoutConstraint activateConstraints:@[
+    [web_contents_view.topAnchor
+        constraintEqualToAnchor:_contentView.topAnchor],
+    [web_contents_view.leadingAnchor
+        constraintEqualToAnchor:_contentView.leadingAnchor],
+    [web_contents_view.trailingAnchor
+        constraintEqualToAnchor:_contentView.trailingAnchor],
+    [web_contents_view.bottomAnchor
+        constraintEqualToAnchor:_contentView.bottomAnchor],
+  ]];
+
+  if (auto* rwhv = _shell->web_contents()->GetRenderWidgetHostView()) {
+    rwhv->SetAllowAutomaticViewBoundsUpdates(true);
+  }
+
+  _searchResultsViewController = nil;
+  _keyboardVisibilityState = SearchKeyboardVisibilityState::kHidden;
+}
+
 @end
 
 @implementation TracingHandler
@@ -551,9 +1011,155 @@ const char kAllTracingCategories[] = "*";
 
 namespace content {
 
+namespace {
+
+// Computes the default background color for the on-screen keyboard by first
+// trying to read it from the bundle and then falling back to a hardcoded
+// default.
+//
+// Note: this logic was copied from C25. In practice, Kabuki always ends up
+// overriding the background color to a specific value.
+UIColor* defaultKeyboardBackgroundColor() {
+  static UIColor* background_color;
+  if (!background_color) {
+    NSString* colorFromPList = [[NSBundle mainBundle]
+        objectForInfoDictionaryKey:@"YTOSKBackgroundColor"];
+    if (!colorFromPList) {
+      colorFromPList = [[NSBundle mainBundle]
+          objectForInfoDictionaryKey:@"YTApplicationBackgroundColor"];
+    }
+    NSArray<NSString*>* colorComponents =
+        [colorFromPList componentsSeparatedByString:@", "];
+    if (colorComponents.count == 4) {
+      background_color =
+          [UIColor colorWithRed:[colorComponents[0] floatValue] / 255.0
+                          green:[colorComponents[1] floatValue] / 255.0
+                           blue:[colorComponents[2] floatValue] / 255.0
+                          alpha:[colorComponents[3] floatValue]];
+    } else {
+      background_color = [UIColor colorWithRed:30 / 255.0
+                                         green:30 / 255.0
+                                          blue:30 / 255.0
+                                         alpha:1];
+    }
+  }
+  return background_color;
+}
+
+class PlatformOnScreenKeyboardTvos final
+    : public on_screen_keyboard::PlatformOnScreenKeyboard {
+ public:
+  explicit PlatformOnScreenKeyboardTvos(
+      ContentShellWindowDelegate* window_delegate)
+      : window_delegate_(window_delegate) {
+    on_screen_keyboard_observer_ = [[OnScreenKeyboardObserver alloc]
+          initWithCallbacks:base::BindRepeating(
+                                &PlatformOnScreenKeyboardTvos::KeyboardBlurred,
+                                GetWeakPtr())
+            focusedCallback:base::BindRepeating(
+                                &PlatformOnScreenKeyboardTvos::KeyboardFocused,
+                                GetWeakPtr())
+        textChangedCallback:base::BindRepeating(&PlatformOnScreenKeyboardTvos::
+                                                    KeyboardTextChanged,
+                                                GetWeakPtr())];
+    window_delegate_.platformOnScreenKeyboardDelegate =
+        on_screen_keyboard_observer_;
+  }
+
+  ~PlatformOnScreenKeyboardTvos() override {
+    if (window_delegate_.platformOnScreenKeyboardDelegate ==
+        on_screen_keyboard_observer_) {
+      window_delegate_.platformOnScreenKeyboardDelegate = nil;
+    }
+  }
+
+  // on_screen_keyboard::PlatformOnScreenKeyboardTvos overrides.
+  void Show(const std::string& text,
+            on_screen_keyboard::mojom::KeyboardOptionsPtr options,
+            base::OnceClosure done_callback) override {
+    UIUserInterfaceStyle theme_override = UIUserInterfaceStyleUnspecified;
+    if (options->theme_override.has_value()) {
+      theme_override =
+          *options->theme_override ==
+                  on_screen_keyboard::mojom::ThemeOverride::kDarkTheme
+              ? UIUserInterfaceStyleDark
+              : UIUserInterfaceStyleLight;
+    }
+    UIColor* color_override = defaultKeyboardBackgroundColor();
+    if (options->background_color) {
+      color_override =
+          [UIColor colorWithRed:options->background_color->red / 255.0
+                          green:options->background_color->green / 255.0
+                           blue:options->background_color->blue / 255.0
+                          alpha:1];
+    }
+
+    [window_delegate_
+        showOnScreenKeyboard:base::SysUTF8ToNSString(text)
+               keyboardStyle:theme_override
+               colorOverride:color_override
+           completionHandler:base::CallbackToBlock(std::move(done_callback))];
+  }
+
+  void Hide(base::OnceClosure done_callback) override {
+    [window_delegate_ hideOnScreenKeyboard];
+    std::move(done_callback).Run();
+  }
+
+  void Focus(base::OnceClosure done_callback) override {
+    [window_delegate_
+        focusOnScreenKeyboard:base::CallbackToBlock(std::move(done_callback))];
+  }
+
+  void Blur(base::OnceClosure done_callback) override {
+    // TODO: b/513162149 - This method was present in C25 and added here for
+    // backward compatibility. The current implementation is empty because not
+    // only is it not called from Kabuki but it is not entirely clear what
+    // should happen here given how the tvOS search keyboard is presented on the
+    // screen: if this is called from Kabuki, the web view already has focus
+    // anyway.
+    std::move(done_callback).Run();
+  }
+
+  void UpdateSuggestions(const std::vector<std::string>& suggestions,
+                         base::OnceClosure done_callback) override {
+    // Not supported on tvOS.
+    std::move(done_callback).Run();
+  }
+
+  void SetKeepFocusOnKeyboard(bool keep_focus) override {
+    // Do nothing on tvOS. Focus handling works as expected without having to
+    // force it to be on the keyboard (and having to deal with
+    // -preferredFocusEnvironments when focus() and blur() are called).
+  }
+
+  void SupportsSuggestions(
+      base::OnceCallback<void(bool)> done_callback) override {
+    std::move(done_callback).Run(false);
+  }
+
+  void IsBeingShown(base::OnceCallback<void(bool)> done_callback) override {
+    std::move(done_callback).Run(window_delegate_.isShowingKeyboard);
+  }
+
+  void BoundingRect(
+      base::OnceCallback<void(const gfx::RectF&)> done_callback) override {
+    std::move(done_callback).Run(gfx::RectF(window_delegate_.boundingRect));
+  }
+
+ private:
+  OnScreenKeyboardObserver* __strong on_screen_keyboard_observer_;
+
+  ContentShellWindowDelegate* __weak window_delegate_;
+};
+
+}  // namespace
+
 struct ShellPlatformDelegate::ShellData {
   UIWindow* window;
   bool fullscreen = false;
+  std::unique_ptr<on_screen_keyboard::PlatformOnScreenKeyboard>
+      on_screen_keyboard;
 };
 
 struct ShellPlatformDelegate::PlatformData {};
@@ -729,6 +1335,19 @@ bool ShellPlatformDelegate::IsFullscreenForTabOrPending(
   DCHECK(base::Contains(shell_data_map_, shell));
   auto iter = shell_data_map_.find(shell);
   return iter->second.fullscreen;
+}
+
+base::WeakPtr<on_screen_keyboard::PlatformOnScreenKeyboard>
+ShellPlatformDelegate::GetOrCreatePlatformOnScreenKeyboard(Shell* shell) {
+  DCHECK(base::Contains(shell_data_map_, shell));
+  ShellData& shell_data = shell_data_map_[shell];
+  if (!shell_data.on_screen_keyboard) {
+    shell_data.on_screen_keyboard =
+        std::make_unique<PlatformOnScreenKeyboardTvos>(
+            static_cast<ContentShellWindowDelegate*>(
+                shell_data.window.rootViewController));
+  }
+  return shell_data.on_screen_keyboard->GetWeakPtr();
 }
 
 }  // namespace content

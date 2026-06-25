@@ -99,5 +99,6 @@
     "H5vccAccessibility",
     "H5vccMetrics",
     "H5vccRuntime",
+    "OnScreenKeyboard",
   ],
 }

@@ -33,5 +33,9 @@ blink_modules_sources("h_5_vcc") {
     "//third_party/blink/renderer/modules/cobalt/h5vcc_storage",
     "//third_party/blink/renderer/modules/cobalt/h5vcc_system",
     "//third_party/blink/renderer/modules/cobalt/h5vcc_updater",
+
+    # //third_party/blink/renderer/modules/cobalt/on_screen_keyboard is not
+    # part of this list because it is not exposed as part of the window.h5vcc
+    # object.
   ]
 }

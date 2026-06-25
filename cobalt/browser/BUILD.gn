@@ -78,6 +78,7 @@ source_set("browser") {
     "//cobalt/browser/performance",
     "//cobalt/browser/performance/public/mojom",
     "//cobalt/browser/user_agent",
+    "//cobalt/build/configs:buildflags",
     "//cobalt/common/features",
     "//cobalt/media/service",
     "//cobalt/media/service/mojom",
@@ -116,6 +117,13 @@ source_set("browser") {
 
   if (is_starboard) {
     deps += [ "//ui/ozone/platform/starboard" ]
+  }
+
+  if (enable_native_on_screen_keyboard) {
+    deps += [
+      "//cobalt/browser/on_screen_keyboard",
+      "//cobalt/browser/on_screen_keyboard/public/mojom",
+    ]
   }
 }
 

@@ -1,0 +1,76 @@
+// Copyright 2017 The Cobalt Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Custom API for hiding, showing, focusing, blurring, and receiving input
+// from an on screen keyboard.
+//
+// This IDL definition was imported almost verbatim from C25:
+// https://github.com/youtube/cobalt/blob/25.lts.1%2B/cobalt/dom/on_screen_keyboard.idl
+// with minor adjustments for Blink in the extended attributes and replacing
+// DOMRect with DOMRectReadOnly for boundingRect.
+
+[
+    Exposed=Window,
+    SecureContext
+]
+interface OnScreenKeyboard : EventTarget {
+  [CallWith=ScriptState, RaisesException]
+  Promise<undefined> show();
+
+  [CallWith=ScriptState, RaisesException]
+  Promise<undefined> hide();
+
+  [CallWith=ScriptState, RaisesException]
+  Promise<undefined> focus();
+
+  [CallWith=ScriptState, RaisesException]
+  Promise<undefined> blur();
+
+  [CallWith=ScriptState, RaisesException]
+  Promise<undefined> updateSuggestions(sequence<DOMString> suggestions);
+
+  readonly attribute boolean shown;
+
+  // If the keyboard has suggestions implemented. If false, calling
+  // updateSuggestions() will result in the promise being immediately rejected.
+  readonly attribute boolean suggestionsSupported;
+
+  // If the keyboard is shown, return bounding rectangle in screen pixel
+  // coordinates, otherwise return null.
+  readonly attribute DOMRectReadOnly? boundingRect;
+
+  // If the keyboard should keep focus, preventing focus from moving away from
+  // the keyboard due to user input.
+  attribute boolean keepFocus;
+
+  attribute DOMString data;
+
+  attribute EventHandler onshow;
+  attribute EventHandler onhide;
+  attribute EventHandler onfocus;
+  attribute EventHandler onblur;
+  attribute EventHandler oninput;
+
+  // This attribute overrides the background color of on-screen keyboard.
+  // The attribute is only fully supported on Apple TV at the moment.
+  // backgroundColor should be a string of below formats:
+  // 1. hex color notation #RRGGBB, e.g. "#0000FF".
+  // 2. rgb color notation rgb(R, G, B), e.g. "rgb(0, 0, 255)".
+  // Note that invalid strings are not rejected, they just have no effect.
+  attribute DOMString? backgroundColor;
+
+  // This attribute overrides the light theme of on-screen keyboard.
+  // The attribute is only fully supported on Apple TV at the moment.
+  attribute boolean? lightTheme;
+};

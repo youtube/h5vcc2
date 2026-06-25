@@ -21,3 +21,6 @@ enable_dav1d_decoder = false
 
 # TODO: b/376141256 - Decide if this flag is needed here or in .gclient file.
 chrome_pgo_phase = 0
+
+# Enable native on-screen keyboard support (for Kabuki's search page).
+enable_native_on_screen_keyboard = true

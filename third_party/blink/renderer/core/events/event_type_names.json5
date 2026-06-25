@@ -385,6 +385,7 @@
     "zoomlevelchange",
     // TODO(cobalt, b/400518318): "Extract Cobalt event to separate file"
     "deeplink",
+    "hide",
     "metrics",
     "texttospeechchange",
   ],

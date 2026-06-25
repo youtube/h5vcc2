@@ -22,6 +22,7 @@
 #include "base/containers/flat_map.h"
 #include "build/build_config.h"
 #include "cobalt/browser/lifecycle/cobalt_lifecycle_manager.h"
+#include "cobalt/build/configs/buildflags.h"
 #include "ui/gfx/geometry/size.h"
 #include "ui/gfx/native_widget_types.h"
 
@@ -34,6 +35,14 @@ class ViewsDelegate;
 #if BUILDFLAG(IS_APPLE)
 #include "ui/display/screen.h"
 #endif
+
+#if BUILDFLAG(ENABLE_NATIVE_ON_SCREEN_KEYBOARD)
+#include "base/memory/weak_ptr.h"
+
+namespace on_screen_keyboard {
+class PlatformOnScreenKeyboard;
+}  // namespace on_screen_keyboard
+#endif  // BUILDFLAG(ENABLE_NATIVE_ON_SCREEN_KEYBOARD)
 
 class GURL;
 
@@ -173,6 +182,11 @@ class ShellPlatformDelegate : public cobalt::CobaltLifecycleManagerObserver {
     skip_for_testing_ = skip_for_testing;
   }
 #endif
+
+#if BUILDFLAG(ENABLE_NATIVE_ON_SCREEN_KEYBOARD)
+  base::WeakPtr<on_screen_keyboard::PlatformOnScreenKeyboard>
+  GetOrCreatePlatformOnScreenKeyboard(Shell* shell);
+#endif  // BUILDFLAG(ENABLE_NATIVE_ON_SCREEN_KEYBOARD)
 
  protected:
   void CreatePlatformWindowInternal(Shell* shell,

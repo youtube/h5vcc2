@@ -1169,6 +1169,13 @@ void Shell::LoadProgressChanged(double progress) {
   }
 }
 
+#if BUILDFLAG(ENABLE_NATIVE_ON_SCREEN_KEYBOARD)
+base::WeakPtr<on_screen_keyboard::PlatformOnScreenKeyboard>
+Shell::GetPlatformOnScreenKeyboard() {
+  return g_platform->GetOrCreatePlatformOnScreenKeyboard(this);
+}
+#endif  // BUILDFLAG(ENABLE_NATIVE_ON_SCREEN_KEYBOARD)
+
 void Shell::ScheduleSwitchToMainWebContents() {
   if (splash_screen_start_time_.is_null()) {
     LOG(INFO) << "NativeSplash: Splash screen not loaded yet, waiting.";
