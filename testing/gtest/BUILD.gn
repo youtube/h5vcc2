@@ -80,6 +80,7 @@ source_set("gtest_main") {
     deps = [
       ":gtest",
       "//starboard:starboard_group",
+      "//starboard/testing:test_runner",
     ]
   } else {
     deps = [ "//third_party/googletest:gtest_main" ]
