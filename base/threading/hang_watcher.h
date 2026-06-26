@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <vector>
 
@@ -106,7 +107,12 @@ class BASE_EXPORT [[maybe_unused, nodiscard]] WatchHangsInScope {
 // within a single process. This instance must outlive all monitored threads.
 class BASE_EXPORT HangWatcher : public DelegateSimpleThread::Delegate {
  public:
+  enum class ThreadType;
+
 #if BUILDFLAG(IS_COBALT)
+  // Re-polls the delegate to update the cached configuration values (e.g. timeout, thread scopes).
+  static void UpdateConfiguration();
+
   // Delegate interface to allow embedders to control HangWatcher behavior.
   class BASE_EXPORT Delegate {
    public:
@@ -114,6 +120,13 @@ class BASE_EXPORT HangWatcher : public DelegateSimpleThread::Delegate {
     // Returns true if hang reporting should be enabled
     // potentially overriding default settings.
     virtual bool IsHangReportingEnabled() = 0;
+    // Returns a custom timeout for hang watching, or std::nullopt to use default.
+    virtual std::optional<base::TimeDelta> GetHangWatchTime();
+    // Returns a custom monitoring period, or std::nullopt to use default.
+    virtual std::optional<base::TimeDelta> GetHangWatchMonitoringPeriod();
+    // Returns whether crash dumps are enabled for a specific thread type.
+    // Returns std::nullopt if the embedder has no specific override.
+    virtual std::optional<bool> IsThreadDumpingEnabled(ThreadType thread_type);
   };
 #endif
 

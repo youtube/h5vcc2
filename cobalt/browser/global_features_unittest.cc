@@ -140,4 +140,30 @@ TEST_F(GlobalFeaturesTest,
   EXPECT_TRUE(active_config_data.empty());
 }
 
+TEST_F(GlobalFeaturesTest, SetAndGetSettingInt) {
+  ASSERT_NE(instance_, nullptr);
+  instance_->SetSettings("test_int", int64_t(42));
+  auto opt_val = instance_->GetSetting("test_int");
+  ASSERT_TRUE(opt_val.has_value());
+  const int64_t* val = std::get_if<int64_t>(&opt_val.value());
+  ASSERT_NE(val, nullptr);
+  EXPECT_EQ(*val, 42);
+}
+
+TEST_F(GlobalFeaturesTest, SetAndGetSettingString) {
+  ASSERT_NE(instance_, nullptr);
+  instance_->SetSettings("test_str", std::string("hello"));
+  auto opt_val = instance_->GetSetting("test_str");
+  ASSERT_TRUE(opt_val.has_value());
+  const std::string* val = std::get_if<std::string>(&opt_val.value());
+  ASSERT_NE(val, nullptr);
+  EXPECT_EQ(*val, "hello");
+}
+
+TEST_F(GlobalFeaturesTest, GetSettingNotFound) {
+  ASSERT_NE(instance_, nullptr);
+  auto opt_val = instance_->GetSetting("non_existent_key");
+  EXPECT_FALSE(opt_val.has_value());
+}
+
 }  // namespace cobalt

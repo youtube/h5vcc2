@@ -28,6 +28,10 @@ class CobaltHangWatcherDelegate : public base::HangWatcher::Delegate {
   static void Initialize();
 
   bool IsHangReportingEnabled() override;
+  std::optional<base::TimeDelta> GetHangWatchTime() override;
+  std::optional<base::TimeDelta> GetHangWatchMonitoringPeriod() override;
+  std::optional<bool> IsThreadDumpingEnabled(
+      base::HangWatcher::ThreadType thread_type) override;
 };
 
 }  // namespace browser

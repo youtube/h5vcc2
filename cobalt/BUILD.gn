@@ -313,6 +313,7 @@ test("cobalt_unittests") {
     "//cobalt/browser/global_features_unittest.cc",
     "//cobalt/browser/h5vcc_metrics/histogram_fetcher_test.cc",
     "//cobalt/browser/h5vcc_runtime/deep_link_manager_unittest.cc",
+    "//cobalt/browser/hang_watcher_delegate_impl_unittest.cc",
     "//cobalt/browser/metrics/cobalt_detailed_metrics_delegate_unittest.cc",
     "//cobalt/browser/metrics/cobalt_enabled_state_provider_test.cc",
     "//cobalt/browser/metrics/cobalt_metrics_log_uploader_test.cc",

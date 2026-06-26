@@ -81,6 +81,7 @@ class GlobalFeatures {
   using SettingValue = std::variant<std::string, int64_t>;
 
   const absl::flat_hash_map<std::string, SettingValue>& GetSettings() const;
+  std::optional<SettingValue> GetSetting(const std::string& key) const;
   void SetSettings(std::string_view key, const SettingValue& value);
 
  private:
