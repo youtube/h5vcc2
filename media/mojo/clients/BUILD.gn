@@ -148,6 +148,13 @@ source_set("clients") {
       "//cobalt/renderer",
     ]
   }
+
+  if (is_cobalt && use_starboard_url_player) {
+    sources += [
+      "starboard/url_player_renderer_client.cc",
+      "starboard/url_player_renderer_client.h",
+    ]
+  }
 }
 
 static_library("test_support") {

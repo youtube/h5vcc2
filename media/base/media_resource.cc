@@ -25,4 +25,10 @@ DemuxerStream* MediaResource::GetFirstStream(DemuxerStream::Type type) {
   return nullptr;
 }
 
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+GURL MediaResource::GetMediaUrl() const {
+  return GURL();
+}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+
 }  // namespace media

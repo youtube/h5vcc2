@@ -17,6 +17,7 @@
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "base/unguessable_token.h"
+#include "build/build_config.h"
 #include "media/base/buffering_state.h"
 #include "media/base/media_resource.h"
 #include "media/base/pipeline_status.h"
@@ -28,6 +29,7 @@
 #include "mojo/public/cpp/bindings/pending_receiver.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "mojo/public/cpp/bindings/self_owned_receiver.h"
+#include "url/gurl.h"
 
 namespace media {
 
@@ -67,6 +69,12 @@ class MEDIA_MOJO_EXPORT MojoRendererService final : public mojom::Renderer,
       std::optional<std::vector<mojo::PendingRemote<mojom::DemuxerStream>>>
           streams,
       InitializeCallback callback) final;
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  void InitializeWithUrl(
+      mojo::PendingAssociatedRemote<mojom::RendererClient> client,
+      const GURL& source_url,
+      InitializeWithUrlCallback callback) final;
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
   void InitializeWithBypassBridge(
       mojo::PendingAssociatedRemote<mojom::RendererClient> client,

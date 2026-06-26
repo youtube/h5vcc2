@@ -7,8 +7,10 @@
 
 #include <memory>
 
+#include "build/build_config.h"
 #include "media/base/renderer.h"
 #include "media/mojo/clients/mojo_renderer.h"
+#include "url/gurl.h"
 
 namespace media {
 
@@ -30,6 +32,11 @@ class MojoRendererWrapper : public Renderer {
   void Initialize(MediaResource* media_resource,
                   RendererClient* client,
                   PipelineStatusCallback init_cb) override;
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  void InitializeWithUrl(RendererClient* client,
+                         const GURL& source_url,
+                         PipelineStatusCallback init_cb);
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
   void SetCdm(CdmContext* cdm_context, CdmAttachedCB cdm_attached_cb) override;
   void SetLatencyHint(std::optional<base::TimeDelta> latency_hint) override;
   void Flush(base::OnceClosure flush_cb) override;

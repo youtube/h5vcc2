@@ -15,6 +15,7 @@
 #include "base/task/sequenced_task_runner.h"
 #include "base/time/default_tick_clock.h"
 #include "base/unguessable_token.h"
+#include "build/build_config.h"
 #include "media/base/demuxer_stream.h"
 #include "media/base/renderer.h"
 #include "media/base/time_delta_interpolator.h"
@@ -22,6 +23,7 @@
 #include "mojo/public/cpp/bindings/associated_receiver.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "mojo/public/cpp/bindings/remote.h"
+#include "url/gurl.h"
 
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
 #include "media/mojo/common/starboard/mojo_renderer_bypass_bridge.h"
@@ -65,6 +67,11 @@ class MojoRenderer : public Renderer, public mojom::RendererClient {
   void Initialize(MediaResource* media_resource,
                   media::RendererClient* client,
                   PipelineStatusCallback init_cb) override;
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  void InitializeWithUrl(media::RendererClient* client,
+                         const GURL& source_url,
+                         PipelineStatusCallback init_cb);
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
   void SetCdm(CdmContext* cdm_context, CdmAttachedCB cdm_attached_cb) override;
   void SetLatencyHint(std::optional<base::TimeDelta> latency_hint) override;
   void Flush(base::OnceClosure flush_cb) override;
