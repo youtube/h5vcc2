@@ -19,9 +19,11 @@
 
 namespace starboard {
 
+using RunTestsCallback = std::function<int(int, char**)>;
+
 // Executes `action`. On platforms requiring main loop pumping (e.g. tvOS),
 // dispatches `action` to a background thread while pumping the main loop.
-void RunTestBlockingAction(std::function<void()>&& action);
+void RunTestBlockingAction(std::function<void()> action);
 
 // Registers global test environments required by the platform (e.g. Android /
 // tvOS).
@@ -30,9 +32,7 @@ void RegisterPlatformTestEnvironments(int argc, char** argv);
 // Runs the platform test suite loop. On platforms requiring a custom app loop
 // launcher (e.g. tvOS UIApplicationMain), executes via the platform runner
 // hook.
-int RunPlatformTestSuite(int argc,
-                         char** argv,
-                         std::function<int(int, char**)> run_tests_fn);
+int RunPlatformTestSuite(int argc, char** argv, RunTestsCallback run_tests_cb);
 
 }  // namespace starboard
 

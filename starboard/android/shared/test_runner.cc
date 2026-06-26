@@ -21,7 +21,7 @@
 
 namespace starboard {
 
-void RunTestBlockingAction(std::function<void()>&& action) {
+void RunTestBlockingAction(std::function<void()> action) {
   action();
 }
 
@@ -30,10 +30,8 @@ void RegisterPlatformTestEnvironments(int argc, char** argv) {
       std::make_unique<starboard::StarboardTestEnvironment>().release());
 }
 
-int RunPlatformTestSuite(int argc,
-                         char** argv,
-                         std::function<int(int, char**)> run_tests_fn) {
-  return run_tests_fn(argc, argv);
+int RunPlatformTestSuite(int argc, char** argv, RunTestsCallback run_tests_cb) {
+  return run_tests_cb(argc, argv);
 }
 
 }  // namespace starboard

@@ -26,7 +26,7 @@
 
 namespace starboard {
 
-void RunTestBlockingAction(std::function<void()>&& action) {
+void RunTestBlockingAction(std::function<void()> action) {
   RunInBackgroundThreadAndWait(std::move(action));
 }
 
@@ -36,20 +36,18 @@ void RegisterPlatformTestEnvironments(int argc, char** argv) {
 }
 
 namespace {
-int RunTestsCallback(std::function<int(int, char**)> run_tests_fn,
-                     int argc,
-                     char** argv) {
-  return run_tests_fn(argc, argv);
+int RunTestsCallbackAdapter(RunTestsCallback run_tests_cb,
+                            int argc,
+                            char** argv) {
+  return run_tests_cb(argc, argv);
 }
 }  // namespace
 
-int RunPlatformTestSuite(int argc,
-                         char** argv,
-                         std::function<int(int, char**)> run_tests_fn) {
+int RunPlatformTestSuite(int argc, char** argv, RunTestsCallback run_tests_cb) {
   CHECK(base::CommandLine::InitializedForCurrentProcess() ||
         base::CommandLine::Init(argc, argv));
   base::InitIOSRunHook(
-      base::BindOnce(&RunTestsCallback, run_tests_fn, argc, argv));
+      base::BindOnce(&RunTestsCallbackAdapter, run_tests_cb, argc, argv));
   return base::RunTestsFromIOSApp();
 }
 
