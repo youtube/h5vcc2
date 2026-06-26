@@ -358,6 +358,7 @@ test("nplb") {
     "//starboard/shared/starboard/player:player_test_data",
     "//starboard/shared/starboard/player:video_dmp",
     "//starboard/testing:fake_graphics_context_provider",
+    "//starboard/testing:test_runner",
     "//testing/gmock",
     "//testing/gtest",
   ]

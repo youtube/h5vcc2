@@ -189,7 +189,10 @@ source_set("starboard_test_main") {
   testonly = true
   sources = [ "//starboard/common/test_main.cc" ]
   public_deps = [ "//testing/gtest" ]
-  deps = [ ":starboard_headers_only" ]
+  deps = [
+    ":starboard_headers_only",
+    "//starboard/testing:test_runner",
+  ]
 
   if (is_ios) {
     deps += [

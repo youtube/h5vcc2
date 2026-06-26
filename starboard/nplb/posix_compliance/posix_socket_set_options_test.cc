@@ -43,7 +43,7 @@ TEST_P(PosixSocketSetOptionsTest, TryThemAllTCP) {
   EXPECT_EQ(setsockopt(socket_fd, SOL_SOCKET, SO_KEEPALIVE, &true_val,
                        sizeof(true_val)),
             0);
-#if defined(__APPLE__)
+#if defined(TCP_KEEPALIVE)
   // In tvOS, TCP_KEEPIDLE and SOL_TCP are not available.
   // For reference:
   // https://stackoverflow.com/questions/15860127/how-to-configure-tcp-keepalive-under-mac-os-x

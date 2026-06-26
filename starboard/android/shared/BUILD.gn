@@ -395,6 +395,7 @@ static_library("test_support") {
 
   deps = [
     ":starboard_platform",
+    "//starboard/testing:test_runner",
     "//testing/gmock",
     "//testing/gtest",
     "//third_party/jni_zero:jni_zero",
@@ -407,6 +408,7 @@ static_library("test_support") {
     "fake_media_codec.h",
     "starboard_test_environment.cc",
     "starboard_test_environment.h",
+    "test_runner.cc",
   ]
 }
 

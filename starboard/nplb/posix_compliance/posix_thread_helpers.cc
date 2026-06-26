@@ -19,11 +19,9 @@
 #include <cstddef>
 
 #include "build/build_config.h"
+#include "starboard/common/thread_platform.h"
+#include "starboard/testing/test_runner.h"
 #include "testing/gtest/include/gtest/gtest.h"
-
-#if BUILDFLAG(IS_IOS_TVOS)
-#include "starboard/tvos/shared/run_in_background_thread_and_wait.h"
-#endif  // BUILDFLAG(IS_IOS_TVOS)
 
 namespace nplb {
 
@@ -98,11 +96,7 @@ void AbstractTestThread::Start() {
 }
 
 void AbstractTestThread::WaitForFinish() {
-#if BUILDFLAG(IS_IOS_TVOS)
-  RunInBackgroundThreadAndWait([this] { Join(); });
-#else
-  Join();
-#endif  // BUILDFLAG(IS_IOS_TVOS)
+  starboard::RunTestBlockingAction([this] { Join(); });
 }
 
 void AbstractTestThread::Join() {
@@ -113,11 +107,7 @@ void AbstractTestThread::Join() {
 
 // static
 void* AbstractTestThread::ThreadEntryPoint(void* ptr) {
-#if defined(__APPLE__)
-  pthread_setname_np("AbstractTestThread");
-#else
-  pthread_setname_np(pthread_self(), "AbstractTestThread");
-#endif
+  starboard::SetCurrentThreadName("AbstractTestThread");
   AbstractTestThread* this_ptr = static_cast<AbstractTestThread*>(ptr);
   this_ptr->Run();
   return NULL;
