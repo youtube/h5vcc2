@@ -103,10 +103,6 @@ declare_args() {
   # Enables optimizations on SSE compatible platforms.
   sb_enable_opus_sse = true
 
-  # Enables or disables the DIAL server that runs inside Cobalt.
-  # Note: Only enable if there's no system-wide DIAL support.
-  enable_in_app_dial = false
-
   # Sub-directory to copy license file to.
   cobalt_licenses_platform = "default"
 

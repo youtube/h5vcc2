@@ -16,4 +16,3 @@ import("//starboard/build/config/modular/configuration.gni")
 
 sabi_path = "//starboard/sabi/x64/sysv/sabi-v$sb_api_version.json"
 install_target_path = "//starboard/evergreen/x64/install_target.gni"
-enable_in_app_dial = true

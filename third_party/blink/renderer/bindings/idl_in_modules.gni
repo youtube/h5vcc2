@@ -1315,6 +1315,16 @@ if (is_cobalt) {
             ],
             "abspath")
   }
+
+  if (enable_in_app_dial) {
+    static_idl_files_in_modules += get_path_info(
+            [
+              "//third_party/blink/renderer/modules/cobalt/dial/dial_http_request.idl",
+              "//third_party/blink/renderer/modules/cobalt/dial/dial_http_response.idl",
+              "//third_party/blink/renderer/modules/cobalt/dial/dial_server.idl",
+            ],
+            "abspath")
+  }
 }
 
 if (!use_webrtc_peer_connection) {

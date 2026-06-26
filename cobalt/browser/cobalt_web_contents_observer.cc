@@ -21,6 +21,7 @@
 #include "base/timer/timer.h"
 #include "cobalt/browser/lifecycle/cobalt_lifecycle_manager.h"
 #include "cobalt/browser/lifecycle/public/mojom/cobalt_lifecycle.mojom.h"
+#include "cobalt/build/configs/buildflags.h"
 #include "content/public/browser/navigation_controller.h"
 #include "content/public/browser/navigation_handle.h"
 #include "content/public/browser/web_contents.h"
@@ -39,6 +40,10 @@
 #if BUILDFLAG(IS_STARBOARD)
 #include <atomic>
 #endif
+
+#if BUILDFLAG(ENABLE_IN_APP_DIAL)
+#include "cobalt/browser/dial/dial_service.h"
+#endif  // BUILDFLAG(ENABLE_IN_APP_DIAL)
 
 namespace cobalt {
 
@@ -180,6 +185,19 @@ void CobaltWebContentsObserver::DidFinishNavigation(
     platform_error_raised_count_ = 0;
 #endif
   }
+}
+
+void CobaltWebContentsObserver::OnVisibilityChanged(
+    content::Visibility visibility) {
+#if BUILDFLAG(ENABLE_IN_APP_DIAL)
+  // This is similar to the C25 behavior of restarting the DIAL servers when an
+  // Unfreeze event was sent by Starboard.
+  if (visibility == content::Visibility::HIDDEN) {
+    in_app_dial::DialService::GetInstance()->Stop();
+  } else {
+    in_app_dial::DialService::GetInstance()->Start();
+  }
+#endif
 }
 
 void CobaltWebContentsObserver::SetStartupDiagnosisInfo(const char* key,

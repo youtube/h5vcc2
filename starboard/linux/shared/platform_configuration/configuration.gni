@@ -34,7 +34,4 @@ sb_widevine_platform = "linux"
 platform_tests_path =
     "//starboard/linux/shared:starboard_platform_tests($starboard_toolchain)"
 
-# TODO(b/330364592): re-enable when in-app-dial is fixed.
-enable_in_app_dial = true
-
 sb_enable_cast_codec_tests = true

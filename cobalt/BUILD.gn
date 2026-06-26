@@ -339,6 +339,13 @@ test("cobalt_unittests") {
     ]
   }
 
+  if (enable_in_app_dial) {
+    sources += [
+      "//cobalt/browser/dial/dial_http_server_unittest.cc",
+      "//cobalt/browser/dial/dial_udp_server_unittest.cc",
+    ]
+  }
+
   public_deps = [ "//third_party/zlib/google:compression_utils" ]
 
   deps = [
@@ -409,5 +416,12 @@ test("cobalt_unittests") {
 
   if (use_ozone) {
     deps += [ "//ui/ozone:ozone_switches" ]
+  }
+
+  if (enable_in_app_dial) {
+    deps += [
+      "//cobalt/browser/dial",
+      "//net:test_support",
+    ]
   }
 }

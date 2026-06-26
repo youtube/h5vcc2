@@ -207,6 +207,9 @@ component("modules") {
       ]
     }
 
+    if (enable_in_app_dial) {
+      sub_modules += [ "//third_party/blink/renderer/modules/cobalt/dial" ]
+    }
   }
 
   if (!use_webrtc_peer_connection) {
@@ -821,11 +824,11 @@ source_set("unit_tests") {
       "//third_party/blink/renderer/modules/webgpu:unit_tests",
     ]
     sources -= [
+      "bluetooth/bluetooth_uuid_unittest.cc",
+      "nfc/nfc_proxy_test.cc",
       "xr/xr_rigid_transform_test.cc",
       "xr/xr_test_utils.cc",
       "xr/xr_view_test.cc",
-      "bluetooth/bluetooth_uuid_unittest.cc",
-      "nfc/nfc_proxy_test.cc",
     ]
   }
 

@@ -23,4 +23,8 @@ declare_args() {
   # TODO(b/505811196): Remove this argument once Cobalt rebased to the milestone
   # where the privacy sandbox components are fully removed.
   enable_privacy_sandbox_apis = true
+
+  # Whether to enable the custom Dial Web APIs for second-screen use cases
+  # (currently only enabled on tvOS).
+  enable_in_app_dial = false
 }

@@ -55,7 +55,7 @@ enable_built_in_dns = use_blink && !is_starboard
 enable_client_certificates = !is_ios || (use_blink && !is_cronet_build)
 
 # Unix sockets are not supported on iOS.
-enable_unix_sockets = (is_posix && !is_starboard) && !is_ios
+enable_unix_sockets = is_posix && !is_starboard && !is_ios
 
 # x86/x64 cast_shell builds run on regular trybots and can use python runtime
 # and remote test server. ARM cast_shell builds don't have python runtime.
@@ -88,7 +88,8 @@ use_external_gssapi = use_kerberos && !is_android && !is_win
 # recvmsg(), which are specific to the Linux kernel. Restrict the feature to
 # Starboard (assuming it corresponds to something running a Linux kernel
 # underneath) and Android (which does have a Linux kernel running underndeath).
-enable_multi_packets_per_call_quic_optimizations = is_cobalt && (is_starboard || is_android)
+enable_multi_packets_per_call_quic_optimizations =
+    is_cobalt && (is_starboard || is_android)
 
 config("net_test_config") {
   if (use_remote_test_server) {
@@ -133,7 +134,7 @@ net_configs = [
   "//build/config/compiler:wexit_time_destructors",
 ]
 
-if (is_linux && !is_cobalt_hermetic_build || is_chromeos) {
+if ((is_linux && !is_cobalt_hermetic_build) || is_chromeos) {
   net_configs += [ "//build/config/linux:libresolv" ]
 }
 
@@ -1731,6 +1732,10 @@ component("net") {
       "websockets/websocket_stream.cc",
       "websockets/websocket_stream.h",
     ]
+
+    if (is_cobalt) {
+      deps += [ "//cobalt/build/configs:buildflags" ]
+    }
   }
 
   # ICU support.

@@ -1,0 +1,57 @@
+// Copyright 2026 The Cobalt Authors. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+module in_app_dial.mojom;
+
+import "services/network/public/mojom/http_raw_headers.mojom";
+
+// An interface that lives in the browser process and dispatches DIAL HTTP
+// requests to a given handler.
+interface DialServer {
+  // Registers a handler for DIAL HTTP requests. If a handler is already
+  // registered, it is overwritten.
+  RegisterHandler(pending_remote<DialRequestHandler> handler);
+};
+
+// Represents the HTTP methods supported by the DIAL-related Web APIs.
+enum DialRequestMethod {
+  kDelete,
+  kGet,
+  kPost,
+};
+
+// A response returned by HandleRequest() below.
+struct DialResponse {
+  uint16 status_code;
+  array<network.mojom.HttpRawHeaderPair> headers;
+  string mime_type;
+  string body;
+};
+
+// An interface implemented in the renderer process that handles DIAL HTTP
+// requests received by the browser-side HTTP server.
+interface DialRequestHandler {
+  // Handles a DIAL HTTP request.
+  // |response| can be null as a shorthand for returning HTTTP 404.
+  //
+  // Given a request such as "GET /apps/YouTube/foo", |service_name| is
+  // "YouTube" and |path| is "/foo". |data| is the request's body (empty for
+  // GET requests) and |host_with_port| is set with the HTTP server's host and
+  // port (which Kabuki needs).
+  HandleRequest(DialRequestMethod method,
+                string service_name,
+                string path,
+                string data,
+                string host_with_port) => (DialResponse? response);
+};

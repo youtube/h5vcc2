@@ -12,10 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import("//build/buildflag_header.gni")
 import("//build/config/arm.gni")
 import("//cobalt/build/configs/hacks.gni")
 import("//starboard/build/buildflags.gni")
 import("//starboard/build/config/toolchain_variables.gni")
+
+buildflag_header("buildflags") {
+  header = "buildflags.h"
+  flags = [ "ENABLE_IN_APP_DIAL=$enable_in_app_dial" ]
+}
 
 config("cobalt_config") {
   configs = [

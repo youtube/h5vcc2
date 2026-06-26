@@ -1,4 +1,4 @@
-# Copyright 2021 The Cobalt Authors. All Rights Reserved.
+# Copyright 2026 The Cobalt Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,8 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import("//starboard/evergreen/shared/platform_configuration/configuration.gni")
+import("//third_party/blink/renderer/modules/modules.gni")
 
-sabi_path = "//starboard/sabi/x64/sysv/sabi-v$sb_api_version.json"
+blink_modules_sources("dial") {
+  sources = [
+    "dial_http_request.cc",
+    "dial_http_request.h",
+    "dial_http_response.cc",
+    "dial_http_response.h",
+    "dial_server.cc",
+    "dial_server.h",
+    "dial_server_manager.cc",
+    "dial_server_manager.h",
+  ]
 
-install_target_path = "//starboard/evergreen/x64/install_target.gni"
+  deps = [ "//cobalt/browser/dial/public/mojom:mojom_blink" ]
+}

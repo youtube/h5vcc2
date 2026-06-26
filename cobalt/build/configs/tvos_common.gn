@@ -21,3 +21,6 @@ enable_dav1d_decoder = false
 
 # TODO: b/376141256 - Decide if this flag is needed here or in .gclient file.
 chrome_pgo_phase = 0
+
+# Enable custom Dial Web APIs and server.
+enable_in_app_dial = true

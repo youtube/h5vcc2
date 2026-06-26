@@ -34,6 +34,7 @@
 #include "cobalt/browser/h5vcc_updater/public/mojom/h5vcc_updater.mojom.h"
 #include "cobalt/browser/performance/performance_impl.h"
 #include "cobalt/browser/performance/public/mojom/performance.mojom.h"
+#include "cobalt/build/configs/buildflags.h"
 #include "cobalt/media/service/mojom/platform_window_provider.mojom.h"
 #include "cobalt/media/service/platform_window_provider_service.h"
 
@@ -52,6 +53,11 @@
 #else
 #include "cobalt/browser/crash_annotator/crash_annotator_impl.h"
 #endif  // BUILDFLAG(IS_ANDROIDTV)
+
+#if BUILDFLAG(ENABLE_IN_APP_DIAL)
+#include "cobalt/browser/dial/dial_server_impl.h"
+#include "cobalt/browser/dial/public/mojom/in_app_dial.mojom.h"
+#endif  // BUILDFLAG(ENABLE_IN_APP_DIAL)
 
 #include "cobalt/browser/h5vcc_platform_service/h5vcc_platform_service_manager_impl.h"
 #include "cobalt/browser/h5vcc_platform_service/public/mojom/h5vcc_platform_service.mojom.h"
@@ -137,6 +143,12 @@ void PopulateCobaltFrameBinders(
         VLOG(1) << "Ignoring H5vccUpdaterSideloading request.";
       }));
 #endif
+
+#if BUILDFLAG(ENABLE_IN_APP_DIAL)
+  binder_map->Add<in_app_dial::mojom::DialServer>(
+      base::BindRepeating(&in_app_dial::DialServerImpl::Create));
+#endif  // BUILDFLAG(ENABLE_IN_APP_DIAL)
+
   binder_map->Add<h5vcc_storage::mojom::H5vccStorage>(
       base::BindRepeating(&h5vcc_storage::H5vccStorageImpl::Create));
   binder_map->Add<media::mojom::PlatformWindowProvider>(

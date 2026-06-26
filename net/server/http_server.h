@@ -16,9 +16,14 @@
 
 #include "base/memory/raw_ptr.h"
 #include "base/memory/weak_ptr.h"
+#include "build/build_config.h"
 #include "net/base/net_export.h"
 #include "net/http/http_status_code.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
+
+#if BUILDFLAG(IS_COBALT)
+#include "cobalt/build/configs/buildflags.h"
+#endif  // BUILDFLAG(IS_COBALT)
 
 namespace net {
 
@@ -97,6 +102,18 @@ class NET_EXPORT HttpServer {
   // Copies the local address to |address|. Returns a network error code.
   int GetLocalAddress(IPEndPoint* address);
 
+#if BUILDFLAG(IS_COBALT)
+// Two separate #if clauses are needed because the latter is defined only if
+// IS_COBALT is true.
+#if BUILDFLAG(ENABLE_IN_APP_DIAL)
+  static bool ParseHeaders(const std::string& request,
+                           HttpServerRequestInfo* info) {
+    size_t pos = 0;
+    return ParseHeaders(request.c_str(), request.length(), info, &pos);
+  }
+#endif  // BUILDFLAG(ENABLE_IN_APP_DIAL)
+#endif  // BUILDFLAG(IS_COBALT)
+
  private:
   friend class HttpServerTest;
 
@@ -120,10 +137,16 @@ class NET_EXPORT HttpServer {
   // recv data. If all data has been consumed successfully, but the headers are
   // not fully parsed, *pos will be set to zero. Returns false if an error is
   // encountered while parsing, true otherwise.
-  bool ParseHeaders(const char* data,
-                    size_t data_len,
-                    HttpServerRequestInfo* info,
-                    size_t* pos);
+#if BUILDFLAG(IS_COBALT)
+#if BUILDFLAG(ENABLE_IN_APP_DIAL)
+  static
+#endif  // BUILDFLAG(ENABLE_IN_APP_DIAL)
+#endif  // BUILDFLAG(IS_COBALT)
+      bool
+      ParseHeaders(const char* data,
+                   size_t data_len,
+                   HttpServerRequestInfo* info,
+                   size_t* pos);
 
   HttpConnection* FindConnection(int connection_id);
 

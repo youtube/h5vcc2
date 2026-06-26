@@ -88,6 +88,13 @@ if (is_cobalt) {
     "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_receive_callback.cc",
     "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_receive_callback.h",
   ]
+
+  if (enable_in_app_dial) {
+    generated_callback_function_sources_in_modules += [
+      "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_dial_http_request_callback.cc",
+      "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_dial_http_request_callback.h",
+    ]
+  }
 }
 
 if (enable_compute_pressure) {
@@ -3251,6 +3258,17 @@ if (is_cobalt) {
     "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_user_on_exit_strategy.cc",
     "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_user_on_exit_strategy.h",
   ]
+
+  if (enable_in_app_dial) {
+    generated_interface_sources_in_modules += [
+      "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_dial_http_request.cc",
+      "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_dial_http_request.h",
+      "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_dial_http_response.cc",
+      "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_dial_http_response.h",
+      "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_dial_server.cc",
+      "$root_gen_dir/third_party/blink/renderer/bindings/modules/v8/v8_dial_server.h",
+    ]
+  }
 }
 
 generated_namespace_sources_in_modules = [
