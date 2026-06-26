@@ -393,9 +393,10 @@ static_library("test_support") {
 
   configs += [ "//starboard/build/config:starboard_implementation" ]
 
+  public_deps = [ "//starboard/testing:test_runner" ]
+
   deps = [
     ":starboard_platform",
-    "//starboard/testing:test_runner",
     "//testing/gmock",
     "//testing/gtest",
     "//third_party/jni_zero:jni_zero",

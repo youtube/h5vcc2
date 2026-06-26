@@ -21,12 +21,12 @@ if (is_internal_build) {
 static_library("test_support") {
   testonly = true
 
-  public_deps = [ "//testing/gtest" ]
-
-  deps = [
-    ":starboard_platform",
+  public_deps = [
     "//starboard/testing:test_runner",
+    "//testing/gtest",
   ]
+
+  deps = [ ":starboard_platform" ]
 
   sources = [
     "starboard_test_environment.h",
