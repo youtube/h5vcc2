@@ -9,8 +9,7 @@ proprietary_codecs = true
 
 # Overriding flag from //media/media_options.gni.
 # Cobalt doesn't use //third_party/ffmpeg.
-media_use_ffmpeg = true
-ffmpeg_branding = "Chrome"
+media_use_ffmpeg = false
 
 # TODO(b/378934120): Remove flags below this line
 

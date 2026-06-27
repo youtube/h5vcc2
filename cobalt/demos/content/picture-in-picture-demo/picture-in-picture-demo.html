@@ -1,0 +1,80 @@
+<!--
+  Copyright 2026 The Cobalt Authors. All Rights Reserved.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Cobalt Picture-in-Picture Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+      background: #f0f0f0;
+      color: #333;
+    }
+    h1 {
+      font-size: 24px;
+    }
+    video {
+      background: #1e2327;
+      border-radius: 8px;
+      width: 640px;
+      height: 360px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    button {
+      display: block;
+      margin: 20px 0;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      background-color: #008CBA;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    /* Critical for Android TV remote navigation */
+    button:focus {
+      background-color: #4CAF50;
+      box-shadow: 0 0 10px #4CAF50;
+      outline: 4px solid #4CAF50;
+    }
+    #log {
+      white-space: pre-wrap;
+      font-family: monospace;
+      background: #eee;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Cobalt Picture-in-Picture Test</h1>
+
+  <video id="video" autoplay muted controls playsinline loop></video>
+
+  <button id="togglePipButton" autofocus>Toggle Picture-in-Picture</button>
+
+  <h3>Console Log:</h3>
+  <div id="log"></div>
+
+  <script src="picture-in-picture-demo.js"></script>
+</body>
+</html>

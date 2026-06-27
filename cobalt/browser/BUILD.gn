@@ -95,7 +95,7 @@ source_set("browser") {
     "//components/os_crypt/sync",
     "//components/prefs",
     "//components/thin_webview",
-    "//components/variations/service",
+    "//components/variations/service:service",
     "//components/viz/common",
     "//services/resource_coordinator/public/cpp/memory_instrumentation",
     "//starboard:starboard_group",
