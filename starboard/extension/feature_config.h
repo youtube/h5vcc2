@@ -111,6 +111,9 @@ STARBOARD_FEATURE(kEnableAv1StartupOptimization,
                   "EnableAv1StartupOptimization",
                   false)
 
+// Enables the ExoPlayer-based SbPlayer for playback.
+STARBOARD_FEATURE(kEnableExoPlayer, "EnableExoPlayer", false)
+
 // By default, Cobalt destroys and recreates AudioTrack during Seek().
 // Set the following variable to true to force it to Flush() AudioTrack
 // during Seek().

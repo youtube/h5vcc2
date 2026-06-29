@@ -23,6 +23,8 @@ import android.os.Build;
 import android.util.Range;
 import dev.cobalt.util.IsEmulator;
 import dev.cobalt.util.Log;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -815,5 +817,57 @@ public class MediaCodecUtil {
       }
     }
     return "";
+  }
+
+  public static ByteBuffer getHdrStaticInfo(float primaryRChromaticityX,
+      float primaryRChromaticityY,
+      float primaryGChromaticityX,
+      float primaryGChromaticityY,
+      float primaryBChromaticityX,
+      float primaryBChromaticityY,
+      float whitePointChromaticityX,
+      float whitePointChromaticityY,
+      float maxMasteringLuminance,
+      float minMasteringLuminance,
+      int maxCll,
+      int maxFall,
+      boolean forceBigEndianHdrMetadata) {
+    final int maxChromaticity = 50000; // Defined in CTA-861.3.
+    final int defaultMaxCll = 1000;
+    final int defaultMaxFall = 200;
+
+    if (maxCll <= 0) {
+      maxCll = defaultMaxCll;
+    }
+    if (maxFall <= 0) {
+      maxFall = defaultMaxFall;
+    }
+
+    // This logic is inspired by
+    // https://cs.android.com/android/_/android/platform/external/exoplayer/+/3423b4bbfffbb62b5f2d8f16cfdc984dc107cd02:tree/library/extractor/src/main/java/com/google/android/exoplayer2/extractor/mkv/MatroskaExtractor.java;l=2200-2215;drc=9af07bc62f8115cbaa6f1178ce8aa3533d2b9e29.
+    ByteBuffer hdrStaticInfo = ByteBuffer.allocateDirect(25);
+    // Force big endian in case the HDR metadata causes problems in production.
+    if (forceBigEndianHdrMetadata) {
+      hdrStaticInfo.order(ByteOrder.BIG_ENDIAN);
+    } else {
+      hdrStaticInfo.order(ByteOrder.LITTLE_ENDIAN);
+    }
+
+    hdrStaticInfo.put((byte) 0);
+    hdrStaticInfo.putShort((short) ((primaryRChromaticityX * maxChromaticity) + 0.5f));
+    hdrStaticInfo.putShort((short) ((primaryRChromaticityY * maxChromaticity) + 0.5f));
+    hdrStaticInfo.putShort((short) ((primaryGChromaticityX * maxChromaticity) + 0.5f));
+    hdrStaticInfo.putShort((short) ((primaryGChromaticityY * maxChromaticity) + 0.5f));
+    hdrStaticInfo.putShort((short) ((primaryBChromaticityX * maxChromaticity) + 0.5f));
+    hdrStaticInfo.putShort((short) ((primaryBChromaticityY * maxChromaticity) + 0.5f));
+    hdrStaticInfo.putShort((short) ((whitePointChromaticityX * maxChromaticity) + 0.5f));
+    hdrStaticInfo.putShort((short) ((whitePointChromaticityY * maxChromaticity) + 0.5f));
+    hdrStaticInfo.putShort((short) (maxMasteringLuminance + 0.5f));
+    hdrStaticInfo.putShort((short) (minMasteringLuminance + 0.5f));
+    hdrStaticInfo.putShort((short) maxCll);
+    hdrStaticInfo.putShort((short) maxFall);
+    hdrStaticInfo.rewind();
+
+    return hdrStaticInfo;
   }
 }
