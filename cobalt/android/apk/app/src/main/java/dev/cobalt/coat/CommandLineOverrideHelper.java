@@ -72,6 +72,8 @@ public final class CommandLineOverrideHelper {
         paramOverrides.add("--enable-zero-copy");
         // Set default raster threads to 2 for smoother performance.
         paramOverrides.add("--num-raster-threads=2");
+        // Enforce ANGLE to use GLES backend by default.
+        paramOverrides.add("--use-angle=gles");
 
         return paramOverrides;
     }

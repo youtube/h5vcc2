@@ -182,11 +182,18 @@ void GetEGLInitDisplays(bool supports_angle_d3d,
     }
   }
 
+#if BUILDFLAG(IS_ANDROID)
+  // On Android, always provide DEFAULT (native EGL) as a fallback if ANGLE
+  // fails to initialize.
+  AddInitDisplay(init_displays, DEFAULT);
+#else
   // If no displays are available due to missing angle extensions or invalid
   // flags, request the default display.
   if (init_displays->empty()) {
     init_displays->push_back(DEFAULT);
   }
+#endif  // BUILDFLAG(IS_ANDROID)
+
 }
 
 }  // namespace
