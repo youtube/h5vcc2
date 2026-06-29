@@ -393,6 +393,11 @@ ScopedJavaLocalRef<jobject> StarboardBridge::GetAudioOutputManager(
   return Java_StarboardBridge_getAudioOutputManager(env, j_starboard_bridge_);
 }
 
+ScopedJavaLocalRef<jobject> StarboardBridge::GetExoPlayerManager(JNIEnv* env) {
+  SB_CHECK(env);
+  return Java_StarboardBridge_getExoPlayerManager(env, j_starboard_bridge_);
+}
+
 std::string StarboardBridge::GetUserAgentAuxField(JNIEnv* env) const {
   SB_DCHECK(env);
   return ConvertJavaStringToUTF8(

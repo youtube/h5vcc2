@@ -473,7 +473,7 @@ void MediaCodecVideoDecoder::WriteInputBuffers(
     // teardown the codec so it can be reinitalized with the new metadata.
     const auto& color_metadata =
         input_buffers.front()->video_stream_info().color_metadata;
-    if (!IsIdentity(color_metadata)) {
+    if (!IsSDR(color_metadata)) {
       SB_DCHECK(!color_metadata_) << "Unexpected residual color metadata.";
       SB_LOG(INFO) << "Reinitializing codec with HDR color metadata.";
       TeardownCodec();

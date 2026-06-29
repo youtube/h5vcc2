@@ -41,62 +41,6 @@ using jni_zero::AttachCurrentThread;
 using jni_zero::JavaParamRef;
 using jni_zero::ScopedJavaLocalRef;
 
-// See
-// https://developer.android.com/reference/android/media/MediaFormat.html#COLOR_RANGE_FULL.
-const jint COLOR_RANGE_FULL = 1;
-const jint COLOR_RANGE_LIMITED = 2;
-// Not defined in MediaFormat. Represents unspecified color ID range.
-const jint COLOR_RANGE_UNSPECIFIED = 0;
-
-const jint COLOR_STANDARD_BT2020 = 6;
-const jint COLOR_STANDARD_BT709 = 1;
-
-const jint COLOR_TRANSFER_HLG = 7;
-const jint COLOR_TRANSFER_SDR_VIDEO = 3;
-const jint COLOR_TRANSFER_ST2084 = 6;
-
-// A special value to represent that no mapping between an SbMedia* HDR
-// metadata value and Android HDR metadata value is possible.  This value
-// implies that HDR playback should not be attempted.
-const jint COLOR_VALUE_UNKNOWN = -1;
-
-jint SbMediaPrimaryIdToColorStandard(SbMediaPrimaryId primary_id) {
-  switch (primary_id) {
-    case kSbMediaPrimaryIdBt709:
-      return COLOR_STANDARD_BT709;
-    case kSbMediaPrimaryIdBt2020:
-      return COLOR_STANDARD_BT2020;
-    default:
-      return COLOR_VALUE_UNKNOWN;
-  }
-}
-
-jint SbMediaTransferIdToColorTransfer(SbMediaTransferId transfer_id) {
-  switch (transfer_id) {
-    case kSbMediaTransferIdBt709:
-      return COLOR_TRANSFER_SDR_VIDEO;
-    case kSbMediaTransferIdSmpteSt2084:
-      return COLOR_TRANSFER_ST2084;
-    case kSbMediaTransferIdAribStdB67:
-      return COLOR_TRANSFER_HLG;
-    default:
-      return COLOR_VALUE_UNKNOWN;
-  }
-}
-
-jint SbMediaRangeIdToColorRange(SbMediaRangeId range_id) {
-  switch (range_id) {
-    case kSbMediaRangeIdLimited:
-      return COLOR_RANGE_LIMITED;
-    case kSbMediaRangeIdFull:
-      return COLOR_RANGE_FULL;
-    case kSbMediaRangeIdUnspecified:
-      return COLOR_RANGE_UNSPECIFIED;
-    default:
-      return COLOR_VALUE_UNKNOWN;
-  }
-}
-
 }  // namespace
 
 // static
