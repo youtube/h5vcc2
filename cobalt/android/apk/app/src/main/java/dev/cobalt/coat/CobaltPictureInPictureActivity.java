@@ -77,7 +77,7 @@ public class CobaltPictureInPictureActivity extends Activity {
     }
 
     mWindowAndroid = new ActivityWindowAndroid(
-        this, /* listenToActivityState= */ false,
+        this, /* listenToActivityState= */ true,
         IntentRequestTracker.createFromActivity(this), null, /* trackOcclusion= */ false);
 
     mCompositorView = CompositorViewFactory.create(this, mWindowAndroid, new ThinWebViewConstraints());

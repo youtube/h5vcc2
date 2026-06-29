@@ -33,8 +33,6 @@ source_set("browser") {
     "cobalt_web_contents_observer.h",
     "h5vcc_settings_impl.cc",
     "h5vcc_settings_impl.h",
-    "picture_in_picture/picture_in_picture_window_manager.cc",
-    "picture_in_picture/picture_in_picture_window_manager.h",
   ]
 
   if (is_androidtv) {

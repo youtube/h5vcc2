@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cobalt/browser/picture_in_picture/picture_in_picture_window_manager.h"
+#include "cobalt/shell/browser/picture_in_picture/picture_in_picture_window_manager.h"
 
 #include "content/public/browser/picture_in_picture_window_controller.h"
 #include "content/public/browser/video_picture_in_picture_window_controller.h"

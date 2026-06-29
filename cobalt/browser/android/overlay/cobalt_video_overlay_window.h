@@ -23,6 +23,7 @@
 #include "components/thin_webview/compositor_view.h"
 #include "content/public/browser/overlay_window.h"
 #include "ui/android/window_android.h"
+#include "ui/android/window_android_observer.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/gfx/geometry/size.h"
 
@@ -32,7 +33,8 @@ class VideoPictureInPictureWindowController;
 
 namespace cobalt {
 
-class CobaltVideoOverlayWindow : public content::VideoOverlayWindow {
+class CobaltVideoOverlayWindow : public content::VideoOverlayWindow,
+                                 public ui::WindowAndroidObserver {
  public:
   explicit CobaltVideoOverlayWindow(
       content::VideoPictureInPictureWindowController* controller);
@@ -41,6 +43,14 @@ class CobaltVideoOverlayWindow : public content::VideoOverlayWindow {
   CobaltVideoOverlayWindow& operator=(const CobaltVideoOverlayWindow&) = delete;
 
   ~CobaltVideoOverlayWindow() override;
+
+  // ui::WindowAndroidObserver implementation.
+  void OnRootWindowVisibilityChanged(bool visible) override;
+  void OnAttachCompositor() override;
+  void OnDetachCompositor() override;
+  void OnAnimate(base::TimeTicks frame_begin_time) override;
+  void OnActivityStopped() override;
+  void OnActivityStarted() override;
 
   // VideoOverlayWindow implementation.
   bool IsActive() const override;
