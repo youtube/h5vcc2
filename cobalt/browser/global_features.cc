@@ -22,6 +22,8 @@
 #include "base/json/string_escape.h"
 #include "base/no_destructor.h"
 #include "base/path_service.h"
+#include "base/strings/string_util.h"
+#include "base/threading/hang_watcher.h"
 #include "base/time/time.h"
 #include "cobalt/browser/constants/cobalt_experiment_names.h"
 #include "cobalt/browser/metrics/cobalt_metrics_services_manager_client.h"
@@ -99,19 +101,36 @@ GlobalFeatures::GetSettings() const {
   return settings_;
 }
 
+std::optional<GlobalFeatures::SettingValue> GlobalFeatures::GetSetting(
+    const std::string& key) const {
+  base::AutoLock auto_lock(lock_);
+  auto it = settings_.find(key);
+  if (it != settings_.end()) {
+    return it->second;
+  }
+  return std::nullopt;
+}
+
 void GlobalFeatures::SetSettings(std::string_view key,
                                  const SettingValue& value) {
-  base::AutoLock auto_lock(lock_);
-  settings_[key] = value;
+  {
+    base::AutoLock auto_lock(lock_);
+    settings_[key] = value;
 
-  LOG(INFO) << "SetSettings: key=" << key << ", value=" << [&value] {
-    if (const auto* s = std::get_if<std::string>(&value)) {
-      return base::GetQuotedJSONString(*s);
-    } else if (const auto* i = std::get_if<int64_t>(&value)) {
-      return std::to_string(*i);
-    }
-    NOTREACHED();
-  }();
+    LOG(INFO) << "SetSettings: key=" << key << ", value=" << [&value] {
+      if (const auto* s = std::get_if<std::string>(&value)) {
+        return base::GetQuotedJSONString(*s);
+      } else if (const auto* i = std::get_if<int64_t>(&value)) {
+        return std::to_string(*i);
+      }
+      NOTREACHED();
+    }();
+  }
+
+  if (base::StartsWith(key, "HangWatch", base::CompareCase::SENSITIVE) ||
+      base::StartsWith(key, "EnableHang", base::CompareCase::SENSITIVE)) {
+    base::HangWatcher::UpdateConfiguration();
+  }
 }
 
 void GlobalFeatures::CreateExperimentConfig() {

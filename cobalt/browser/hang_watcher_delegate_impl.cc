@@ -16,8 +16,11 @@
 
 #include <cstdint>
 #include <optional>
+#include <variant>
 
 #include "base/feature_list.h"
+#include "base/strings/string_number_conversions.h"
+#include "base/strings/string_util.h"
 #include "cobalt/browser/features.h"
 #include "cobalt/browser/global_features.h"
 namespace cobalt {
@@ -37,11 +40,10 @@ bool CobaltHangWatcherDelegate::IsHangReportingEnabled() {
   // explicitly provided, we fallback to the standard Chromium 'FeatureList'
   // which is backed by Finch.
   if (auto* global_features = GlobalFeatures::GetInstance()) {
-    const auto& settings = global_features->GetSettings();
-    auto it = settings.find("EnableHangReporting");
-    if (it != settings.end()) {
-      if (const auto* val = std::get_if<int64_t>(&it->second)) {
-        bool enabled = (*val != 0);
+    auto val_opt = global_features->GetSetting("EnableHangReporting");
+    if (val_opt.has_value()) {
+      if (const auto* val_int = std::get_if<int64_t>(&val_opt.value())) {
+        bool enabled = *val_int != 0;
         DLOG(INFO) << "CobaltHangWatcherDelegate: EnableHangReporting: "
                    << enabled;
         return enabled;
@@ -51,6 +53,68 @@ bool CobaltHangWatcherDelegate::IsHangReportingEnabled() {
   DLOG(INFO) << "CobaltHangWatcherDelegate: EnableHangReporting: using Finch";
 
   return base::FeatureList::IsEnabled(cobalt::features::kHangReporting);
+}
+
+std::optional<base::TimeDelta> CobaltHangWatcherDelegate::GetHangWatchTime() {
+  if (auto* global_features = GlobalFeatures::GetInstance()) {
+    auto val_opt = global_features->GetSetting("HangWatchTimeSeconds");
+    if (val_opt.has_value()) {
+      if (const auto* val = std::get_if<int64_t>(&val_opt.value())) {
+        if (*val > 0) {
+          return base::Seconds(*val);
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<base::TimeDelta>
+CobaltHangWatcherDelegate::GetHangWatchMonitoringPeriod() {
+  if (auto* global_features = GlobalFeatures::GetInstance()) {
+    auto val_opt =
+        global_features->GetSetting("HangWatchMonitoringPeriodSeconds");
+    if (val_opt.has_value()) {
+      if (const auto* val = std::get_if<int64_t>(&val_opt.value())) {
+        if (*val > 0) {
+          return base::Seconds(*val);
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
+std::optional<bool> CobaltHangWatcherDelegate::IsThreadDumpingEnabled(
+    base::HangWatcher::ThreadType thread_type) {
+  if (auto* global_features = GlobalFeatures::GetInstance()) {
+    std::string key;
+    switch (thread_type) {
+      case base::HangWatcher::ThreadType::kMainThread:
+        key = "EnableHangWatchMainThreadDump";
+        break;
+      case base::HangWatcher::ThreadType::kIOThread:
+        key = "EnableHangWatchIOThreadDump";
+        break;
+      case base::HangWatcher::ThreadType::kThreadPoolThread:
+        key = "EnableHangWatchThreadPoolDump";
+        break;
+      case base::HangWatcher::ThreadType::kRendererThread:
+        key = "EnableHangWatchRendererThreadDump";
+        break;
+      default:
+        return std::nullopt;
+    }
+    if (!key.empty()) {
+      auto val_opt = global_features->GetSetting(key);
+      if (val_opt.has_value()) {
+        if (const auto* val_int = std::get_if<int64_t>(&val_opt.value())) {
+          return *val_int != 0;
+        }
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 }  // namespace browser
