@@ -650,6 +650,8 @@ enum RendererType {
   kTest= 11,             // Renderer implementations used in tests
   [EnableIf=use_starboard_media]
   kStarboard = 12,       // StarboardRendererFactory
+  [EnableIf=use_starboard_url_player]
+  kUrlPlayer = 13,       // UrlPlayerRendererClientFactory
 };
 
 // See media/base/demuxer.h for description.
@@ -662,6 +664,7 @@ enum DemuxerType {
   kFrameInjectingDemuxer = 5,
   kStreamProviderDemuxer = 6,
   kManifestDemuxer = 7,
+  kUrlPlayerDemuxer = 8,  // URL-based native player (e.g., HLS on tvOS).
 };
 
 // See media::CreateCdmStatus

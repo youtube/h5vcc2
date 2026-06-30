@@ -23,3 +23,10 @@ declare_args() {
       is_cobalt && current_toolchain != host_toolchain &&
       (!is_starboard || current_toolchain != v8_snapshot_toolchain)
 }
+
+if (is_ios) {
+  import("//build/config/apple/mobile_config.gni")
+  use_starboard_url_player = use_starboard_media && target_platform == "tvos"
+} else {
+  use_starboard_url_player = false
+}

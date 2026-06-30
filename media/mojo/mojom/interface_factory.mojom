@@ -113,6 +113,16 @@ interface InterfaceFactory {
       pending_receiver<StarboardRendererExtension> renderer_extension,
       pending_remote<StarboardRendererClientExtension> client_extension);
 
+  [EnableIf=use_starboard_url_player]
+  // Creates a UrlPlayerRenderer for tvOS URL-based playback.
+  // Uses the same extension endpoints as StarboardRenderer.
+  CreateUrlPlayerRenderer(
+      pending_remote<MediaLog> media_log,
+      StarboardRendererConfig config,
+      pending_receiver<Renderer> renderer,
+      pending_receiver<StarboardRendererExtension> renderer_extension,
+      pending_remote<StarboardRendererClientExtension> client_extension);
+
   // Creates a CDM based on the `cdm_config` provided. The `key_system` in the
   // `cdm_config` is a generic term for a decryption mechanism and/or content
   // protection provider. It should be a reverse domain name,

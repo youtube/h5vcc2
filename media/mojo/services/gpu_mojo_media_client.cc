@@ -28,6 +28,10 @@
 #include "media/mojo/mojom/video_decoder.mojom.h"
 #include "media/video/video_decode_accelerator.h"
 
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+#include "media/mojo/services/starboard/url_player_renderer_wrapper.h"
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+
 namespace media {
 
 namespace {
@@ -311,6 +315,25 @@ std::unique_ptr<Renderer> GpuMojoMediaClient::CreateStarboardRenderer(
   return CreatePlatformStarboardRenderer(std::move(traits));
 }
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+std::unique_ptr<Renderer> GpuMojoMediaClient::CreateUrlPlayerRenderer(
+    mojom::FrameInterfaceFactory* /* frame_interfaces */,
+    scoped_refptr<base::SingleThreadTaskRunner> task_runner,
+    mojo::PendingRemote<mojom::MediaLog> media_log_remote,
+    const StarboardRendererConfig& config,
+    mojo::PendingReceiver<mojom::StarboardRendererExtension>
+        renderer_extension_receiver,
+    mojo::PendingRemote<mojom::StarboardRendererClientExtension>
+        client_extension_remote) {
+  UrlPlayerRendererTraits traits(
+      task_runner, std::move(media_log_remote),
+      video_geometry_setter_service_, config.overlay_plane_id,
+      config.viewport_size, std::move(renderer_extension_receiver),
+      std::move(client_extension_remote));
+  return std::make_unique<UrlPlayerRendererWrapper>(std::move(traits));
+}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
 std::unique_ptr<CdmFactory> GpuMojoMediaClient::CreateCdmFactory(
     mojom::FrameInterfaceFactory* frame_interfaces) {
