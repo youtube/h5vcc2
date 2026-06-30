@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import("//cobalt/build/configs/cobalt.gni")
 import("//testing/test.gni")
 
 if (is_ios) {
@@ -92,6 +93,13 @@ source_set("browser") {
     "//services/resource_coordinator/public/cpp/memory_instrumentation",
     "//starboard:starboard_group",
   ]
+
+  if (!cobalt_is_release_build) {
+    deps += [
+      "//components/services/heap_profiling",
+      "//components/services/heap_profiling/public/cpp",
+    ]
+  }
 
   if (is_androidtv) {
     deps += [
