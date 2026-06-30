@@ -281,12 +281,11 @@ class CobaltLifecycleManager : public cobalt::mojom::CobaltLifecycleObserver {
   // associated with a specific WebContents when it is destroyed.
   std::map<content::WebContents*, std::vector<mojo::ReceiverId>> receiver_ids_;
 
-  // Map tracking the active Mojo ReceiverId for each RenderFrameHost (by its
-  // GlobalId). This prevents race conditions where an asynchronous disconnect
-  // handler for an old Mojo pipe unregisters a frame that has already been
-  // re-bound to a new pipe.
-  std::map<content::GlobalRenderFrameHostId, mojo::ReceiverId>
-      active_receivers_;
+  // Tracks the number of active Mojo lifecycle observer receivers (connections)
+  // associated with each RenderFrameHost (keyed by its global ID). This is used
+  // to dynamically monitor frame connection lifetimes and determine when a
+  // frame is actively participating in the lifecycle transition handshake.
+  std::map<content::GlobalRenderFrameHostId, int> active_receiver_counts_;
 
   base::WeakPtrFactory<CobaltLifecycleManager> weak_factory_{this};
 
