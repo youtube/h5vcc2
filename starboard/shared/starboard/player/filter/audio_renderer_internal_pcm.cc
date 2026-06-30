@@ -22,6 +22,7 @@
 
 #include "starboard/common/check_op.h"
 #include "starboard/common/time.h"
+#include "starboard/shared/starboard/experimental_features.h"
 #include "starboard/shared/starboard/media/media_util.h"
 
 namespace starboard {
@@ -438,7 +439,8 @@ void AudioRendererPcm::GetSourceStatus(int* frames_in_buffer,
   *is_eos_reached = is_eos_reached_on_sink_thread_;
   *is_playing = is_playing_on_sink_thread_;
 
-  if (*is_playing || experimental_features_.allow_audio_writing_on_pause) {
+  if (*is_playing ||
+      experimental_features_.GetBool(kMediaAllowAudioWritingOnPause)) {
     *frames_in_buffer =
         frames_in_buffer_on_sink_thread_ - frames_consumed_on_sink_thread_;
     *offset_in_frames =

@@ -45,6 +45,7 @@
 #undef IPC_MESSAGE_EXPORT
 #define IPC_MESSAGE_EXPORT
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
+#include "media/base/starboard/ipc_param_traits.h"
 #include "media/base/starboard/starboard_renderer_config.h"
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
@@ -195,32 +196,6 @@ IPC_STRUCT_TRAITS_BEGIN(media::OverlayInfo)
 IPC_STRUCT_TRAITS_END()
 
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
-IPC_STRUCT_TRAITS_BEGIN(media::StarboardRendererConfig::ExperimentalFeatures)
-  // keep-sorted start
-  IPC_STRUCT_TRAITS_MEMBER(allow_audio_writing_on_pause)
-  IPC_STRUCT_TRAITS_MEMBER(bypass_mojo_for_media)
-  IPC_STRUCT_TRAITS_MEMBER(decoded_audio_buffer_pool)
-  IPC_STRUCT_TRAITS_MEMBER(enable_av1_startup_optimization)
-  IPC_STRUCT_TRAITS_MEMBER(enable_flush_during_seek)
-  IPC_STRUCT_TRAITS_MEMBER(enable_low_latency)
-  IPC_STRUCT_TRAITS_MEMBER(enable_reset_audio_decoder)
-  IPC_STRUCT_TRAITS_MEMBER(enable_simd_based_audio_format_switching)
-  IPC_STRUCT_TRAITS_MEMBER(enable_trivial_optimizations)
-  IPC_STRUCT_TRAITS_MEMBER(enable_video_renderer_vsp_adjustment)
-  IPC_STRUCT_TRAITS_MEMBER(flush_audio_track_during_seek)
-  IPC_STRUCT_TRAITS_MEMBER(force_clear_surface_view)
-  IPC_STRUCT_TRAITS_MEMBER(force_decode_to_texture)
-  IPC_STRUCT_TRAITS_MEMBER(ignore_mediacodec_callbacks_during_flushing)
-  IPC_STRUCT_TRAITS_MEMBER(max_samples_per_write)
-  IPC_STRUCT_TRAITS_MEMBER(skip_flush_on_decoder_teardown)
-  IPC_STRUCT_TRAITS_MEMBER(skip_video_frames_over_60_fps)
-  IPC_STRUCT_TRAITS_MEMBER(video_decoder_initial_preroll_count)
-  IPC_STRUCT_TRAITS_MEMBER(video_frame_impl_pool)
-  IPC_STRUCT_TRAITS_MEMBER(video_renderer_min_decoded_frames)
-  IPC_STRUCT_TRAITS_MEMBER(video_renderer_min_input_buffers)
-  // keep-sorted end
-IPC_STRUCT_TRAITS_END()
-
 IPC_STRUCT_TRAITS_BEGIN(media::StarboardRendererConfig)
   IPC_STRUCT_TRAITS_MEMBER(overlay_plane_id)
   IPC_STRUCT_TRAITS_MEMBER(audio_write_duration_local)

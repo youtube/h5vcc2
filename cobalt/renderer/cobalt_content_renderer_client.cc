@@ -30,6 +30,7 @@
 #include "media/base/key_systems_support_registration.h"
 #include "media/base/media_log.h"
 #include "media/base/renderer_factory.h"
+#include "media/base/starboard/experimental_features.h"
 #include "media/mojo/clients/starboard/starboard_renderer_client_factory.h"
 #include "mojo/public/cpp/bindings/generic_pending_receiver.h"
 #include "starboard/media.h"
@@ -45,56 +46,26 @@
 namespace cobalt {
 
 namespace {
+using ::media::ExperimentalFeatures;
 
 const char kWidevineL3KeySystem[] = "com.youtube.widevine.l3";
 
-const char kH5vccSettingsKeyMediaAllowAudioWritingOnPause[] =
-    "Media.AllowAudioWritingOnPause";
-const char kH5vccSettingsKeyMediaBypassMojoForMedia[] =
-    "Media.BypassMojoForMedia";
-const char kH5vccSettingsKeyMediaDecodedAudioBufferPool[] =
-    "Media.DecodedAudioBufferPool";
-const char kH5vccSettingsKeyMediaEnableAv1StartupOptimization[] =
-    "Media.EnableAv1StartupOptimization";
-// TODO: b/474454335 - Remove once seek experiment is done.
-const char kH5vccSettingsKeyMediaEnableFlushDuringSeek[] =
-    "Media.EnableFlushDuringSeek";
-const char kH5vccSettingsKeyMediaEnableLowLatency[] = "Media.EnableLowLatency";
-// TODO: b/474454335 - Remove once seek experiment is done.
-const char kH5vccSettingsKeyMediaEnableResetAudioDecoder[] =
-    "Media.EnableResetAudioDecoder";
-const char kH5vccSettingsKeyMediaEnableTrivialOptimizations[] =
-    "Media.EnableTrivialOptimizations";
-const char kH5vccSettingsKeyMediaEnableSimdBasedAudioFormatSwitching[] =
-    "Media.EnableSimdBasedAudioFormatSwitching";
-const char kH5vccSettingsKeyMediaEnableVideoRendererVspAdjustment[] =
-    "Media.EnableVideoRendererVspAdjustment";
-const char kH5vccSettingsKeyMediaFlushAudioTrackDuringSeek[] =
-    "Media.FlushAudioTrackDuringSeek";
-const char kH5vccSettingsKeyMediaForceDecodeToTexture[] =
-    "Media.ForceDecodeToTexture";
-const char kH5vccSettingsKeyMediaForceClearSurfaceView[] =
-    "Media.ForceClearSurfaceView";
-const char kH5vccSettingsKeyMediaIgnoreMediaCodecCallbacksDuringFlushing[] =
-    "Media.IgnoreMediaCodecCallbacksDuringFlushing";
-const char kH5vccSettingsKeyMediaVideoDecoderInitialPrerollCount[] =
-    "Media.VideoDecoderInitialPrerollCount";
-const char kH5vccSettingsKeyMediaVideoFrameImplPool[] =
-    "Media.VideoFrameImplPool";
-const char kH5vccSettingsKeyMediaVideoRendererMinInputBuffers[] =
-    "Media.VideoRendererMinInputBuffers";
-const char kH5vccSettingsKeyMediaVideoRendererMinDecodedFrames[] =
-    "Media.VideoRendererMinDecodedFrames";
-const char kH5vccSettingsKeyMediaMaxSamplesPerWrite[] =
-    "Media.MaxSamplesPerWrite";
-const char kH5vccSettingsKeyMediaSkipFlushOnDecoderTeardown[] =
-    "Media.SkipFlushOnDecoderTeardown";
-const char kH5vccSettingsKeyMediaSkipVideoFramesOver60Fps[] =
-    "Media.SkipVideoFramesOver60Fps";
-
-using ExperimentalFeatures =
-    ::media::StarboardRendererConfig::ExperimentalFeatures;
-using H5vccSettingValue = std::variant<std::string, int64_t>;
+ExperimentalFeatures ParseH5vccSettings(mojom::SettingsPtr settings) {
+  ExperimentalFeatures::Map h5vcc_settings;
+  for (auto& [key, value] : settings->settings) {
+    if (!value) {
+      continue;
+    }
+    if (value->is_int_value()) {
+      h5vcc_settings.emplace(key, value->get_int_value());
+    } else if (value->is_string_value()) {
+      h5vcc_settings.emplace(key, std::move(value->get_string_value()));
+    } else {
+      NOTREACHED();
+    }
+  }
+  return ExperimentalFeatures(std::move(h5vcc_settings));
+}
 
 // TODO(b/376542844): Eliminate the usage of hardcoded MIME string once we
 // support to query codec capabilities with configs. The profile information
@@ -150,149 +121,6 @@ std::string GetMimeFromAudioType(const ::media::AudioType& type) {
 
   // TODO(b/375232937) Add IAMF
   return codecs;
-}
-
-std::map<std::string, H5vccSettingValue> ParseH5vccSettings(
-    cobalt::mojom::SettingsPtr settings) {
-  std::map<std::string, H5vccSettingValue> h5vcc_settings;
-  for (auto& [key, value] : settings->settings) {
-    if (value->is_string_value()) {
-      h5vcc_settings.emplace(key, std::move(value->get_string_value()));
-    } else if (value->is_int_value()) {
-      h5vcc_settings.emplace(key, value->get_int_value());
-    } else {
-      NOTREACHED();
-    }
-  }
-  return h5vcc_settings;
-}
-
-template <typename T>
-const T* GetSettingValue(
-    const std::map<std::string, H5vccSettingValue>& settings,
-    const std::string& key) {
-  auto it = settings.find(key);
-  if (it == settings.end()) {
-    return nullptr;
-  }
-  return std::get_if<T>(&it->second);
-}
-
-// Experiment framework uses 0 as the sentinel value for unset.
-// e.g.)
-// http://go/latestexpcl/player_web/features/player_web_cobalt.impl.gcl;l=332;rcl=862772714
-constexpr int kH5vccUnsetSentinel = 0;
-
-std::optional<int> ProcessRangedIntH5vccSetting(
-    const std::map<std::string, H5vccSettingValue>& settings,
-    const char* key,
-    int min_val,
-    int max_val,
-    int unset_sentinel) {
-  auto* val = GetSettingValue<int64_t>(settings, key);
-  if (!val) {
-    return std::nullopt;
-  }
-  if (*val == unset_sentinel) {
-    LOG(INFO) << "Value for " << key << " matches unset sentinel (" << *val
-              << "); falling back to system default.";
-    return std::nullopt;
-  }
-  if (*val < min_val || max_val < *val) {
-    LOG(WARNING) << "Invalid value for " << key << ": " << *val;
-    return std::nullopt;
-  }
-
-  return static_cast<int>(*val);
-}
-
-ExperimentalFeatures ProcessH5vccSettings(
-    const std::map<std::string, H5vccSettingValue>& settings) {
-  ExperimentalFeatures parsed;
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaAllowAudioWritingOnPause)) {
-    parsed.allow_audio_writing_on_pause = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaBypassMojoForMedia)) {
-    parsed.bypass_mojo_for_media = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaDecodedAudioBufferPool)) {
-    parsed.decoded_audio_buffer_pool = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaEnableAv1StartupOptimization)) {
-    parsed.enable_av1_startup_optimization = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaEnableFlushDuringSeek)) {
-    parsed.enable_flush_during_seek = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaEnableLowLatency)) {
-    parsed.enable_low_latency = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaEnableResetAudioDecoder)) {
-    parsed.enable_reset_audio_decoder = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaEnableTrivialOptimizations)) {
-    parsed.enable_trivial_optimizations = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings,
-          kH5vccSettingsKeyMediaEnableSimdBasedAudioFormatSwitching)) {
-    parsed.enable_simd_based_audio_format_switching = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaEnableVideoRendererVspAdjustment)) {
-    parsed.enable_video_renderer_vsp_adjustment = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaFlushAudioTrackDuringSeek)) {
-    parsed.flush_audio_track_during_seek = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaForceDecodeToTexture)) {
-    parsed.force_decode_to_texture = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaForceClearSurfaceView)) {
-    parsed.force_clear_surface_view = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings,
-          kH5vccSettingsKeyMediaIgnoreMediaCodecCallbacksDuringFlushing)) {
-    parsed.ignore_mediacodec_callbacks_during_flushing = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaSkipFlushOnDecoderTeardown)) {
-    parsed.skip_flush_on_decoder_teardown = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaSkipVideoFramesOver60Fps)) {
-    parsed.skip_video_frames_over_60_fps = *val != 0;
-  }
-  if (auto* val = GetSettingValue<int64_t>(
-          settings, kH5vccSettingsKeyMediaVideoFrameImplPool)) {
-    parsed.video_frame_impl_pool = *val != 0;
-  }
-
-  parsed.video_decoder_initial_preroll_count = ProcessRangedIntH5vccSetting(
-      settings, kH5vccSettingsKeyMediaVideoDecoderInitialPrerollCount,
-      /*min_val=*/1, /*max_val=*/100'000, kH5vccUnsetSentinel);
-  parsed.video_renderer_min_input_buffers = ProcessRangedIntH5vccSetting(
-      settings, kH5vccSettingsKeyMediaVideoRendererMinInputBuffers,
-      /*min_val=*/1, /*max_val=*/100'000, kH5vccUnsetSentinel);
-  parsed.video_renderer_min_decoded_frames = ProcessRangedIntH5vccSetting(
-      settings, kH5vccSettingsKeyMediaVideoRendererMinDecodedFrames,
-      /*min_val=*/1, /*max_val=*/100'000, kH5vccUnsetSentinel);
-  parsed.max_samples_per_write = ProcessRangedIntH5vccSetting(
-      settings, kH5vccSettingsKeyMediaMaxSamplesPerWrite, /*min_val=*/1,
-      /*max_val=*/100'000, kH5vccUnsetSentinel);
-  return parsed;
 }
 
 class CobaltWidevineL3KeySystemInfo : public cdm::WidevineKeySystemInfo {
@@ -495,8 +323,7 @@ void CobaltContentRendererClient::GetStarboardRendererFactoryTraits(
   cobalt::mojom::SettingsPtr settings;
   ExperimentalFeatures experimental_features;
   if ((*h5vcc_settings_remote_)->GetSettings(&settings) && settings) {
-    auto h5vcc_settings = ParseH5vccSettings(std::move(settings));
-    experimental_features = ProcessH5vccSettings(h5vcc_settings);
+    experimental_features = ParseH5vccSettings(std::move(settings));
   }
   renderer_factory_traits->experimental_features = experimental_features;
 }

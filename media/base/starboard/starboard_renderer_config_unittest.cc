@@ -29,12 +29,10 @@ TEST(StarboardRendererConfigTest, SunnyDay) {
       base::Microseconds(100000);
   const std::string max_video_capabilities =
       "width=1920; height=1080; framerate=15;";
-  const bool enable_flush_during_seek = true;
-  const bool enable_reset_audio_decoder = false;
-
-  StarboardRendererConfig::ExperimentalFeatures experimental_features;
-  experimental_features.enable_flush_during_seek = enable_flush_during_seek;
-  experimental_features.enable_reset_audio_decoder = enable_reset_audio_decoder;
+  ExperimentalFeatures::Map map;
+  map["Media.ForceDecodeToTexture"] = 1;
+  map["Media.BypassMojoForMedia"] = 0;
+  StarboardRendererConfig::ExperimentalFeatures experimental_features(map);
 
   StarboardRendererConfig config(
       base::UnguessableToken::Create(), audio_write_duration_local,
@@ -43,10 +41,12 @@ TEST(StarboardRendererConfigTest, SunnyDay) {
   EXPECT_EQ(config.audio_write_duration_local, audio_write_duration_local);
   EXPECT_EQ(config.audio_write_duration_remote, audio_write_duration_remote);
   EXPECT_EQ(config.max_video_capabilities, max_video_capabilities);
-  EXPECT_EQ(config.experimental_features.enable_flush_during_seek,
-            enable_flush_during_seek);
-  EXPECT_EQ(config.experimental_features.enable_reset_audio_decoder,
-            enable_reset_audio_decoder);
+  EXPECT_TRUE(config.experimental_features.GetBool(kMediaForceDecodeToTexture));
+  EXPECT_FALSE(config.experimental_features.GetBool(kMediaBypassMojoForMedia));
+  EXPECT_EQ(config.experimental_features.Get(kMediaForceDecodeToTexture),
+            std::optional<bool>(true));
+  EXPECT_EQ(config.experimental_features.Get(kMediaBypassMojoForMedia),
+            std::optional<bool>(false));
   EXPECT_EQ(config.viewport_size, gfx::Size(1920, 1080));
 }
 

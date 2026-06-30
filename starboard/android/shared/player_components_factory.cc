@@ -34,6 +34,7 @@
 #include "starboard/common/string.h"
 #include "starboard/media.h"
 #include "starboard/shared/opus/opus_audio_decoder.h"
+#include "starboard/shared/starboard/experimental_features.h"
 #include "starboard/shared/starboard/features.h"
 #include "starboard/shared/starboard/media/media_util.h"
 #include "starboard/shared/starboard/media/mime_type.h"
@@ -292,12 +293,12 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
     const auto& experimental_features =
         creation_parameters.experimental_features();
 
-    starboard::Buffer::SetPoolEnabled(
-        experimental_features.decoded_audio_buffer_pool);
-    starboard::MediaCodecVideoDecoder::SetVideoFramePoolEnabled(
-        experimental_features.video_frame_impl_pool);
+    Buffer::SetPoolEnabled(
+        experimental_features.GetBool(kMediaDecodedAudioBufferPool));
+    MediaCodecVideoDecoder::SetVideoFramePoolEnabled(
+        experimental_features.GetBool(kMediaVideoFrameImplPool));
 
-    if (experimental_features.enable_av1_startup_optimization) {
+    if (experimental_features.GetBool(kMediaEnableAv1StartupOptimization)) {
       MediaCapabilitiesCache::GetInstance()->SetAv1OptEnabled(true);
       SB_LOG(INFO) << "`enable_av1_startup_optimization` is set to true.";
     }
@@ -322,7 +323,8 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
 
     bool enable_flush_during_seek =
         FeatureList::IsEnabled(features::kForceFlushDecoderDuringReset) ||
-        creation_parameters.experimental_features().flush_decoder_during_reset;
+        creation_parameters.experimental_features().GetBool(
+            kMediaEnableFlushDuringSeek);
     if (creation_parameters.video_codec() != kSbMediaVideoCodecNone &&
         !creation_parameters.video_mime().empty()) {
       auto video_mime_type = MimeType::Create(creation_parameters.video_mime());
@@ -457,7 +459,7 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
         creation_parameters.experimental_features();
     bool enable_reset_audio_decoder =
         FeatureList::IsEnabled(features::kForceResetAudioDecoder) ||
-        experimental_features.reset_audio_decoder ||
+        experimental_features.GetBool(kMediaEnableResetAudioDecoder) ||
         (video_mime_type &&
          video_mime_type->GetParamBoolValue("enableresetaudiodecoder", false));
     SB_LOG_IF(INFO, enable_reset_audio_decoder)
@@ -471,7 +473,7 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
 
     bool enable_flush_during_seek =
         FeatureList::IsEnabled(features::kForceFlushDecoderDuringReset) ||
-        experimental_features.flush_decoder_during_reset ||
+        experimental_features.GetBool(kMediaEnableFlushDuringSeek) ||
         (video_mime_type &&
          video_mime_type->GetParamBoolValue("enableflushduringseek", false));
     SB_LOG_IF(INFO, enable_flush_during_seek)
@@ -485,7 +487,7 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
 
     bool allow_flush_audio_track_during_seek =
         FeatureList::IsEnabled(features::kForceFlushAudioTrackDuringReset) ||
-        experimental_features.flush_audio_track_during_seek;
+        experimental_features.GetBool(kMediaFlushAudioTrackDuringSeek);
     SB_LOG_IF(INFO, allow_flush_audio_track_during_seek)
         << "`kForceFlushAudioTrackDuringReset` is set to true, force flushing"
         << " audio track during Reset().";
@@ -496,12 +498,12 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
     if (creation_parameters.audio_codec() != kSbMediaAudioCodecNone) {
       // TODO: b/500811542 - Connect to H5VCC.
       const bool allow_audio_writing_on_pause =
-          experimental_features.allow_audio_writing_on_pause;
+          experimental_features.GetBool(kMediaAllowAudioWritingOnPause);
       SB_LOG_IF(INFO, allow_audio_writing_on_pause)
           << "allow_audio_writing_on_pause is set to true.";
 
       const bool enable_video_renderer_vsp_adjustment =
-          experimental_features.enable_video_renderer_vsp_adjustment;
+          experimental_features.GetBool(kMediaEnableVideoRendererVspAdjustment);
       SB_LOG_IF(INFO, enable_video_renderer_vsp_adjustment)
           << "enable_video_renderer_vsp_adjustment is set to true.";
 
@@ -548,8 +550,9 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
           << "The maximum size in bytes of a buffer of data is "
           << max_video_input_size;
 
-      if (experimental_features.enable_video_renderer_vsp_adjustment &&
-          !experimental_features.allow_audio_writing_on_pause) {
+      if (experimental_features.GetBool(
+              kMediaEnableVideoRendererVspAdjustment) &&
+          !experimental_features.GetBool(kMediaAllowAudioWritingOnPause)) {
         return Failure(
             "Video renderer vsp adjustment needs to be enabled with audio "
             "writing on pause.");
@@ -587,7 +590,7 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
     bool force_big_endian_hdr_metadata = false;
     bool enable_flush_during_seek =
         FeatureList::IsEnabled(features::kForceFlushDecoderDuringReset) ||
-        experimental_features.flush_decoder_during_reset;
+        experimental_features.GetBool(kMediaEnableFlushDuringSeek);
     int64_t flush_delay_usec = features::kFlushDelayUsec.Get();
     int64_t reset_delay_usec = features::kResetDelayUsec.Get();
 

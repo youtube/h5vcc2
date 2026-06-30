@@ -15,44 +15,20 @@
 #ifndef MEDIA_BASE_STARBOARD_STARBOARD_RENDERER_CONFIG_H_
 #define MEDIA_BASE_STARBOARD_STARBOARD_RENDERER_CONFIG_H_
 
-#include <optional>
 #include <ostream>
 #include <string>
 
 #include "base/time/time.h"
 #include "base/unguessable_token.h"
 #include "media/base/media_export.h"
+#include "media/base/starboard/experimental_features.h"
 #include "ui/gfx/geometry/size.h"
 
 namespace media {
 
 // Configs for StarboardRenderer.
 struct MEDIA_EXPORT StarboardRendererConfig {
-  struct ExperimentalFeatures {
-    // keep-sorted start
-    bool allow_audio_writing_on_pause = false;
-    bool bypass_mojo_for_media = false;
-    bool decoded_audio_buffer_pool = false;
-    bool enable_av1_startup_optimization = false;
-    bool enable_flush_during_seek = false;
-    bool enable_low_latency = false;
-    bool enable_reset_audio_decoder = false;
-    bool enable_video_renderer_vsp_adjustment = false;
-    bool flush_audio_track_during_seek = false;
-    bool force_clear_surface_view = false;
-    bool force_decode_to_texture = false;
-    bool ignore_mediacodec_callbacks_during_flushing = false;
-    bool skip_flush_on_decoder_teardown = false;
-    bool skip_video_frames_over_60_fps = false;
-    bool video_frame_impl_pool = false;
-    std::optional<bool> enable_simd_based_audio_format_switching;
-    std::optional<bool> enable_trivial_optimizations;
-    std::optional<int> max_samples_per_write;
-    std::optional<int> video_decoder_initial_preroll_count;
-    std::optional<int> video_renderer_min_decoded_frames;
-    std::optional<int> video_renderer_min_input_buffers;
-    // keep-sorted end
-  };
+  using ExperimentalFeatures = media::ExperimentalFeatures;
 
   StarboardRendererConfig();
   StarboardRendererConfig(const base::UnguessableToken& overlay_plane_id,
@@ -71,10 +47,6 @@ struct MEDIA_EXPORT StarboardRendererConfig {
   ExperimentalFeatures experimental_features;
   gfx::Size viewport_size;
 };
-
-MEDIA_EXPORT std::ostream& operator<<(
-    std::ostream& os,
-    const StarboardRendererConfig::ExperimentalFeatures& features);
 
 }  // namespace media
 

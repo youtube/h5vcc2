@@ -25,6 +25,7 @@ if (current_toolchain == starboard_toolchain) {
     testonly = true
 
     sources = [
+      "//starboard/shared/starboard/experimental_features_test.cc",
       "adaptive_audio_decoder_test.cc",
       "audio_channel_layout_mixer_test.cc",
       "audio_decoder_test.cc",

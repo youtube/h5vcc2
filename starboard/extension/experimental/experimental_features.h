@@ -25,33 +25,18 @@ extern "C" {
 #define kStarboardExtensionExperimentalFeaturesConfigurationName \
   "dev.starboard.extension.ExperimentalFeaturesConfiguration"
 
+typedef struct StarboardExperimentalFeatureEntry {
+  const char* key;
+  int64_t value;
+} StarboardExperimentalFeatureEntry;
+
 // This extension is intended ONLY for temporary experiments. Once an experiment
 // is concluded and the feature is launched, the corresponding field should be
 // removed from this struct and moved to a dedicated extension or a permanent
 // Starboard function.
 typedef struct StarboardExtensionExperimentalFeatures {
-  // If a field is NULL, it means the value is not set.
-  // The fields should be in alphabetical order.
-  // keep-sorted start
-  bool allow_audio_writing_on_pause;
-  bool decoded_audio_buffer_pool;
-  bool enable_av1_startup_optimization;
-  bool enable_low_latency;
-  bool enable_video_renderer_vsp_adjustment;
-  bool flush_audio_track_during_seek;
-  bool flush_decoder_during_reset;
-  bool force_clear_surface_view;
-  bool ignore_mediacodec_callbacks_during_flushing;
-  bool reset_audio_decoder;
-  bool skip_flush_on_decoder_teardown;
-  bool skip_video_frames_over_60_fps;
-  bool video_frame_impl_pool;
-  const bool* enable_simd_based_audio_format_switching;
-  const bool* enable_trivial_optimizations;
-  const int* video_decoder_initial_preroll_count;
-  const int* video_renderer_min_decoded_frames;
-  const int* video_renderer_min_input_buffers;
-  // keep-sorted end
+  const StarboardExperimentalFeatureEntry* entries;
+  size_t entry_count;
 } StarboardExtensionExperimentalFeatures;
 
 typedef struct StarboardExtensionExperimentalFeaturesConfigurationApi {

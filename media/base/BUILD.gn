@@ -483,7 +483,11 @@ source_set("base") {
   if (is_cobalt && use_starboard_media) {
     sources += [
         "starboard/demuxer_memory_limit_starboard.cc",
+        "starboard/experimental_features.cc",
+        "starboard/experimental_features.h",
         "starboard/renderer_factory_traits.h",
+        "starboard/ipc_param_traits.cc",
+        "starboard/ipc_param_traits.h",
         "starboard/starboard_renderer_config.cc",
         "starboard/starboard_renderer_config.h",
         "starboard/starboard_rendering_mode.h"
@@ -718,6 +722,8 @@ source_set("unit_tests") {
 
   if (is_cobalt && use_starboard_media) {
     sources += [
+      "starboard/experimental_features_unittest.cc",
+      "starboard/ipc_param_traits_unittest.cc",
       "starboard/starboard_renderer_config_unittest.cc"
     ]
   }

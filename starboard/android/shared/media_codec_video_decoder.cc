@@ -41,6 +41,7 @@
 #include "starboard/configuration.h"
 #include "starboard/decode_target.h"
 #include "starboard/drm.h"
+#include "starboard/shared/starboard/experimental_features.h"
 #include "starboard/shared/starboard/media/media_tracing.h"
 #include "starboard/shared/starboard/media/mime_type.h"
 #include "starboard/shared/starboard/player/filter/video_frame_internal.h"
@@ -350,27 +351,29 @@ MediaCodecVideoDecoder::MediaCodecVideoDecoder(
                             ? platform_options.flush_delay_usec
                             : 0),
       skip_flush_on_decoder_teardown_(
-          pipeline_config.experimental_features.skip_flush_on_decoder_teardown),
-      force_clear_surface_(
-          pipeline_config.experimental_features.force_clear_surface_view),
+          pipeline_config.experimental_features.GetBool(
+              kMediaSkipFlushOnDecoderTeardown)),
+      force_clear_surface_(pipeline_config.experimental_features.GetBool(
+          kMediaForceClearSurfaceView)),
       needs_fps_to_initialize_codec_(
           video_codec_ == kSbMediaVideoCodecAv1 &&
           MediaCapabilitiesCache::GetInstance()->IsAv18kCappedAt30()),
       skip_video_frames_over_60_fps_(
-          pipeline_config.experimental_features.skip_video_frames_over_60_fps),
+          pipeline_config.experimental_features.GetBool(
+              kMediaSkipVideoFramesOver60Fps)),
       ignore_mediacodec_callbacks_during_flushing_(
-          pipeline_config.experimental_features
-              .ignore_mediacodec_callbacks_during_flushing),
-      enable_low_latency_(
-          pipeline_config.experimental_features.enable_low_latency),
+          pipeline_config.experimental_features.GetBool(
+              kMediaIgnoreMediaCodecCallbacksDuringFlushing)),
+      enable_low_latency_(pipeline_config.experimental_features.GetBool(
+          kMediaEnableLowLatency)),
       is_video_frame_tracker_enabled_(android_get_device_api_level() >= 34 ||
                                       tunnel_mode_audio_session_id_),
       media_codec_factory_(std::move(media_codec_factory)),
       has_new_texture_available_(false),
       initial_number_of_preroll_frames_(
           pipeline_config.experimental_features
-              .video_decoder_initial_preroll_count.value_or(
-                  kInitialPrerollFrameCount)),
+              .Get(kMediaVideoDecoderInitialPrerollCount)
+              .value_or(kInitialPrerollFrameCount)),
       number_of_preroll_frames_(initial_number_of_preroll_frames_),
       surface_texture_bridge_(
           output_mode_ == kSbPlayerOutputModeDecodeToTexture
