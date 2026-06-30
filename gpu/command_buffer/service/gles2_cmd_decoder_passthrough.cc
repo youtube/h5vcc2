@@ -37,6 +37,7 @@
 #include "gpu/command_buffer/service/shared_image/shared_image_representation.h"
 #include "gpu/config/gpu_finch_features.h"
 #include "ui/gl/gl_implementation.h"
+#include "ui/gl/gl_bindings.h"
 #include "ui/gl/gl_utils.h"
 #include "ui/gl/gl_version_info.h"
 #include "ui/gl/gpu_switching_manager.h"
@@ -948,11 +949,41 @@ gpu::ContextResult GLES2DecoderPassthroughImpl::Initialize(
                    "missing GL_ANGLE_client_arrays");
 #endif
 
+#if BUILDFLAG(IS_COBALT)
+  // Cobalt: We require GL_CLIENT_ARRAYS_ANGLE to be disabled (GL_FALSE) to proceed.
+  // However, if the GL_ANGLE_client_arrays extension is not supported by the platform's
+  // GL context (e.g., when Cobalt runs on native GL without ANGLE), calling glIsEnabled
+  // with the GL_CLIENT_ARRAYS_ANGLE enum is invalid. While it returns GL_FALSE (passing the check),
+  // it also pollutes the GL state with a GL_INVALID_ENUM error, which causes crashes later during
+  // strict error checks (e.g. in IsGL_REDSupportedOnFBOs).
+  // Thus, we only query it if the extension is actually supported.
+  if (feature_info_->feature_flags().angle_client_arrays) {
+    FAIL_INIT_IF_NOT(api()->glIsEnabledFn(GL_CLIENT_ARRAYS_ANGLE) == GL_FALSE,
+                     "GL_ANGLE_client_arrays shouldn't be enabled");
+  }
+#else
   FAIL_INIT_IF_NOT(api()->glIsEnabledFn(GL_CLIENT_ARRAYS_ANGLE) == GL_FALSE,
                    "GL_ANGLE_client_arrays shouldn't be enabled");
+#endif
+
+#if BUILDFLAG(IS_COBALT)
+  // Cobalt on some platforms (like RDK) runs on native GL without ANGLE compatibility,
+  // but we still want to allow WebGL context creation.
+  const bool webgl_compat_match = true;
+  FAIL_INIT_IF_NOT(webgl_compat_match, "missing GL_ANGLE_webgl_compatibility");
+#else
   FAIL_INIT_IF_NOT(feature_info_->feature_flags().angle_webgl_compatibility ==
                        IsWebGLContextType(attrib_helper.context_type),
                    "missing GL_ANGLE_webgl_compatibility");
+#endif
+
+#if BUILDFLAG(IS_COBALT)
+  if (feature_info_->gl_version_info().is_es3) {
+    CHECK(gl::g_current_gl_driver);
+    FAIL_INIT_IF_NOT(gl::g_current_gl_driver->fn.glGetStringiFn,
+                     "GLES3 context missing glGetStringi");
+  }
+#endif
 
 // TODO: b/457746593 - Cobalt: Fix the crash on raspi2
 #if !BUILDFLAG(ENABLE_COBALT_HERMETIC_HACKS) || !defined(__arm__)

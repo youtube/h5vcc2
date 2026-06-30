@@ -21,6 +21,8 @@
 #include "base/strings/string_util.h"
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
+#include "build/buildflag.h"
+#include "ui/gfx/extension_set.h"
 #include "ui/gl/angle_implementation.h"
 #include "ui/gl/buildflags.h"
 #include "ui/gl/gl_bindings.h"
@@ -448,6 +450,37 @@ std::string GetGLExtensionsFromCurrentContext() {
 }
 
 std::string GetGLExtensionsFromCurrentContext(GLApi* api) {
+#if BUILDFLAG(IS_COBALT)
+  if (!api)
+    return std::string();
+
+  // On OpenGL ES 3.0+, glGetString(GL_EXTENSIONS) is deprecated and can return
+  // null while setting a GL_INVALID_ENUM error. This error can linger and cause
+  // crashes later (e.g. in IsGL_REDSupportedOnFBOs). To prevent this, we query
+  // extensions individually using glGetStringi if we detect an ES3 context.
+  {
+    GLVersionInfo version_info(
+        reinterpret_cast<const char*>(api->glGetStringFn(GL_VERSION)),
+        reinterpret_cast<const char*>(api->glGetStringFn(GL_RENDERER)),
+        gfx::ExtensionSet());
+    if (version_info.is_es3) {
+      GLint num_extensions = 0;
+      api->glGetIntegervFn(GL_NUM_EXTENSIONS, &num_extensions);
+      std::string extensions;
+      for (GLint i = 0; i < num_extensions; ++i) {
+        const char* ext = reinterpret_cast<const char*>(
+            api->glGetStringiFn(GL_EXTENSIONS, i));
+        if (ext) {
+          if (!extensions.empty())
+            extensions += " ";
+          extensions += ext;
+        }
+      }
+      return extensions;
+    }
+  }
+#endif
+
   const char* extensions =
       reinterpret_cast<const char*>(api->glGetStringFn(GL_EXTENSIONS));
   return extensions ? std::string(extensions) : std::string();
@@ -458,6 +491,16 @@ gfx::ExtensionSet GetRequestableGLExtensionsFromCurrentContext() {
 }
 
 gfx::ExtensionSet GetRequestableGLExtensionsFromCurrentContext(GLApi* api) {
+#if BUILDFLAG(IS_COBALT)
+  // Cobalt on some platforms (like RDK) runs on native GL without ANGLE,
+  // but uses the passthrough command decoder. Querying requestable extensions
+  // (which is ANGLE-specific) on native GL will generate GL errors.
+  const char* version =
+      reinterpret_cast<const char*>(api->glGetStringFn(GL_VERSION));
+  if (!version || !strstr(version, "ANGLE")) {
+    return gfx::ExtensionSet();
+  }
+#endif
   return GetGLExtensionsFromCurrentContext(api,
                                            GL_REQUESTABLE_EXTENSIONS_ANGLE);
 }

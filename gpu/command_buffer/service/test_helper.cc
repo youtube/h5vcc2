@@ -18,6 +18,7 @@
 
 #include "base/strings/string_number_conversions.h"
 #include "build/build_config.h"
+#include "build/buildflag.h"
 #include "gpu/command_buffer/service/buffer_manager.h"
 #include "gpu/command_buffer/service/error_state_mock.h"
 #include "gpu/command_buffer/service/feature_info.h"
@@ -473,9 +474,36 @@ void TestHelper::SetupFeatureInfoInitExpectationsWithGLVersion(
   split_extensions_ =
       std::vector<std::string>(extension_set.begin(), extension_set.end());
   gl::GLVersionInfo gl_info(gl_version, gl_renderer, extension_set);
+
+#if BUILDFLAG(IS_COBALT)
+  // In Cobalt, we query version/renderer during extension query, which happens first.
+  EXPECT_CALL(*gl, GetString(GL_VERSION))
+      .WillOnce(Return(reinterpret_cast<const uint8_t*>(gl_version)))
+      .RetiresOnSaturation();
+  EXPECT_CALL(*gl, GetString(GL_RENDERER))
+      .WillOnce(Return(reinterpret_cast<const uint8_t*>(gl_renderer)))
+      .RetiresOnSaturation();
+
+  // In Cobalt, if we detect an ES3 context, we query extensions individually.
+  if (gl_info.is_es3) {
+    EXPECT_CALL(*gl, GetIntegerv(GL_NUM_EXTENSIONS, _))
+        .WillOnce(SetArgPointee<1>(split_extensions_.size()))
+        .RetiresOnSaturation();
+    for (size_t i = 0; i < split_extensions_.size(); ++i) {
+      EXPECT_CALL(*gl, GetStringi(GL_EXTENSIONS, i))
+          .WillOnce(Return(reinterpret_cast<const uint8_t*>(split_extensions_[i].c_str())))
+          .RetiresOnSaturation();
+    }
+  } else {
+    EXPECT_CALL(*gl, GetString(GL_EXTENSIONS))
+        .WillOnce(Return(reinterpret_cast<const uint8_t*>(extensions)))
+        .RetiresOnSaturation();
+  }
+#else // !BUILDFLAG(IS_COBALT)
   EXPECT_CALL(*gl, GetString(GL_EXTENSIONS))
       .WillOnce(Return(reinterpret_cast<const uint8_t*>(extensions)))
       .RetiresOnSaturation();
+#endif
 
   EXPECT_CALL(*gl, GetString(GL_VERSION))
       .WillOnce(Return(reinterpret_cast<const uint8_t*>(gl_version)))

@@ -15,6 +15,7 @@ assert(angle_enable_gl)
 
 config("angle_gl_backend_config") {
   defines = [ "ANGLE_ENABLE_OPENGL" ]
+  include_dirs = []
   if (angle_enable_gl_desktop_backend) {
     defines += [ "ANGLE_ENABLE_GL_DESKTOP_BACKEND" ]
   }
@@ -32,12 +33,15 @@ config("angle_gl_backend_config") {
       ]
     }
   }
-  if (!is_starboard) {
-  if (angle_has_build && (is_linux || is_chromeos)) {
-    defines += [ "ANGLE_HAS_LIBDRM" ]
+  if (is_starboard) {
+    defines += [ "ANGLE_USE_STARBOARD" ]
+    include_dirs += [ "$angle_root/../.." ]
+  } else {
+    if (angle_has_build && (is_linux || is_chromeos)) {
+      defines += [ "ANGLE_HAS_LIBDRM" ]
+    }
   }
-  }
-  include_dirs = [ "../../../third_party/khronos" ]
+  include_dirs += [ "../../../third_party/khronos" ]
 }
 
 angle_source_set("angle_gl_backend") {
@@ -51,10 +55,12 @@ angle_source_set("angle_gl_backend") {
     "$angle_root:angle_image_util",
   ]
 
-  if (!is_starboard) {
-  if (angle_has_build && (is_linux || is_chromeos)) {
-    deps += [ "//build/config/linux/libdrm" ]
-  }
+  if (is_starboard) {
+    deps += [ "//starboard:starboard_headers_only" ]
+  } else {
+    if (angle_has_build && (is_linux || is_chromeos)) {
+      deps += [ "//build/config/linux/libdrm" ]
+    }
   }
 
   if (is_win) {

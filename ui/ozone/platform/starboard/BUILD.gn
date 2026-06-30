@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import("//build/config/ozone.gni")
+import("//ui/gl/features.gni")
 
 assert(is_starboard)
 
@@ -49,11 +50,19 @@ source_set("starboard") {
     "//ui/display",
     "//ui/events/ozone/layout:layout",
     "//ui/gfx:native_widget_types",
+    "//ui/gl:buildflags",
     "//ui/ozone:ozone_base",
     "//ui/ozone/common",
     "//ui/platform_window",
     "//ui/platform_window/stub",
   ]
+
+  if (use_static_angle) {
+    deps += [
+      "//third_party/angle:libEGL_static",
+      "//third_party/angle:libGLESv2_static",
+    ]
+  }
 }
 
 source_set("starboard_unittests") {
