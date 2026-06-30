@@ -19946,6 +19946,8 @@ from previous Chrome versions.
   <int value="11" label="kTest"/>
 <!-- Cobalt: Renderer for Starboard (SbPlayer) -->
   <int value="12" label="kStarboard"/>
+<!-- Cobalt: URL-based renderer for native HLS on tvOS -->
+  <int value="13" label="kUrlPlayer"/>
 </enum>
 
 <enum name="MediaSessionAction">

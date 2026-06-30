@@ -111,6 +111,14 @@ config("buildflag_defines") {
     defines += [ "ENABLE_BUILDFLAG_USE_STARBOARD_MEDIA" ]
   }
 
+  # use_starboard_url_player and BUILDFLAG(USE_STARBOARD_URL_PLAYER) should be
+  # used to wrap URL-based player functionality (e.g., HLS via AVPlayer on
+  # tvOS). This is a derived capability that is true only for tvOS builds with
+  # Starboard media enabled.
+  if (use_starboard_url_player) {
+    defines += [ "ENABLE_BUILDFLAG_USE_STARBOARD_URL_PLAYER" ]
+  }
+
   # use_evergreen and BUILDFLAG(USE_EVERGREEN) should be used for
   # Evergreen-specific functionality, i.e. the Evergreen loader_app. Do not use
   # this flag for hermetic build functionality, instead use

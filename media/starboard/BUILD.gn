@@ -59,6 +59,12 @@ source_set("starboard") {
 
     deps += [ ":buildflags" ]
   }
+  if (use_starboard_url_player) {
+    sources += [
+      "url_player_renderer.cc",
+      "url_player_renderer.h",
+    ]
+  }
 
   deps += [
     "//base",
@@ -97,6 +103,9 @@ source_set("unit_tests") {
       "starboard_renderer_unittest.cc",
       "starboard_utils_test.cc",
     ]
+  }
+  if (use_starboard_url_player) {
+    sources += [ "url_player_renderer_unittest.cc" ]
   }
   configs += [ "//media:media_config" ]
   deps = [

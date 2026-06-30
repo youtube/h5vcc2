@@ -21,6 +21,10 @@
 #include "media/mojo/common/starboard/mojo_renderer_bypass_bridge.h"
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+#include "media/mojo/services/starboard/url_player_renderer_wrapper.h"
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+
 namespace media {
 
 // Time interval to update media time.
@@ -134,6 +138,39 @@ void MojoRendererService::Initialize(
       base::BindOnce(&MojoRendererService::OnAllStreamsReady, weak_this_,
                      std::move(callback)));
 }
+
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+void MojoRendererService::InitializeWithUrl(
+    mojo::PendingAssociatedRemote<mojom::RendererClient> client,
+    const GURL& source_url,
+    InitializeWithUrlCallback callback) {
+  DVLOG(1) << __func__ << ": " << source_url;
+
+  if (state_ != STATE_UNINITIALIZED) {
+    std::move(callback).Run(false);
+    return;
+  }
+
+  if (renderer_->GetRendererType() != RendererType::kUrlPlayer) {
+    mojo::ReportBadMessage("InitializeWithUrl requires URL player renderer");
+    return;
+  }
+
+  if (!source_url.is_valid()) {
+    mojo::ReportBadMessage("InitializeWithUrl requires a valid source URL");
+    return;
+  }
+
+  client_.Bind(std::move(client));
+  state_ = STATE_INITIALIZING;
+
+  static_cast<UrlPlayerRendererWrapper*>(renderer_.get())
+      ->InitializeWithUrl(
+          this, source_url,
+          base::BindOnce(&MojoRendererService::OnRendererInitializeDone,
+                         weak_this_, std::move(callback)));
+}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
 void MojoRendererService::InitializeWithBypassBridge(

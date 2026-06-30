@@ -24,6 +24,7 @@
 #include "media/base/mock_media_log.h"
 #include "media/base/test_helpers.h"
 #include "media/base/video_renderer_sink.h"
+#include "media/media_buildflags.h"
 #include "media/mojo/mojom/renderer.mojom.h"
 #include "media/mojo/mojom/renderer_extensions.mojom.h"
 #include "media/renderers/video_overlay_factory.h"
@@ -61,6 +62,13 @@ class FakeMojomRenderer : public mojom::Renderer {
       InitializeWithBypassBridgeCallback cb) override {
     std::move(cb).Run(true);
   }
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  void InitializeWithUrl(mojo::PendingAssociatedRemote<mojom::RendererClient>,
+                         const GURL& source_url,
+                         InitializeWithUrlCallback cb) override {
+    std::move(cb).Run(true);
+  }
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
   MOCK_METHOD1(Flush, void(FlushCallback));
   void StartPlayingFrom(base::TimeDelta time) override {}
   MOCK_METHOD1(SetPlaybackRate, void(double));
