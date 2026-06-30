@@ -97,15 +97,19 @@ class AppEventRunnerImpl : public AppEventRunner,
   }
 
   void InitializeSystem() override {
+#if !BUILDFLAG(IS_ANDROID)
     exit_manager_ = std::make_unique<base::AtExitManager>();
+#endif
   }
 
   void CreateMainDelegate(absl::optional<int64_t> startup_timestamp,
                           bool is_visible,
                           const char* initial_deep_link) override {
+#if !BUILDFLAG(IS_ANDROID)
     content_main_delegate_ = std::make_unique<cobalt::CobaltMainDelegate>(
         startup_timestamp, initial_deep_link,
         false /* is_content_browsertests */, is_visible);
+#endif
   }
 
   std::vector<content::WebContents*> GetWebContents() override {

@@ -591,13 +591,7 @@ public abstract class CobaltActivity extends Activity {
       mHandler.removeCallbacks(mFreezeRunnable);
       mFreezeRunnable = null;
     }
-    WebContents webContents = getActiveWebContents();
-    if (webContents != null &&
-        (getJavaSwitches().containsKey(JavaSwitches.DELAY_FREEZE_ON_BACKGROUND) ||
-         getJavaSwitches().containsKey(JavaSwitches.ENABLE_FREEZE))) {
-      // document.onresume event
-      webContents.onResume();
-    }
+    AppEventBridge.handleLifecycleEvent(StarboardBridge.kSbEventTypeStart);
     // visibility:visible event
     updateShellActivityVisible(mWasDisplayOn);
     MemoryPressureMonitor.INSTANCE.enablePolling(false);
@@ -608,7 +602,7 @@ public abstract class CobaltActivity extends Activity {
   @Override
   protected void onPause() {
     mPhysicalBackKeyPressed = false;
-    CobaltContentBrowserClient.dispatchBlur();
+    AppEventBridge.handleLifecycleEvent(StarboardBridge.kSbEventTypeBlur);
     super.onPause();
   }
 
@@ -620,27 +614,24 @@ public abstract class CobaltActivity extends Activity {
 
     // visibility:hidden event
     updateShellActivityVisible(false);
-    WebContents webContents = getActiveWebContents();
-    if (webContents != null) {
-      if (getJavaSwitches().containsKey(JavaSwitches.DELAY_FREEZE_ON_BACKGROUND)) {
-        if (mFreezeRunnable != null) {
-          mHandler.removeCallbacks(mFreezeRunnable);
-        }
-        mFreezeRunnable = new Runnable() {
-          @Override
-          public void run() {
-            WebContents currentWebContents = getActiveWebContents();
-            if (currentWebContents != null) {
-              currentWebContents.onFreeze();
-            }
-            mFreezeRunnable = null;
-          }
-        };
-        mHandler.postDelayed(mFreezeRunnable, 1500);
-      } else if (getJavaSwitches().containsKey(JavaSwitches.ENABLE_FREEZE)) {
-        // If ENABLE_FREEZE is specified, fire freeze event immediately
-        webContents.onFreeze();
+
+    AppEventBridge.handleLifecycleEvent(StarboardBridge.kSbEventTypeConceal);
+
+    if (getJavaSwitches().containsKey(JavaSwitches.DELAY_FREEZE_ON_BACKGROUND)) {
+      if (mFreezeRunnable != null) {
+        mHandler.removeCallbacks(mFreezeRunnable);
       }
+      mFreezeRunnable = new Runnable() {
+        @Override
+        public void run() {
+          AppEventBridge.handleLifecycleEvent(StarboardBridge.kSbEventTypeFreeze);
+          mFreezeRunnable = null;
+        }
+      };
+      mHandler.postDelayed(mFreezeRunnable, 1500);
+    } else if (getJavaSwitches().containsKey(JavaSwitches.ENABLE_FREEZE)) {
+      // If ENABLE_FREEZE is specified, fire freeze event immediately
+      AppEventBridge.handleLifecycleEvent(StarboardBridge.kSbEventTypeFreeze);
     }
 
     if (VideoSurfaceView.getCurrentSurface() != null) {
@@ -662,7 +653,7 @@ public abstract class CobaltActivity extends Activity {
       rootView.requestFocus();
       Log.i(TAG, "Request focus on the root view on resume.");
     }
-    CobaltContentBrowserClient.dispatchFocus();
+    AppEventBridge.handleLifecycleEvent(StarboardBridge.kSbEventTypeFocus);
     StartupGuard.getInstance().setStartupMilestone(13);
   }
 
