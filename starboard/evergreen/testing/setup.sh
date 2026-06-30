@@ -31,8 +31,8 @@ if [[ -z ${1} ]]; then
   exit 1
 fi
 
-if [[ "${1}" != "linux-x64x11" ]] && [[ "${1}" != "raspi-2" ]]; then
-  log "error" "The loader platform provided must be either linux-x64x11 or raspi-2"
+if [[ "${1}" != "linux-x64x11" ]]; then
+  log "error" "The loader platform provided must be linux-x64x11"
   exit 1
 fi
 LOADER_PLATFORM="${1}"
