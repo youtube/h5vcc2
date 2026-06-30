@@ -1340,6 +1340,14 @@ component("base") {
       sources += [ "android/reached_code_profiler_stub.cc" ]
     }
 
+    # TODO(https://crbug.com/495203133): the native_target partner toolchain
+    # compiles debug/stack_trace_android.cc but links neither an unwinder nor
+    # Starboard's unwind_starboard, leaving the _Unwind_* symbols it references
+    # undefined.
+    if (!is_starboard) {
+      sources += [ "debug/cobalt_unwind_stubs.cc" ]
+    }
+
     # This is actually a linker script, but it can be added to the link in the
     # same way as a library.
     libs += [ "android/library_loader/anchor_functions.lds" ]
@@ -1395,7 +1403,9 @@ component("base") {
 
     deps += [
       ":base_jni",
+      ":jni_android_jni",
       ":process_launcher_jni",
+      "//build:robolectric_buildflags",
     ]
   }  # is_android || is_robolectric
 
@@ -4272,7 +4282,10 @@ if (is_android || is_robolectric) {
   }
 
   generate_jar_jni("android_runtime_jni_headers") {
-    classes = [ "java/lang/Runtime.class" ]
+    classes = [
+      "java/lang/Runtime.class",
+      "java/lang/Throwable.class",
+    ]
   }
 
   generate_jar_jni("android_runtime_unchecked_jni_headers") {
@@ -4284,6 +4297,10 @@ if (is_android || is_robolectric) {
     sources = [
       "android/java/src/org/chromium/base/process_launcher/ChildProcessService.java",
     ]
+  }
+
+  generate_jni("jni_android_jni") {
+    sources = [ "android/java/src/org/chromium/base/JniAndroid.java" ]
   }
 }  # is_android || is_robolectric
 
@@ -4375,6 +4392,7 @@ if (is_android) {
       "//third_party/androidx:androidx_annotation_annotation_java",
       "//third_party/androidx:androidx_collection_collection_java",
       "//third_party/androidx:androidx_core_core_java",
+      "//third_party/jni_zero:jni_zero_java",
     ]
 
     sources = [

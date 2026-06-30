@@ -207,7 +207,7 @@ bool SysInfo::IsLowEndDeviceImpl() {
   // implementations which could give different results.
   // Also the Java code cannot depend on the native code
   // since it might not be loaded yet.
-  if (!base::android::IsVMInitialized())
+  if (!base::android::IsJavaAvailable())
     return false;
   return g_lazy_low_end_device.Get().value();
 }
