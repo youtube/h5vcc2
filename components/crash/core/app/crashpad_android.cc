@@ -567,6 +567,13 @@ class HandlerStarter {
       return database_path;
     }
 
+#if BUILDFLAG(IS_COBALT)
+    // Disable periodic tasks. In the Android "at-crash" execution model, this
+    // flag prevents an unnecessary file system scan for pending reports, reducing
+    // thread contention during the critical crash dumping window.
+    // TODO: Implement actual database pruning for Android TV.
+    arguments.push_back("--no-periodic-tasks");
+#endif
     if (crashpad::SetSanitizationInfo(GetCrashReporterClient(),
                                       &browser_sanitization_info_)) {
       arguments.push_back(base::StringPrintf("--sanitization-information=%p",

@@ -38,6 +38,10 @@ class CobaltCrashReporterClient : public crash_reporter::CrashReporterClient {
 
   std::string GetUploadUrl() override;
 
+  void GetSanitizationInformation(const char* const** allowed_annotations,
+                                  void** target_module,
+                                  bool* sanitize_stacks) override;
+
  private:
   friend class base::NoDestructor<CobaltCrashReporterClient>;
 

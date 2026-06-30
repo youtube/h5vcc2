@@ -96,3 +96,23 @@ bool CobaltCrashReporterClient::IsRunningUnattended() {
 std::string CobaltCrashReporterClient::GetUploadUrl() {
   return kCrashReportUrl;
 }
+
+// Overrides the default behavior to explicitly enable stack sanitization.
+// Setting *sanitize_stacks = true ensures that all stack memory in the
+// minidump is overwritten with the 0x0DEFACED pattern.
+// This aligns the native Android crashpad path with the
+// behavior established in the Starboard crashpad wrapper for 3P platforms.
+void CobaltCrashReporterClient::GetSanitizationInformation(
+    const char* const** allowed_annotations,
+    void** target_module,
+    bool* sanitize_stacks) {
+  if (allowed_annotations) {
+    *allowed_annotations = nullptr;
+  }
+  if (target_module) {
+    *target_module = nullptr;
+  }
+  if (sanitize_stacks) {
+    *sanitize_stacks = true;
+  }
+}
