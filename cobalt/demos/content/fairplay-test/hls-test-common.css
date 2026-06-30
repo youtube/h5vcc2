@@ -1,0 +1,124 @@
+body {
+    background: #000;
+    color: #0f0;
+    font-family: monospace;
+    padding: 20px;
+}
+video {
+    width: 960px;
+    height: 540px;
+    background: #111;
+}
+#mode-selector {
+    margin: 10px 0;
+    display: flex;
+    gap: 6px;
+}
+#mode-selector .mode-btn {
+    background: #111;
+    color: #888;
+    border: 1px solid #444;
+    padding: 4px 10px;
+    font-family: monospace;
+    font-size: 12px;
+    cursor: pointer;
+}
+#mode-selector .mode-btn.active {
+    color: #0f0;
+    border-color: #0f0;
+    font-weight: bold;
+}
+#controls {
+    margin: 10px 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+#controls button {
+    background: #222;
+    color: #0f0;
+    border: 1px solid #0f0;
+    padding: 6px 14px;
+    font-family: monospace;
+    font-size: 13px;
+    cursor: pointer;
+}
+#controls button:focus {
+    background: #ff0;
+    color: #000;
+    outline: 3px solid #fff;
+}
+#controls button.active {
+    border-color: #0f0;
+    border-width: 2px;
+    color: #0f0;
+    font-weight: bold;
+}
+#controls button.active:focus {
+    background: #ff0;
+    color: #000;
+}
+#seek-bar {
+    width: 300px;
+    accent-color: #0f0;
+}
+.mode-btn:focus {
+    background: #ff0;
+    color: #000;
+    outline: 3px solid #fff;
+}
+#timeline {
+    font-size: 13px;
+    margin: 4px 0;
+}
+#buffered-info {
+    font-size: 12px;
+    color: #0a0;
+    margin: 2px 0;
+}
+#info-panels {
+    display: flex;
+    gap: 12px;
+    margin: 10px 0;
+    flex-wrap: wrap;
+}
+#info-panels .info-box {
+    border: 1px solid #333;
+    padding: 8px 12px;
+    min-width: 200px;
+    flex: 1;
+}
+#info-panels .info-box h4 {
+    margin: 0 0 6px 0;
+    color: #0f0;
+    font-size: 13px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+}
+#info-panels .info-box table {
+    font-size: 12px;
+    width: 100%;
+}
+#info-panels .info-box td {
+    padding: 1px 0;
+}
+#info-panels .info-box td:first-child {
+    color: #888;
+    padding-right: 8px;
+    white-space: nowrap;
+}
+#info-panels .info-box td:last-child {
+    color: #0f0;
+    word-break: break-all;
+}
+#log {
+    white-space: pre-wrap;
+    font-size: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+.error { color: #f00; }
+.warn { color: #ff0; }
+.ok { color: #0f0; }

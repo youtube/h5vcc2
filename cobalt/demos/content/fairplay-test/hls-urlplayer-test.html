@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>HLS URL Player Test Suite</title>
+    <link rel="stylesheet" href="hls-test-common.css">
+</head>
+<body>
+    <h3 id="test-title" style="display:inline">HLS URL Player Test Suite</h3>
+    <a href="README.md" style="font-size:11px; color:#0a0; margin-left:10px; text-decoration:underline;">[ README ]</a>
+    <a href="https://github.com/Dash-Industry-Forum/dash.js/issues/4844" style="font-size:11px; color:#0a0; margin-left:6px; text-decoration:underline;">[ Axinom FairPlay Ref ]</a>
+
+    <!-- Test mode selector -->
+    <div id="mode-selector">
+        <button id="mode-clear" class="mode-btn active" tabindex="1">Clear HLS</button>
+        <button id="mode-encrypted" class="mode-btn" tabindex="2">Encrypted HLS (FairPlay)</button>
+    </div>
+
+    <video id="video" controls tabindex="-1"></video>
+
+    <div id="controls">
+        <button id="btn-play" tabindex="3">Play</button>
+        <button id="btn-pause" tabindex="4">Pause</button>
+        <button id="btn-seek-back" tabindex="5">-10s</button>
+        <button id="btn-seek-fwd" tabindex="6">+10s</button>
+        <button id="btn-rate-05" tabindex="7">0.5x</button>
+        <button id="btn-rate-1" tabindex="8" class="active">1x</button>
+        <button id="btn-rate-15" tabindex="9">1.5x</button>
+        <button id="btn-rate-2" tabindex="10">2x</button>
+        <button id="btn-mute" tabindex="11">Mute</button>
+        <button id="btn-unmute" tabindex="12">Unmute</button>
+    </div>
+
+    <div id="timeline">
+        <input type="range" id="seek-bar" min="0" max="100" value="0" step="2" tabindex="13">
+        <span id="time-display">0:00 / 0:00</span>
+    </div>
+    <div id="buffered-info">Buffered: --</div>
+
+    <div id="info-panels">
+        <div class="info-box" id="stream-info">
+            <h4>Stream Info</h4>
+            <table>
+                <tr><td>Type</td><td id="si-type">--</td></tr>
+                <tr><td>URL</td><td id="si-url">--</td></tr>
+                <tr><td>Duration</td><td id="si-duration">--</td></tr>
+                <tr><td>Resolution</td><td id="si-resolution">--</td></tr>
+                <tr><td>Video Codec</td><td id="si-vcodec">--</td></tr>
+                <tr><td>Audio Codec</td><td id="si-acodec">--</td></tr>
+                <tr><td>Variants</td><td id="si-variants">--</td></tr>
+            </table>
+        </div>
+        <div class="info-box" id="player-info">
+            <h4>Player Info</h4>
+            <table>
+                <tr><td>readyState</td><td id="pi-ready">--</td></tr>
+                <tr><td>networkState</td><td id="pi-network">--</td></tr>
+                <tr><td>paused</td><td id="pi-paused">--</td></tr>
+                <tr><td>playbackRate</td><td id="pi-rate">--</td></tr>
+                <tr><td>currentTime</td><td id="pi-time">--</td></tr>
+                <tr><td>volume / muted</td><td id="pi-volume">--</td></tr>
+                <tr><td>Decoded Frames</td><td id="pi-decoded">--</td></tr>
+                <tr><td>Dropped Frames</td><td id="pi-dropped">--</td></tr>
+            </table>
+        </div>
+        <div class="info-box" id="drm-info" style="display:none">
+            <h4>DRM Info</h4>
+            <table>
+                <tr><td>Encryption</td><td id="di-encrypted">--</td></tr>
+                <tr><td>Key System</td><td id="di-keysystem">--</td></tr>
+                <tr><td>Scheme</td><td id="di-scheme">--</td></tr>
+                <tr><td>Init Data Types</td><td id="di-initdatatypes">--</td></tr>
+                <tr><td>Session Type</td><td id="di-sessiontype">--</td></tr>
+                <tr><td>Init Data Type</td><td id="di-initdata">--</td></tr>
+                <tr><td>Key Status</td><td id="di-keystatus">--</td></tr>
+                <tr><td>Session ID</td><td id="di-sessionid">--</td></tr>
+                <tr><td>Expiration</td><td id="di-expiration">--</td></tr>
+            </table>
+        </div>
+        <div class="info-box" id="capabilities-info">
+            <h4>Platform Capabilities</h4>
+            <table>
+                <tr><td>Video Codecs</td><td id="cap-video">--</td></tr>
+                <tr><td>Audio Codecs</td><td id="cap-audio">--</td></tr>
+                <tr><td>HLS MIME</td><td id="cap-hls">--</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div id="log" tabindex="-1"></div>
+
+    <!-- m3u8-parser v7 (local copy to avoid CORS when fetching manifests for codec info)
+         Source: https://cdn.jsdelivr.net/npm/m3u8-parser@7/dist/m3u8-parser.min.js -->
+    <script src="m3u8-parser.min.js"></script>
+    <script src="hls-test-common.js"></script>
+    <!-- FairPlay DRM: config + EME logic (only used in encrypted mode) -->
+    <script src="hls-test-fairplay.js"></script>
+    <script>
+    (function() {
+        var STREAMS = {
+            clear: {
+                name: 'Clear HLS',
+                url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+                encrypted: false
+            },
+            encrypted: {
+                name: 'Encrypted HLS',
+                url: 'https://media.axprod.net/TestVectors/Cmaf/protected_1080p_h264_cbcs/manifest.m3u8',
+                encrypted: true
+            }
+        };
+
+        var video = document.getElementById('video');
+
+        // Read mode from URL: ?mode=clear or ?mode=encrypted
+        var params = new URLSearchParams(window.location.search);
+        var mode = params.get('mode') || 'clear';
+
+        // Mode selector buttons
+        document.getElementById('mode-clear').onclick = function() {
+            window.location.search = '?mode=clear';
+        };
+        document.getElementById('mode-encrypted').onclick = function() {
+            window.location.search = '?mode=encrypted';
+        };
+
+        // Highlight active mode
+        if (mode === 'encrypted') {
+            document.getElementById('mode-clear').classList.remove('active');
+            document.getElementById('mode-encrypted').classList.add('active');
+        }
+
+        var stream = STREAMS[mode === 'encrypted' ? 'encrypted' : 'clear'];
+        document.getElementById('test-title').textContent = stream.name;
+
+        // Show DRM Info panel only for encrypted streams
+        if (stream.encrypted) {
+            document.getElementById('drm-info').style.display = '';
+        }
+
+        // Populate stream info panel
+        HLSTest.updateStreamInfo(stream);
+
+        // MIME type checks
+        HLSTest.log('--- Prerequisite: MIME Type Support ---');
+        var mimeChecks = [
+            'application/x-mpegURL',
+            'application/x-mpegURL; codecs="avc1.42000d"',
+            'application/x-mpegURL; codecs="avc1.640028"',
+            'application/x-mpegURL; codecs="mp4a.40.2"',
+            'application/x-mpegURL; codecs="avc1.640028, mp4a.40.2"'
+        ];
+        var hlsSupported = false;
+        mimeChecks.forEach(function(mime) {
+            var result = video.canPlayType(mime);
+            HLSTest.log('canPlayType("' + mime + '") = "' + result + '"',
+                result ? 'ok' : 'error');
+            if (result) hlsSupported = true;
+        });
+        HLSTest.log('---');
+
+        if (!hlsSupported) {
+            HLSTest.log('FATAL: No HLS support. Aborting.', 'error');
+            return;
+        }
+
+        // Wire up common controls
+        HLSTest.initControls(video);
+
+        // Monitor events before setting src so loadstart/loadedmetadata are captured
+        HLSTest.monitorEvents(video);
+
+        // Set source (remote URL for playback, local manifestUrl is for parsing only)
+        HLSTest.log('Setting video.src to: ' + stream.url, 'ok');
+        video.src = stream.url;
+
+        // Log when ready to play
+        video.addEventListener('canplay', function() {
+            HLSTest.log('Ready. Press Play or call video.play().', 'ok');
+        }, { once: true });
+
+        // FairPlay DRM setup (only for encrypted mode)
+        if (stream.encrypted) {
+            setupFairPlay(video);
+        }
+
+        // Set initial focus for tvOS remote
+        document.getElementById('btn-play').focus();
+    })();
+    </script>
+</body>
+</html>
