@@ -150,6 +150,10 @@ mojom("mojom") {
     enabled_features += [ "use_starboard_media" ]
   }
 
+  if (is_cobalt && use_starboard_url_player) {
+    enabled_features += [ "use_starboard_url_player" ]
+  }
+
   shared_typemaps = [
     {
       types = [

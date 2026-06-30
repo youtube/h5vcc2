@@ -11,6 +11,11 @@
 #include "base/time/time.h"
 #include "media/base/demuxer_stream.h"
 #include "media/base/media_export.h"
+#include "build/build_config.h"
+#include "media/media_buildflags.h"
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+#include "url/gurl.h"
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
 namespace media {
 
@@ -41,6 +46,21 @@ class MEDIA_EXPORT MediaResource {
   // A helper function that return the first stream of the given `type` if one
   // exists or a null pointer if there is no streams of that type.
   DemuxerStream* GetFirstStream(DemuxerStream::Type type);
+
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  // Returns the media URL for URL based players (e.g., HLS via AVPlayer).
+  virtual GURL GetMediaUrl() const;
+
+  // Propagates duration changes from the native URL player to the
+  // DemuxerHost, which forwards to the pipeline and JS video.duration.
+  virtual void ForwardDurationChangeToDemuxerHost(base::TimeDelta duration);
+
+  // Propagates buffered time ranges from the native URL player to the
+  // DemuxerHost. Unlike duration (reported once at Presenting), buffered
+  // ranges are polled continuously as AVPlayer downloads HLS segments.
+  virtual void ForwardBufferedTimeRangesToDemuxerHost(base::TimeDelta start,
+                                                      base::TimeDelta length);
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 };
 
 }  // namespace media

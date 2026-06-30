@@ -25,6 +25,14 @@ interface Renderer {
   Initialize(pending_associated_remote<RendererClient> client,
              array<pending_remote<DemuxerStream>>? streams) => (bool success);
 
+  // Initializes the tvOS URL player with a `source_url` delivered on the
+  // renderer pipe. No demuxer streams are needed - the platform handles
+  // demuxing. Sending the URL on the renderer pipe keeps URL delivery
+  // and initialization ordered on the same Mojo pipe.
+  [EnableIf=use_starboard_url_player]
+  InitializeWithUrl(pending_associated_remote<RendererClient> client,
+                    url.mojom.Url source_url) => (bool success);
+
   // Supported only in single-process mode with the feature enabled.
   [EnableIf=use_starboard_media]
   InitializeWithBypassBridge(pending_associated_remote<RendererClient> client,

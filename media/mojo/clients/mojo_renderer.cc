@@ -151,6 +151,32 @@ void MojoRenderer::Initialize(MediaResource* media_resource,
                                               base::Unretained(this), client));
 }
 
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+void MojoRenderer::InitializeWithUrl(media::RendererClient* client,
+                                     const GURL& source_url,
+                                     PipelineStatusCallback init_cb) {
+  DVLOG(1) << __func__;
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
+  DCHECK(source_url.is_valid());
+
+  if (encountered_error_) {
+    task_runner_->PostTask(
+        FROM_HERE, base::BindOnce(std::move(init_cb),
+                                  PIPELINE_ERROR_INITIALIZATION_FAILED));
+    return;
+  }
+
+  init_cb_ = std::move(init_cb);
+
+  BindRemoteRendererIfNeeded();
+
+  remote_renderer_->InitializeWithUrl(
+      client_receiver_.BindNewEndpointAndPassRemote(), source_url,
+      base::BindOnce(&MojoRenderer::OnInitialized, base::Unretained(this),
+                     client));
+}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+
 void MojoRenderer::SetCdm(CdmContext* cdm_context,
                           CdmAttachedCB cdm_attached_cb) {
   DVLOG(1) << __func__;

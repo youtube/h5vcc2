@@ -5,6 +5,7 @@
 #include "media/base/media_resource.h"
 
 #include "base/no_destructor.h"
+#include "media/media_buildflags.h"
 #include "net/cookies/site_for_cookies.h"
 #include "net/storage_access_api/status.h"
 #include "url/gurl.h"
@@ -24,5 +25,18 @@ DemuxerStream* MediaResource::GetFirstStream(DemuxerStream::Type type) {
   }
   return nullptr;
 }
+
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+GURL MediaResource::GetMediaUrl() const {
+  return GURL();
+}
+
+void MediaResource::ForwardDurationChangeToDemuxerHost(
+    base::TimeDelta duration) {}
+
+void MediaResource::ForwardBufferedTimeRangesToDemuxerHost(
+    base::TimeDelta start,
+    base::TimeDelta length) {}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
 }  // namespace media

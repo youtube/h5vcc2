@@ -184,6 +184,16 @@ class FakeInterfaceFactory : public media::mojom::InterfaceFactory {
       mojo::PendingRemote<media::mojom::StarboardRendererClientExtension>
           client_extension_remote) override {}
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  void CreateUrlPlayerRenderer(
+      mojo::PendingRemote<media::mojom::MediaLog> media_log_remote,
+      const media::StarboardRendererConfig& config,
+      mojo::PendingReceiver<media::mojom::Renderer> receiver,
+      mojo::PendingReceiver<media::mojom::StarboardRendererExtension>
+          renderer_extension_receiver,
+      mojo::PendingRemote<media::mojom::StarboardRendererClientExtension>
+          client_extension_remote) override {}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
  private:
   FakeMojoMediaClient mojo_media_client_;

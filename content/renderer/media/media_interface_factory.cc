@@ -202,6 +202,33 @@ void MediaInterfaceFactory::CreateStarboardRenderer(
 }
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+void MediaInterfaceFactory::CreateUrlPlayerRenderer(
+    mojo::PendingRemote<media::mojom::MediaLog> media_log_remote,
+    const media::StarboardRendererConfig& config,
+    mojo::PendingReceiver<media::mojom::Renderer> receiver,
+    mojo::PendingReceiver<media::mojom::StarboardRendererExtension>
+        renderer_extension_receiver,
+    mojo::PendingRemote<media::mojom::StarboardRendererClientExtension>
+        client_extension_remote) {
+  if (!task_runner_->BelongsToCurrentThread()) {
+    task_runner_->PostTask(
+        FROM_HERE,
+        base::BindOnce(&MediaInterfaceFactory::CreateUrlPlayerRenderer,
+                       weak_this_, std::move(media_log_remote),
+                       config, std::move(receiver),
+                       std::move(renderer_extension_receiver),
+                       std::move(client_extension_remote)));
+    return;
+  }
+
+  GetMediaInterfaceFactory()->CreateUrlPlayerRenderer(
+      std::move(media_log_remote), config,
+      std::move(receiver), std::move(renderer_extension_receiver),
+      std::move(client_extension_remote));
+}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+
 void MediaInterfaceFactory::CreateCdm(const media::CdmConfig& cdm_config,
                                       CreateCdmCallback callback) {
   if (!task_runner_->BelongsToCurrentThread()) {

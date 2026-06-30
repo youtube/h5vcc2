@@ -264,6 +264,20 @@ void StarboardRendererClient::GetSbWindowHandle() {
   renderer_extension_->OnSbWindowHandleReady(sb_window_handle);
 }
 
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+void StarboardRendererClient::OnDurationChange(base::TimeDelta duration) {
+  // Duration reporting is handled by UrlPlayerRendererClient.
+  // StarboardRendererClient does not use URL player paths.
+}
+
+void StarboardRendererClient::OnBufferedTimeRangesChange(
+    base::TimeDelta start,
+    base::TimeDelta length) {
+  // Buffered ranges reporting is handled by UrlPlayerRendererClient.
+  // StarboardRendererClient does not use URL player paths.
+}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+
 #if BUILDFLAG(IS_ANDROID)
 void StarboardRendererClient::RequestOverlayInfo(bool restart_for_transitions) {
   DCHECK(media_task_runner_->RunsTasksInCurrentSequence());

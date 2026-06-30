@@ -6,6 +6,8 @@
 
 #include <utility>
 
+#include "base/logging.h"
+
 namespace media {
 
 MojoRendererWrapper::MojoRendererWrapper(
@@ -19,6 +21,15 @@ void MojoRendererWrapper::Initialize(MediaResource* media_resource,
                                      PipelineStatusCallback init_cb) {
   mojo_renderer_->Initialize(media_resource, client, std::move(init_cb));
 }
+
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+void MojoRendererWrapper::InitializeWithUrl(RendererClient* client,
+                                            const GURL& source_url,
+                                            PipelineStatusCallback init_cb) {
+  DVLOG(1) << __func__;
+  mojo_renderer_->InitializeWithUrl(client, source_url, std::move(init_cb));
+}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
 void MojoRendererWrapper::Flush(base::OnceClosure flush_cb) {
   mojo_renderer_->Flush(std::move(flush_cb));

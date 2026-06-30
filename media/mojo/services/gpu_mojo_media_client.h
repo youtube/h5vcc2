@@ -200,6 +200,17 @@ class MEDIA_MOJO_EXPORT GpuMojoMediaClient : public MojoMediaClient {
       mojo::PendingRemote<mojom::StarboardRendererClientExtension>
           client_extension_remote) final;
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  std::unique_ptr<Renderer> CreateUrlPlayerRenderer(
+      mojom::FrameInterfaceFactory* frame_interfaces,
+      scoped_refptr<base::SingleThreadTaskRunner> task_runner,
+      mojo::PendingRemote<mojom::MediaLog> media_log_remote,
+      const StarboardRendererConfig& config,
+      mojo::PendingReceiver<mojom::StarboardRendererExtension>
+          renderer_extension_receiver,
+      mojo::PendingRemote<mojom::StarboardRendererClientExtension>
+          client_extension_remote) final;
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
   std::unique_ptr<CdmFactory> CreateCdmFactory(
       mojom::FrameInterfaceFactory* interface_provider) final;
 

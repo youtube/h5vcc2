@@ -391,7 +391,11 @@ struct EnumTraits<media::mojom::RendererType, ::media::RendererType> {
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
       case ::media::RendererType::kStarboard:
         return media::mojom::RendererType::kStarboard;
-#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+      case ::media::RendererType::kUrlPlayer:
+        return media::mojom::RendererType::kUrlPlayer;
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
     }
 
     NOTREACHED();
@@ -436,7 +440,12 @@ struct EnumTraits<media::mojom::RendererType, ::media::RendererType> {
       case media::mojom::RendererType::kStarboard:
         *output = ::media::RendererType::kStarboard;
         return true;
-#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+      case media::mojom::RendererType::kUrlPlayer:
+        *output = ::media::RendererType::kUrlPlayer;
+        return true;
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
     }
 
     NOTREACHED();
@@ -461,6 +470,8 @@ struct EnumTraits<media::mojom::DemuxerType, ::media::DemuxerType> {
         return media::mojom::DemuxerType::kStreamProviderDemuxer;
       case ::media::DemuxerType::kManifestDemuxer:
         return media::mojom::DemuxerType::kManifestDemuxer;
+      case ::media::DemuxerType::kUrlPlayerDemuxer:
+        return media::mojom::DemuxerType::kUrlPlayerDemuxer;
     }
 
     NOTREACHED();
@@ -491,6 +502,9 @@ struct EnumTraits<media::mojom::DemuxerType, ::media::DemuxerType> {
         return true;
       case media::mojom::DemuxerType::kManifestDemuxer:
         *output = ::media::DemuxerType::kManifestDemuxer;
+        return true;
+      case media::mojom::DemuxerType::kUrlPlayerDemuxer:
+        *output = ::media::DemuxerType::kUrlPlayerDemuxer;
         return true;
     }
 

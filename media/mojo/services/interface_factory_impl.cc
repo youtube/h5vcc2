@@ -312,6 +312,31 @@ void InterfaceFactoryImpl::CreateStarboardRenderer(
 }
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+void InterfaceFactoryImpl::CreateUrlPlayerRenderer(
+    mojo::PendingRemote<mojom::MediaLog> media_log_remote,
+    const StarboardRendererConfig& config,
+    mojo::PendingReceiver<mojom::Renderer> receiver,
+    mojo::PendingReceiver<mojom::StarboardRendererExtension>
+        renderer_extension_receiver,
+    mojo::PendingRemote<mojom::StarboardRendererClientExtension>
+        client_extension_remote) {
+  DVLOG(2) << __func__;
+  auto renderer = mojo_media_client_->CreateUrlPlayerRenderer(
+      frame_interfaces_.get(),
+      base::SingleThreadTaskRunner::GetCurrentDefault(),
+      std::move(media_log_remote), config,
+      std::move(renderer_extension_receiver),
+      std::move(client_extension_remote));
+  if (!renderer) {
+    DLOG(ERROR) << "UrlPlayerRenderer creation failed.";
+    return;
+  }
+
+  AddRenderer(std::move(renderer), std::move(receiver));
+}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+
 void InterfaceFactoryImpl::CreateCdm(const CdmConfig& cdm_config,
                                      CreateCdmCallback callback) {
   DVLOG(2) << __func__;

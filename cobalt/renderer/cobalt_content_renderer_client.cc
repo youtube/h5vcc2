@@ -19,6 +19,7 @@
 
 #include "base/task/bind_post_task.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "cobalt/media/service/mojom/platform_window_provider.mojom.h"
 #include "cobalt/renderer/cobalt_render_frame_observer.h"
 #include "cobalt/shell/common/url_constants.h"
@@ -30,6 +31,7 @@
 #include "media/base/key_systems_support_registration.h"
 #include "media/base/media_log.h"
 #include "media/base/renderer_factory.h"
+#include "media/media_buildflags.h"
 #include "media/mojo/clients/starboard/starboard_renderer_client_factory.h"
 #include "mojo/public/cpp/bindings/generic_pending_receiver.h"
 #include "starboard/media.h"
@@ -41,6 +43,9 @@
 #include "third_party/blink/public/web/web_security_policy.h"
 #include "third_party/blink/public/web/web_view.h"
 #include "ui/gfx/geometry/size_conversions.h"
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+#include "media/starboard/url_player_demuxer.h"
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
 namespace cobalt {
 
@@ -500,6 +505,20 @@ void CobaltContentRendererClient::PostSandboxInitialized() {
     unregister_thread_closure = base::HangWatcher::RegisterThread(
         base::HangWatcher::ThreadType::kRendererThread);
   }
+}
+
+std::unique_ptr<::media::Demuxer>
+CobaltContentRendererClient::OverrideDemuxerForUrl(
+    content::RenderFrame* render_frame,
+    const GURL& url,
+    scoped_refptr<base::SequencedTaskRunner> task_runner) {
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  if (::media::IsHlsUrl(url)) {
+    return std::make_unique<::media::UrlPlayerDemuxer>(std::move(task_runner),
+                                                       url);
+  }
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  return nullptr;
 }
 
 }  // namespace cobalt
