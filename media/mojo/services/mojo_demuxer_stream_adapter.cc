@@ -106,7 +106,12 @@ void MojoDemuxerStreamAdapter::OnBufferReady(
     Status status,
     std::vector<mojom::DecoderBufferPtr> batch_buffers,
     const std::optional<AudioDecoderConfig>& audio_config,
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+    const std::optional<VideoDecoderConfig>& video_config,
+    const std::optional<std::string>& mime_type) {
+#else   // BUILDFLAG(USE_STARBOARD_MEDIA)
     const std::optional<VideoDecoderConfig>& video_config) {
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
   DVLOG(3) << __func__
            << ": status=" << ::media::DemuxerStream::GetStatusName(status)
            << ", batch_buffers.size=" << batch_buffers.size();
@@ -114,6 +119,11 @@ void MojoDemuxerStreamAdapter::OnBufferReady(
   DCHECK_NE(type_, UNKNOWN);
 
   if (status == kConfigChanged) {
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+    if (mime_type.has_value()) {
+      mime_type_ = *mime_type;
+    }
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
     UpdateConfig(std::move(audio_config), std::move(video_config));
     std::move(read_cb_).Run(kConfigChanged, {});
     return;

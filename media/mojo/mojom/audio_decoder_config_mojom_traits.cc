@@ -53,6 +53,9 @@ bool StructTraits<media::mojom::AudioDecoderConfigDataView,
   output->Initialize(codec, sample_format, channel_layout,
                      input.samples_per_second(), std::move(extra_data),
                      encryption_scheme, seek_preroll, input.codec_delay());
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  output->set_is_change_type_transition(input.is_change_type_transition());
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
   output->set_profile(profile);
   output->set_target_output_channel_layout(target_output_channel_layout);
   output->set_target_output_sample_format(target_output_sample_format);

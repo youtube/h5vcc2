@@ -52,10 +52,19 @@ interface DemuxerStream {
   // TODO(dalecurtis): Remove this method in favor of serializing everything
   // into the DataPipe given to Initialize() once DataPipe supports framed data
   // in a nicer fashion.
+  [EnableIfNot=use_starboard_media]
   Read(uint32 count) => (Status status,
                         array<DecoderBuffer> batch_buffers,
                         AudioDecoderConfig? audio_config,
                         VideoDecoderConfig? video_config);
+
+  [EnableIf=use_starboard_media]
+  // Passes updated stream mime_type during kConfigChanged events for Starboard.
+  Read(uint32 count) => (Status status,
+                        array<DecoderBuffer> batch_buffers,
+                        AudioDecoderConfig? audio_config,
+                        VideoDecoderConfig? video_config,
+                        string? mime_type);
 
   // Enables converting bitstream to a format that is expected by the decoder.
   // For example, H.264/AAC bitstream based packets into H.264 Annex B format.

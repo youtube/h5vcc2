@@ -164,9 +164,17 @@ void SourceBufferState::Init(StreamParser::InitCB init_cb,
   InitializeParser(expected_codecs);
 }
 
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+void SourceBufferState::ChangeType(
+    std::unique_ptr<StreamParser> new_stream_parser,
+    const std::string& new_expected_codecs,
+    const std::string& new_mime_type) {
+#else   // BUILDFLAG(USE_STARBOARD_MEDIA)
 void SourceBufferState::ChangeType(
     std::unique_ptr<StreamParser> new_stream_parser,
     const std::string& new_expected_codecs) {
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+
   DCHECK_GE(state_, PENDING_PARSER_CONFIG);
   DCHECK_NE(state_, PENDING_PARSER_INIT);
   DCHECK(!parsing_media_segment_);
@@ -177,6 +185,14 @@ void SourceBufferState::ChangeType(
     state_ = PENDING_PARSER_RECONFIG;
 
   stream_parser_ = std::move(new_stream_parser);
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  for (auto& stream : audio_streams_) {
+    stream.second->SetMimeType(new_mime_type);
+  }
+  for (auto& stream : video_streams_) {
+    stream.second->SetMimeType(new_mime_type);
+  }
+#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
   InitializeParser(new_expected_codecs);
 }
 
@@ -666,6 +682,13 @@ bool SourceBufferState::OnNewConfigs(std::unique_ptr<MediaTracks> tracks) {
       }
 
       track->set_id(stream->media_track_id());
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+      // Currently, |PENDING_PARSER_RECONFIG| is only set when a changeType
+      // call occurs, so we're safe to update the config's value.
+      if (state_ == PENDING_PARSER_RECONFIG) {
+        audio_config.set_is_change_type_transition(true);
+      }
+#endif
       frame_processor_->OnPossibleAudioConfigUpdate(audio_config);
       success &= stream->UpdateAudioConfig(audio_config, allow_codec_changes,
                                            media_log_);
@@ -751,6 +774,13 @@ bool SourceBufferState::OnNewConfigs(std::unique_ptr<MediaTracks> tracks) {
       }
 
       track->set_id(stream->media_track_id());
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+      // Currently, |PENDING_PARSER_RECONFIG| is only set when a changeType
+      // call occurs, so we're safe to update the config's value.
+      if (state_ == PENDING_PARSER_RECONFIG) {
+        video_config.set_is_change_type_transition(true);
+      }
+#endif
       success &= stream->UpdateVideoConfig(video_config, allow_codec_changes,
                                            media_log_);
     } else {

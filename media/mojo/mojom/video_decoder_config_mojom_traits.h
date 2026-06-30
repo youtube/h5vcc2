@@ -81,6 +81,12 @@ struct StructTraits<media::mojom::VideoDecoderConfigDataView,
     return input.level();
   }
 
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  static bool is_change_type_transition(const media::VideoDecoderConfig& input) {
+    return input.is_change_type_transition();
+  }
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+
   static bool Read(media::mojom::VideoDecoderConfigDataView input,
                    media::VideoDecoderConfig* output);
 };

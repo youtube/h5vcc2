@@ -29,6 +29,10 @@
 #include "media/filters/source_buffer_stream.h"
 #include "media/filters/stream_parser_factory.h"
 
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+#include <string_view>
+#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
+
 namespace media {
 
 class SourceBufferStream;
@@ -88,6 +92,7 @@ class MEDIA_EXPORT ChunkDemuxerStream : public DemuxerStream {
   // Returns the latest presentation timestamp of the buffers queued in the
   // stream.
   base::TimeDelta GetWriteHead() const;
+  void SetMimeType(std::string_view mime_type);
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
   void OnMemoryPressure(
@@ -191,7 +196,7 @@ class MEDIA_EXPORT ChunkDemuxerStream : public DemuxerStream {
   GetPendingBuffers_Locked() EXCLUSIVE_LOCKS_REQUIRED(lock_);
 
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
-  const std::string mime_type_;
+  std::string mime_type_ GUARDED_BY(lock_);
   base::TimeDelta write_head_ GUARDED_BY(lock_);
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 

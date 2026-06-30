@@ -83,6 +83,10 @@ source_set("filters") {
     "//ui/gfx/geometry:geometry",
   ]
 
+  if (use_starboard_media) {
+    deps += [ "//starboard:starboard_headers_only" ]
+  }
+
   libs = []
 
   if (proprietary_codecs) {

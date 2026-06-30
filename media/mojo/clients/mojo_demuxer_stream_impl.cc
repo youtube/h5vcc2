@@ -93,13 +93,23 @@ void MojoDemuxerStreamImpl::OnBufferReady(
       NOTREACHED() << "Unsupported config change encountered for type: "
                    << stream_->type();
     }
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+    std::optional<std::string> mime_type = stream_->mime_type();
+    std::move(callback).Run(Status::kConfigChanged, {}, audio_config,
+                            video_config, mime_type);
+#else   // BUILDFLAG(USE_STARBOARD_MEDIA)
     std::move(callback).Run(Status::kConfigChanged, {}, audio_config,
                             video_config);
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
     return;
   }
 
   if (status == Status::kAborted) {
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+    std::move(callback).Run(Status::kAborted, {}, audio_config, video_config, /*mime_type=*/std::nullopt);
+#else   // BUILDFLAG(USE_STARBOARD_MEDIA)
     std::move(callback).Run(Status::kAborted, {}, audio_config, video_config);
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
     return;
   }
 
@@ -110,7 +120,11 @@ void MojoDemuxerStreamImpl::OnBufferReady(
     mojom::DecoderBufferPtr mojo_buffer =
         mojo_decoder_buffer_writer_->WriteDecoderBuffer(std::move(buffer));
     if (!mojo_buffer) {
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+      std::move(callback).Run(Status::kAborted, {}, audio_config, video_config, /*mime_type=*/std::nullopt);
+#else   // BUILDFLAG(USE_STARBOARD_MEDIA)
       std::move(callback).Run(Status::kAborted, {}, audio_config, video_config);
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
       return;
     }
     output_mojo_buffers.emplace_back(std::move(mojo_buffer));
@@ -119,8 +133,13 @@ void MojoDemuxerStreamImpl::OnBufferReady(
   // TODO(dalecurtis): Once we can write framed data to the DataPipe, fill via
   // the producer handle and then read more to keep the pipe full.  Waiting for
   // space can be accomplished using an AsyncWaiter.
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  std::move(callback).Run(status, std::move(output_mojo_buffers), audio_config,
+                          video_config, /*mime_type=*/std::nullopt);
+#else   // BUILDFLAG(USE_STARBOARD_MEDIA)
   std::move(callback).Run(status, std::move(output_mojo_buffers), audio_config,
                           video_config);
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 }
 
 }  // namespace media

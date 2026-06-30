@@ -70,6 +70,12 @@ struct StructTraits<media::mojom::AudioDecoderConfigDataView,
     return input.should_discard_decoder_delay();
   }
 
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  static bool is_change_type_transition(const media::AudioDecoderConfig& input) {
+    return input.is_change_type_transition();
+  }
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+
   static bool Read(media::mojom::AudioDecoderConfigDataView input,
                    media::AudioDecoderConfig* output);
 };

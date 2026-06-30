@@ -69,7 +69,12 @@ class MEDIA_MOJO_EXPORT MojoDemuxerStreamAdapter : public DemuxerStream {
   void OnBufferReady(Status status,
                      std::vector<mojom::DecoderBufferPtr> batch_buffers,
                      const std::optional<AudioDecoderConfig>& audio_config,
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+                     const std::optional<VideoDecoderConfig>& video_config,
+                     const std::optional<std::string>& mime_type);
+#else   // BUILDFLAG(USE_STARBOARD_MEDIA)
                      const std::optional<VideoDecoderConfig>& video_config);
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
   void OnBufferRead(scoped_refptr<DecoderBuffer> buffer);
 

@@ -122,6 +122,11 @@ class MEDIA_EXPORT AudioDecoderConfig {
     return target_output_sample_format_;
   }
 
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  void set_is_change_type_transition(bool value) { is_change_type_transition_ = value; }
+  bool is_change_type_transition() const { return is_change_type_transition_; }
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+
  private:
   // WARNING: When modifying or adding any parameters, update the following:
   // - AudioDecoderConfig::AsHumanReadableString()
@@ -170,6 +175,12 @@ class MEDIA_EXPORT AudioDecoderConfig {
   // Count of channels. By default derived from `channel_layout_`, but can also
   // be manually set in `SetChannelsForDiscrete()`;
   int channels_ = 0;
+
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  // Designates whether the received config was caused by a
+  // SourceBuffer.changeType() call.
+  bool is_change_type_transition_ = false;
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
   // Not using DISALLOW_COPY_AND_ASSIGN here intentionally to allow the compiler
   // generated copy constructor and assignment operator. Since the extra data is

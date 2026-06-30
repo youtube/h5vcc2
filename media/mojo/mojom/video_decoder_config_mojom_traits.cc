@@ -70,6 +70,10 @@ bool StructTraits<media::mojom::VideoDecoderConfigDataView,
   if (hdr_metadata)
     output->set_hdr_metadata(hdr_metadata.value());
 
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  output->set_is_change_type_transition(input.is_change_type_transition());
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+
   if (!output->IsValidConfig())
     return false;
 
