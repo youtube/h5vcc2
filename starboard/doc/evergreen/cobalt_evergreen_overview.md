@@ -81,9 +81,7 @@ There are minimal differences in switching to Evergreen as the Cobalt team has
 already done a majority of the work building the necessary components to support
 the Evergreen architecture. You will still be responsible for building the
 Starboard and platform-specific components as usual. Thereafter, switching to
-Evergreen is as simple as building a different configuration. Please see the
-Raspberry Pi 2 Evergreen reference port
-([Instructions](cobalt_evergreen_reference_port_raspi2.md)) for an example.
+Evergreen is as simple as building a different configuration.
 
 ![Cobalt non-Evergreen vs
 Evergreen](resources/cobalt_evergreen_overview_vs_non_evergreen.png)
@@ -279,8 +277,8 @@ be an Evergreen platform configuration, and have a Starboard ABI file that
 matches the file used by the platform configuration used to build the
 `elf_loader_sandbox`.
 
-For example, building these targets for the Raspberry Pi 2 would use the
-`raspi-2` and `evergreen-arm-hardfp` platform configurations.
+For example, building these targets for the RDK would use the
+`rdk-arm` and `evergreen-arm-hardfp-rdk` platform configurations.
 
 ## Verifying Platform Requirements
 
@@ -289,9 +287,6 @@ In order to verify the platform requirements you should run the
 configured appropriately for Evergreen.
 
 These tests are enabled automatically for all Starboard platforms (`is_starboard = true`).
-
-There is a reference implementation available for Raspberry Pi 2 with
-instructions available [here](cobalt_evergreen_reference_port_raspi2.md).
 
 ### Verifying Crashpad Uploads
 
