@@ -12,6 +12,9 @@
 #include "base/command_line.h"
 #include "base/containers/contains.h"
 #include "base/functional/bind.h"
+#if BUILDFLAG(IS_COBALT)
+#include "base/memory/cobalt_memory_context.h"
+#endif
 #include "base/no_destructor.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/task/sequence_manager/task_time_observer.h"
@@ -274,6 +277,10 @@ void CategorizedWorkerPoolJob::Run(base::span<const TaskCategory> categories,
         });
 
     base::ScopedAllowBaseSyncPrimitives allow;
+#if BUILDFLAG(IS_COBALT)
+    base::memory::ScopedMemoryContext scoped_context(
+        base::memory::MemoryContext::kGraphics);
+#endif
     prioritized_task->task->RunOnWorkerThread();
 
     {

@@ -427,8 +427,16 @@ TEST_P(PoissonAllocationSamplerLoadFactorTest,
     EXPECT_EQ(last_load_factor, 0.0);
   }
 
+#if BUILDFLAG(IS_COBALT)
+  // Fix a bug in upstream Chromium where `GetParam()` (which returns a float) 
+  // is inadvertently truncated to `size_t`. This prevents the test from crashing 
+  // when parameterized with values like 0.5.
+  float target_load_factor = GetParam();
+  if (target_load_factor == 0.0f) {
+#else
   size_t target_load_factor = GetParam();
   if (target_load_factor == 0) {
+#endif
     // Use the default load factor.
     target_load_factor = 1.0;
   } else {

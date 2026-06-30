@@ -18,11 +18,9 @@
 #if defined(OS_LINUX) || defined(OS_ANDROID)
 #include <sys/prctl.h>
 #endif
+#include <unistd.h>
 
 
-#if BUILDFLAG(IS_ANDROID)
-#include <android/log.h>
-#endif
 #include "base/logging.h"
 
 #include "base/no_destructor.h"

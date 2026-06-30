@@ -8,6 +8,12 @@
 #include "base/threading/thread_id_name_manager.h"
 #include "base/trace_event/base_tracing.h"
 
+#if BUILDFLAG(IS_COBALT)
+#include <string_view>
+#include "base/memory/cobalt_memory_context.h"
+#include "base/strings/string_util.h"
+#endif // BUILDFLAG(IS_COBALT)
+
 #if BUILDFLAG(IS_FUCHSIA)
 #include "base/fuchsia/scheduler.h"
 #endif
@@ -59,6 +65,46 @@ std::optional<TimeDelta> PlatformThreadBase::GetThreadLeewayOverride() {
 
 // static
 void PlatformThreadBase::SetNameCommon(const std::string& name) {
+#if BUILDFLAG(IS_COBALT)
+  if (memory::GetCurrentMemoryContext() == memory::MemoryContext::kUnknown) {
+    struct ThreadPatternMapping {
+      std::string_view pattern;
+      memory::MemoryContext context;
+      bool exact_match;
+      CompareCase compare_case;
+    };
+
+    constexpr ThreadPatternMapping kThreadPatterns[] = {
+        // Script
+        {"V8", memory::MemoryContext::kScriptHeap, false, CompareCase::SENSITIVE},
+
+        // Graphics
+        {"Compositor", memory::MemoryContext::kGraphics, false, CompareCase::SENSITIVE},
+        {"CrGpuMain", memory::MemoryContext::kGraphics, true, CompareCase::SENSITIVE},
+        {"RasterWorker", memory::MemoryContext::kGraphics, true, CompareCase::SENSITIVE},
+        {"GpuMemoryThread", memory::MemoryContext::kGraphics, true, CompareCase::SENSITIVE},
+
+        // Media
+        {"Media", memory::MemoryContext::kMedia, true, CompareCase::SENSITIVE},
+        {"VideoDecoder", memory::MemoryContext::kMedia, true, CompareCase::SENSITIVE},
+        {"FFmpeg", memory::MemoryContext::kMedia, false, CompareCase::INSENSITIVE_ASCII},
+    };
+
+    for (const auto& entry : kThreadPatterns) {
+      if (entry.exact_match) {
+        if (name == entry.pattern) {
+          memory::SetCurrentMemoryContext(entry.context);
+          break;
+        }
+      } else {
+        if (StartsWith(name, entry.pattern, entry.compare_case)) {
+          memory::SetCurrentMemoryContext(entry.context);
+          break;
+        }
+      }
+    }
+  }
+#endif // BUILDFLAG(IS_COBALT)
   ThreadIdNameManager::GetInstance()->SetName(name);
 }
 

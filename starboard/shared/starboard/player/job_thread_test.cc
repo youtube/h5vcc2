@@ -22,6 +22,7 @@
 #include <mutex>
 #include <vector>
 
+#include "base/memory/cobalt_memory_context.h"
 #include "starboard/common/log.h"
 #include "starboard/common/time.h"
 #include "starboard/shared/starboard/player/job_queue.h"
@@ -34,6 +35,14 @@ namespace {
 
 using ::testing::ElementsAre;
 
+TEST(JobThreadTest, PropagatesMediaMemoryContext) {
+  auto job_thread = JobThread::Create("MediaJobThread");
+  base::memory::MemoryContext context = base::memory::MemoryContext::kUnknown;
+  job_thread->ScheduleAndWait(
+      [&]() { context = base::memory::GetCurrentMemoryContext(); });
+  EXPECT_EQ(context, base::memory::MemoryContext::kMedia);
+  job_thread->Stop();
+}
 // Require at least millisecond-level precision.
 constexpr int64_t kPrecisionUsec = 1000;
 

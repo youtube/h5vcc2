@@ -20,8 +20,6 @@
 
 // This is called by the VM when the shared library is first loaded.
 JNI_EXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
-  base::memory::SetCurrentMemoryContext(
-      base::memory::MemoryContext::kBrowserMain);
   base::android::InitVM(vm);
   if (!content::android::OnJNIOnLoadInit()) {
     return -1;

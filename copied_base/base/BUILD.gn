@@ -3281,6 +3281,7 @@ test("base_unittests") {
     "lazy_instance_unittest.cc",
     "logging_unittest.cc",
     "memory/aligned_memory_unittest.cc",
+    "memory/cobalt_memory_context_unittest.cc",
     "memory/discardable_memory_backing_field_trial_unittest.cc",
     "memory/discardable_shared_memory_unittest.cc",
     "memory/memory_pressure_listener_unittest.cc",
