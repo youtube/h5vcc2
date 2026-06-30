@@ -771,7 +771,7 @@ jobs:
     env:
       TMPDIR: /__w/_temp
       TEST_ARTIFACTS_KEY: ${{ matrix.platform }}_${{ matrix.name }}_test_artifacts
-      TEST_RESULTS_KEY: ${{ matrix.platform }}_${{ matrix.name }}_test_results-${{ matrix.shard }}
+      TEST_RESULTS_KEY: ${{ matrix.platform }}_${{ matrix.name }}_test_results
     steps:
       - name: Restore CI Essentials
         uses: actions/checkout@v4
@@ -900,6 +900,28 @@ jobs:
           fetch-depth: 1
           filter: blob:none
           sparse-checkout: ${{ env.CI_ESSENTIALS }}
+      - name: Download Test Results
+        uses: actions/download-artifact@v5
+        with:
+          pattern: ${{ env.TEST_RESULTS_KEY }}*
+          path: results/
+      - name: Prepare test filters
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          # Prepare resolved filter directory.
+          RESOLVED_FILTER_DIR="${GITHUB_WORKSPACE}/resolved_filters"
+          mkdir -p "${RESOLVED_FILTER_DIR}"
+          echo "RESOLVED_FILTER_DIR=${RESOLVED_FILTER_DIR}" >> $GITHUB_ENV
+
+          # Copy original filter and replace with generated ones if they exist.
+          cp -r "${GITHUB_WORKSPACE}/cobalt/testing/filters/${PLATFORM}"/* "${RESOLVED_FILTER_DIR}/" || true
+          if [ -d "${GITHUB_WORKSPACE}/results" ]; then
+            find "${GITHUB_WORKSPACE}/results" \
+              -type d -name "retry_filters" \
+              -exec cp -r {}/. "${RESOLVED_FILTER_DIR}/" \; || true
+          fi
+        shell: bash
       - name: Extract Test Target Name
         id: extract-target-name
         env:
@@ -908,28 +930,18 @@ jobs:
         shell: bash
       - name: Check if ${{ matrix.test_info.target }} is skipped in test filters
         id: filter
+        env:
+          TEST_TARGET: ${{ steps.extract-target-name.outputs.test_target }}
         run: |
-          set -x
-          # Get first entry in test filters file.
-          test_filter=""
-          test_target="${{ steps.extract-target-name.outputs.test_target }}"
-          test_filter_json_dir="${GITHUB_WORKSPACE}/cobalt/testing/filters/${{ matrix.platform }}/${test_target}_filter.json"
-          if [ -f ${test_filter_json_dir} ]; then
-            test_filter="$(jq -cr '.failing_tests[0]' ${test_filter_json_dir})"
-            if [ "${test_filter}" = '*' ]; then
-              echo "${test_target} was skipped due to test filter."
-              echo "skipped=true" >> $GITHUB_OUTPUT
-            else
-              echo "skipped=false" >> $GITHUB_OUTPUT
-            fi
+          set -ex
+          test_filter_json_file="${RESOLVED_FILTER_DIR}/${TEST_TARGET}_filter.json"
+          if [ -f "${test_filter_json_file}" ] && jq -e '(.failing_tests // []) | any(. == "*")' "${test_filter_json_file}" >/dev/null 2>&1; then
+            echo "${TEST_TARGET} was skipped due to test filter."
+            echo "skipped=true" >> $GITHUB_OUTPUT
+          else
+            echo "skipped=false" >> $GITHUB_OUTPUT
           fi
         shell: bash
-      - name: Download Test Results
-        if: steps.filter.outputs.skipped != 'true'
-        uses: actions/download-artifact@v5
-        with:
-          pattern: ${{ env.TEST_RESULTS_KEY }}*
-          path: results/
       - name: Test Results
         if: steps.filter.outputs.skipped != 'true'
         uses: ./.github/actions/process_test_results
@@ -945,8 +957,6 @@ jobs:
         uses: ./.github/actions/print_logs
         with:
           log_glob: results/**/${{ steps.extract-target-name.outputs.test_target }}*logcat.txt
-          # TODO: Enable symbolization when it works.
-          # symbolize: true
           symbolize: 'false'
       - name: ${{ matrix.test_info.target }} Test Logs
         if: always() && steps.filter.outputs.skipped != 'true'
@@ -954,9 +964,45 @@ jobs:
         with:
           log_glob: results/**/${{ steps.extract-target-name.outputs.test_target }}*log.txt
           results_glob: results/**/${{ steps.extract-target-name.outputs.test_target }}*.xml
-          # TODO: Enable symbolization when it works.
-          # symbolize: ${{ needs.initialize.outputs.test_on_device == 'true' }}
           symbolize: 'false'
+      - name: Generate Retry Filter
+        if: always() && steps.filter.outputs.skipped != 'true'
+        env:
+          TEST_TARGET: ${{ steps.extract-target-name.outputs.test_target }}
+        run: |
+          set -ex
+          mkdir -p "${GITHUB_WORKSPACE}/retry_filters_artifact/retry_filters"
+          shopt -s globstar nullglob
+          xml_files=("results"/**/"${TEST_TARGET}"*.xml)
+          if [ ${#xml_files[@]} -gt 0 ]; then
+            # Write a global filter file first (for fallback/non-sharded runners).
+            python3 cobalt/tools/junit_mini_parser.py \
+                --mode generate-filter \
+                --target "${TEST_TARGET}" \
+                --output-dir "${GITHUB_WORKSPACE}/retry_filters_artifact/retry_filters" \
+                "${xml_files[@]}"
+
+            # Also write shard-specific filter files if they come from shards.
+            for xml_file in "${xml_files[@]}"; do
+              if [[ "${xml_file}" =~ /shard_([0-9]+)/ ]]; then
+                shard_suffix="_${BASH_REMATCH[1]}"
+                python3 cobalt/tools/junit_mini_parser.py \
+                    --mode generate-filter \
+                    --target "${TEST_TARGET}${shard_suffix}" \
+                    --output-dir "${GITHUB_WORKSPACE}/retry_filters_artifact/retry_filters" \
+                    "${xml_file}"
+              fi
+            done
+          fi
+        shell: bash
+      - name: Upload Retry Filter
+        if: always() && steps.filter.outputs.skipped != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.TEST_RESULTS_KEY }}_retry_filter_${{ steps.extract-target-name.outputs.test_target }}
+          path: retry_filters_artifact/
+          if-no-files-found: ignore
+          overwrite: true
 
   browser-test-results:
     needs: [initialize, build, browser-test-on-host]

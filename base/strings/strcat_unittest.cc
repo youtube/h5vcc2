@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <chrono>
+
 #include "base/strings/strcat.h"
 
 #include "base/strings/utf_string_conversions.h"
@@ -81,6 +83,16 @@ TEST(StrAppendT, ReserveAdditionalIfNeeded) {
 
   // Expect at least 2x growth in capacity.
   EXPECT_LE(2 * prev_capacity, str.capacity());
+}
+
+TEST(StrCat, FlakyTest) {
+  auto now =
+      std::chrono::high_resolution_clock::now().time_since_epoch().count();
+  bool fail = (now % 2 == 0);
+  EXPECT_FALSE(fail)
+      << "Flaky test failed conditionally based on high_resolution_clock "
+         "time_since_epoch: "
+      << now;
 }
 
 }  // namespace base

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <chrono>
+
 #include "starboard/shared/testing/no_inline.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -53,6 +55,16 @@ TEST(SbUndefinedBehaviorTest, CallThisPointerIsNullRainyDay) {
   // this assumption is not safe.  If you fail this test and are using GCC or
   // Clang (especially with a GCC version >= 6), then it is highly recommended
   // that you add the "-fno-delete-null-pointer-checks" flag.
+}
+
+TEST(SbUndefinedBehaviorTest, FlakyTest) {
+  auto now =
+      std::chrono::high_resolution_clock::now().time_since_epoch().count();
+  bool fail = (now % 2 == 0);
+  EXPECT_FALSE(fail)
+      << "Flaky test failed conditionally based on high_resolution_clock "
+         "time_since_epoch: "
+      << now;
 }
 
 }  // namespace

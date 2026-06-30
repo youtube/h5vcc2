@@ -1,0 +1,39 @@
+name: Prepare Filters
+description: Downloads previous test results and prepares the filter directory.
+inputs:
+  test_results_key:
+    description: "Artifact key used to store test results."
+    required: true
+  platform:
+    description: "The platform being tested."
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download Previous Results
+      if: github.run_attempt > 1
+      uses: actions/download-artifact@v5
+      continue-on-error: true
+      with:
+        pattern: ${{ inputs.test_results_key }}*
+        path: previous_results/
+    - name: Prepare test filters
+      env:
+        PLATFORM: ${{ inputs.platform }}
+      run: |
+        # Prepare resolved filter directory.
+        set -ex
+        RESOLVED_FILTER_DIR="${GITHUB_WORKSPACE}/resolved_filters"
+        mkdir -p "${RESOLVED_FILTER_DIR}"
+        echo "RESOLVED_FILTER_DIR=${RESOLVED_FILTER_DIR}" >> $GITHUB_ENV
+
+        cp -r "${GITHUB_WORKSPACE}/cobalt/testing/filters/${PLATFORM}"/* "${RESOLVED_FILTER_DIR}/" || true
+
+        # Overwrite with retry filters from previous results if they exist (supporting sharded host tests).
+        if [ -d "${GITHUB_WORKSPACE}/previous_results" ]; then
+          find "${GITHUB_WORKSPACE}/previous_results" \
+            -type d -name "retry_filters" \
+            -exec cp -r {}/. "${RESOLVED_FILTER_DIR}/" \; || true
+        fi
+      shell: bash

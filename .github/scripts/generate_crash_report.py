@@ -37,6 +37,8 @@ def _extract_crash(log_path: pathlib.Path) -> Optional[Tuple[str, str, str]]:
     A tuple `(test_suite, test_name, log_output_for_crashed_test)` or
     `None` if no crash is detected.
   """
+  if not log_path.is_file():
+    return None
   with log_path.open('r', encoding='utf-8', errors='replace') as f:
     lines = f.readlines()
 

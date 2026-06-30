@@ -59,7 +59,8 @@ class OnDeviceTestsGatewayClient:
 
   def __init__(self):
     self.channel = grpc.insecure_channel(
-        target=f'{_ON_DEVICE_TESTS_GATEWAY_SERVICE_HOST}:{_ON_DEVICE_TESTS_GATEWAY_SERVICE_PORT}',  # pylint:disable=line-too-long
+        target=(f'{_ON_DEVICE_TESTS_GATEWAY_SERVICE_HOST}:'
+                f'{_ON_DEVICE_TESTS_GATEWAY_SERVICE_PORT}'),
         # These options need to match server settings.
         options=[
             ('grpc.keepalive_time_ms', 10000),
@@ -161,15 +162,19 @@ def _get_gtest_filter(filter_json_dir: str, target_name: str) -> str:
   Returns:
       A string containing the gtest filters.
   """
-  gtest_filter = '*'
+  gtest_filter = None
   filter_json_file = os.path.join(filter_json_dir, f'{target_name}_filter.json')
   if os.path.exists(filter_json_file):
     with open(filter_json_file, 'r', encoding='utf-8') as f:
       filter_data = json.load(f)
-      failing_tests = ':'.join(filter_data.get('failing_tests', []))
-      if failing_tests:
-        gtest_filter = '-' + failing_tests
-  return gtest_filter
+      if isinstance(filter_data, dict):
+        # Missing or empty tests_to_run implies run all tests.
+        positive_filters = ':'.join(filter_data.get('tests_to_run', []))
+        negative_filters = ':'.join(filter_data.get('failing_tests', []))
+        gtest_filter = positive_filters
+        if negative_filters:
+          gtest_filter += f"-{negative_filters}"
+  return gtest_filter or '*'
 
 
 def _unit_test_files(args: argparse.Namespace, target_name: str) -> List[str]:

@@ -26,6 +26,11 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: Prepare Filters
+      uses: ./.github/actions/prepare_filters
+      with:
+        test_results_key: ${{ inputs.test_results_key }}
+        platform: ${{ matrix.platform }}
     - name: Install Requirements
       run: |
         pip3 install --require-hashes --no-deps -r ${GITHUB_WORKSPACE}/cobalt/tools/requirements.txt
@@ -65,6 +70,10 @@ runs:
         GITHUB_WORKFLOW: ${{ github.workflow }}
         TEST_ATTEMPTS: ${{ inputs.test_attempts }}
         TEST_TYPE: unit_test
+        PLATFORM: ${{ matrix.platform }}
+        TEST_DEVICE_FAMILY: ${{ inputs.test_device_family }}
+        TEST_DIMENSIONS: ${{ inputs.test_dimensions }}
+        GCS_RESULTS_PATH: ${{ inputs.gcs_results_path }}
       run: |
         set -x
 
@@ -73,12 +82,12 @@ runs:
           --token ${GITHUB_TOKEN} \
           trigger \
           --test_type ${TEST_TYPE} \
-          --device_family '${{ inputs.test_device_family }}' \
+          --device_family "${TEST_DEVICE_FAMILY}" \
           --targets "${TEST_TARGETS_JSON}" \
-          --filter_json_dir "${GITHUB_WORKSPACE}/cobalt/testing/filters/${{ matrix.platform }}" \
+          --filter_json_dir "${RESOLVED_FILTER_DIR}" \
           --label chrobalt_on_device_test \
           --label github_${GITHUB_PR_NUMBER:-postsubmit} \
-          --label builder-${{ matrix.platform }} \
+          --label builder-${PLATFORM} \
           --label builder_url-${GITHUB_RUN_URL} \
           --label ${TEST_TYPE} \
           --label github \
@@ -93,10 +102,10 @@ runs:
           --label author_id-${GITHUB_PR_HEAD_USER_ID:-$GITHUB_COMMIT_AUTHOR_EMAIL} \
           --label branch:${GITHUB_REF_NAME} \
           --label target_branch:${GITHUB_BASE_REF} \
-          --dimensions '${{ inputs.test_dimensions }}' \
+          --dimensions "${TEST_DIMENSIONS}" \
           ${TEST_ATTEMPTS:+"--test_attempts" "$TEST_ATTEMPTS"} \
           --gcs_archive_path "${GCS_ARTIFACTS_PATH}" \
-          --gcs_result_path "${{ inputs.gcs_results_path }}" || {
+          --gcs_result_path "${GCS_RESULTS_PATH}" || {
             echo "Finished running tests..."
             echo "The test session failed. See logs for details."
             # Fail the job so it's easy to retrigger.
@@ -108,6 +117,8 @@ runs:
       if: always()
       env:
         TEST_TARGETS_JSON: ${{ inputs.test_targets_json }}
+        PLATFORM: ${{ matrix.platform }}
+        GCS_RESULTS_PATH: ${{ inputs.gcs_results_path }}
       run: |
         set -uxe
         shopt -s globstar nullglob
@@ -117,35 +128,38 @@ runs:
 
         # Test results (xml and logs) must be in a subfolder in results_dir.
         # to be picked up by the test result processor.
-        mkdir -p "${test_output}/${{ matrix.platform }}"
-        gsutil -q cp -r "${{ inputs.gcs_results_path }}/" "${test_output}/${{ matrix.platform }}"
+        mkdir -p "${test_output}/${PLATFORM}"
+        gsutil -q cp -r "${GCS_RESULTS_PATH}/" "${test_output}/${PLATFORM}"
 
         # Check for missing result xml files.
-        exit_code=0
+        target_failed=0
         readarray -t test_targets < <(echo "$TEST_TARGETS_JSON" | jq -r '.[]')
         for test_target_with_path in "${test_targets[@]}"; do
-          # Trim path prefix (before :).
           test_target=${test_target_with_path#*:}
-          xml_files=("${test_output}"/${{ matrix.platform }}/**/"${test_target}"*.xml)
-          if [[ "${#xml_files[@]}" -eq 0 ]]; then
-            # No matching XML results found. Check if the test target is filtered.
-            test_filter_file="${GITHUB_WORKSPACE}/cobalt/testing/filters/${{ matrix.platform }}/${test_target}_filter.json"
-            if [ ! -f "${test_filter_file}" ] || [ "$(jq -cr '.failing_tests[0]' "${test_filter_file}")" != '*' ]; then
-              echo "Test result xml is missing for ${test_target}."
+          test_filter_file="${RESOLVED_FILTER_DIR}/${test_target}_filter.json"
+          if [ -f "${test_filter_file}" ] && jq -e '(.failing_tests // []) | any(. == "*")' "${test_filter_file}" >/dev/null 2>&1; then
+            # Target was skipped.
+            continue
+          fi
 
-              # Try to find the crashed test in the log and create a fake junit xml for it.
-              log_path=("${test_output}"/${{ matrix.platform }}/**/"${test_target}"_log.txt)
-              xml_path=("${test_output}"/${{ matrix.platform }}/1/"${test_target}"_testoutput.xml)
-              python3 ${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py "${log_path}" "${xml_path}"
-              exit_code=1
+          xml_files=("${test_output}/${PLATFORM}"/**/"${test_target}"*.xml)
+          if [[ "${#xml_files[@]}" -eq 0 ]]; then
+            # Target was NOT skipped, but XML is missing -> Crash.
+            echo "Test result xml is missing for ${test_target}."
+            log_paths=("${test_output}/${PLATFORM}"/**/"${test_target}"_log.txt)
+            if [ -f "${log_paths[0]:-}" ]; then
+              python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${log_paths[0]}" "${test_output}/${PLATFORM}/1/${test_target}_testoutput.xml"
             fi
-          elif grep -e '<failure' -e '<error' ${xml_files}; then
-            # Double-check the result XML for failures. ODT service has been known to report incorrect status.
-            echo "::error::Found failures in the test xml."
-            exit_code=1
+            target_failed=1
+          else
+            # XML exists. Check for failures.
+            if grep -q -e '<failure' -e '<error' "${xml_files[@]}"; then
+              echo "::error::Found failures in the test xml."
+              target_failed=1
+            fi
           fi
         done
-        exit ${exit_code}
+        exit ${target_failed}
       shell: bash
     - name: Archive Test Results
       uses: actions/upload-artifact@v4
