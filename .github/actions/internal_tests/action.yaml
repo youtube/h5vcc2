@@ -14,7 +14,7 @@ inputs:
     description: "The name of the artifact to be used for tests (e.g., Cobalt.apk)."
     default: "Cobalt.apk"
   test_device_family:
-    description: "The test device family (e.g., raspi, rdk)."
+    description: "The test device family (e.g., rdk)."
     default: ""
 
 runs:

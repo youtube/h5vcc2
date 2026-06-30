@@ -97,7 +97,7 @@ runs:
         if ! grep -q "target_cpu" .gclient; then
           if [[ "${{ matrix.platform }}" == *"evergreen-arm64"* ]]; then
             echo "target_cpu=['x64', 'arm64']" >> .gclient
-          elif [[ "${{ matrix.platform }}" == *"raspi-2"* || "${{ matrix.platform }}" == *"evergreen-arm"* ]]; then
+          elif [[ "${{ matrix.platform }}" == *"evergreen-arm"* ]]; then
             echo "target_cpu=['x64', 'arm']" >> .gclient
           fi
         fi

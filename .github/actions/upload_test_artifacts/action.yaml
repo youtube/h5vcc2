@@ -36,13 +36,13 @@ runs:
       run: |
         host_archive_flags="--compression zstd --compression-level=9"
         android_archive_flags="--compression gz --archive-per-target --use-android-deps-path --flatten-deps"
-        raspi_rdk_archive_flags="--compression gz --archive-per-target --flatten-deps"
+        rdk_archive_flags="--compression gz --archive-per-target --flatten-deps"
 
         device_archive_flags=""
         if [[ "${PLATFORM}" == *android* ]]; then
           device_archive_flags="${android_archive_flags}"
-        elif [[ "${PLATFORM}" == *raspi* || "${PLATFORM}" == *rdk* ]]; then
-          device_archive_flags="${raspi_rdk_archive_flags}"
+        elif [[ "${PLATFORM}" == *rdk* ]]; then
+          device_archive_flags="${rdk_archive_flags}"
         fi
 
         echo "host_archive_flags=${host_archive_flags}" >> $GITHUB_OUTPUT

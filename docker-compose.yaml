@@ -4,11 +4,6 @@ services:
       context: cobalt/docker/linux
     image: "${DOCKER_COMPOSE_IMAGE:-linux}"
     platform: linux/amd64
-  raspi:
-    build:
-      context: cobalt/docker/raspi
-    image: "${DOCKER_COMPOSE_IMAGE:-raspi}"
-    platform: linux/amd64
   rdk:
     build:
       context: cobalt/docker/rdk
