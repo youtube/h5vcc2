@@ -131,7 +131,17 @@ const int kNonInitialPrerollFrameCount = 1;
 // rendered, the rest of the playback should play without frame drops. So,
 // tunnel mode prerolling only needs 1 frame.
 const int kTunnelModePrerollFrameCount = 1;
-const int kMaxPendingInputsSize = 128;
+// The maximum number of pending inputs allowed in the decoder queue.
+// We set this to 128 frames (approx 2.1 seconds of 60fps video or 4.2 seconds
+// of 30fps video) to provide a buffer safety cushion that helps survive
+// V8 JavaScript main-thread congestion without video starvation,
+constexpr int kMaxPendingInputsSize = 128;
+
+// VideoFrameTracker tracks frames in the entire media pipeline (decoder queue,
+// codec, and renderer). We set its capacity to accommodate the maximum input
+// queue size (`kMaxPendingInputsSize`) plus a margin of 100 frames for frames
+// in the codec and renderer.
+constexpr int kVideoFrameTrackerCapacity = kMaxPendingInputsSize + 100;
 
 const int kFpsGuesstimateRequiredInputBufferCount = 3;
 
@@ -399,7 +409,7 @@ MediaCodecVideoDecoder::MediaCodecVideoDecoder(
 
   if (is_video_frame_tracker_enabled_) {
     video_frame_tracker_ =
-        std::make_unique<VideoFrameTracker>(kMaxPendingInputsSize * 2);
+        std::make_unique<VideoFrameTracker>(kVideoFrameTrackerCapacity);
   }
 
   if (require_software_codec_) {
@@ -994,9 +1004,13 @@ void MediaCodecVideoDecoder::ProcessOutputBuffer(
       }
     }
   }
+
+  bool need_more_input =
+      !is_end_of_stream &&
+      media_decoder_->GetNumberOfPendingInputs() < kMaxPendingInputsSize;
   decoder_status_cb_(
-      is_end_of_stream ? kBufferFull : kNeedMoreInput,
-      new VideoFrameImpl(
+      need_more_input ? kNeedMoreInput : kBufferFull,
+      make_scoped_refptr<VideoFrameImpl>(
           dequeue_output_result, media_codec_bridge,
           std::bind(&MediaCodecVideoDecoder::OnVideoFrameRelease, this)));
 }

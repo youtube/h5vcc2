@@ -14,6 +14,7 @@
 
 #include "starboard/android/shared/media_codec_video_decoder.h"
 
+#include <chrono>
 #include <condition_variable>
 #include <deque>
 #include <mutex>
@@ -105,6 +106,8 @@ class MediaCodecVideoDecoderTest : public ::testing::Test {
     return fake_factory_ ? fake_factory_->last_created_video_codec() : nullptr;
   }
 
+  std::mutex callback_mutex_;
+  int need_more_input_count_ = 0;
   JobQueue job_queue_;
   FakeMediaCodecFactory* fake_factory_ = nullptr;
   const jni_zero::ScopedJavaGlobalRef<jstring> dummy_surface_{
@@ -186,6 +189,72 @@ TEST_F(MediaCodecVideoDecoderTest, BasicDecodingFlow) {
   EXPECT_FALSE(released_outputs[0].render);
 
   EXPECT_FALSE(error_called);
+}
+
+TEST_F(MediaCodecVideoDecoderTest, BackpressureOnOutputFrame) {
+  CreateDecoder();
+
+  FakeMediaCodec* fake_codec = GetFakeVideoCodec();
+  ASSERT_NE(fake_codec, nullptr);
+
+  std::mutex local_mutex;
+  std::condition_variable local_cv;
+  bool output_received = false;
+  VideoDecoder::Status received_status = VideoDecoder::kNeedMoreInput;
+
+  decoder_->Initialize(
+      [&](VideoDecoder::Status status, const scoped_refptr<VideoFrame>& frame) {
+        std::lock_guard lock(callback_mutex_);
+        if (status == VideoDecoder::kNeedMoreInput) {
+          need_more_input_count_++;
+        }
+        if (frame) {
+          received_status = status;
+          std::lock_guard local_lock(local_mutex);
+          output_received = true;
+          local_cv.notify_all();
+        }
+      },
+      [](SbPlayerError error, const std::string& msg) {});
+
+  const int kMaxPendingInputs = 128;
+
+  // Write `kMaxPendingInputs + 1` buffers to fill the queue and go beyond.
+  // We expect signals for the first `kMaxPendingInputs - 1` writes.
+  for (int i = 0; i < kMaxPendingInputs + 1; ++i) {
+    auto input_buffer = CreateDummyVideoInputBuffer(i * 1000, 1024);
+    decoder_->WriteInputBuffers({input_buffer});
+  }
+
+  {
+    std::lock_guard lock(callback_mutex_);
+    EXPECT_EQ(need_more_input_count_, kMaxPendingInputs - 1);
+  }
+
+  // Simulate one input buffer available.
+  // Decoder should process it, reducing the pending queue size to the threshold
+  // (`kMaxPendingInputs`).
+  fake_codec->SimulateInputBufferAvailable(0);
+  ASSERT_TRUE(fake_codec->WaitForInputQueue(1, 1000));
+
+  // Simulate output buffer ready.
+  // Since the pending queue size is still at the threshold (>=
+  // `kMaxPendingInputs`), the decoder should NOT signal `kNeedMoreInput` but
+  // instead signal `kBufferFull`.
+  fake_codec->SimulateOutputAvailable(/*index=*/0, /*flags=*/0, /*offset=*/0,
+                                      /*pts=*/0, /*size=*/1024);
+
+  // Wait for the output callback.
+  std::unique_lock<std::mutex> local_lock(local_mutex);
+  ASSERT_TRUE(
+      local_cv.wait_for(local_lock, std::chrono::seconds(1),
+                        [&output_received]() { return output_received; }));
+
+  EXPECT_EQ(received_status, VideoDecoder::kBufferFull);
+  {
+    std::lock_guard lock(callback_mutex_);
+    EXPECT_EQ(need_more_input_count_, kMaxPendingInputs - 1);
+  }
 }
 
 }  // namespace

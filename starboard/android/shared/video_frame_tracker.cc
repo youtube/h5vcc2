@@ -87,6 +87,10 @@ void VideoFrameTracker::OnInputBuffer(int64_t timestamp) {
       static_cast<size_t>(max_pending_frames_size_)) {
     // OnFrameRendered() is only available after API level 23.  Cap the size
     // of |frames_to_be_rendered_| in case OnFrameRendered() is not available.
+    SB_LOG(WARNING) << "VideoFrameTracker capacity exceeded ("
+                    << max_pending_frames_size_
+                    << " frames). Evicting oldest frame with timestamp: "
+                    << frames_to_be_rendered_.front();
     frames_to_be_rendered_.pop_front();
   }
 
