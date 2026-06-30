@@ -1,9 +1,0 @@
-import("//cobalt/build/configs/linux_modular_common.gn")
-
-use_asan = false
-target_cpu = "arm"
-starboard_target_platform = "raspi-2"
-
-# Avoid using the gold linker on raspi
-# See b/389972301#comment14 for more details
-use_gold = false

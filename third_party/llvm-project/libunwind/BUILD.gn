@@ -51,7 +51,7 @@ config("common_unwind_dependents_config") {
 
 # TODO: this conditional is only to prevent gn check errors related to evergreen
 # dependencies from spilling over to gn check when run for non-evergreen
-# platforms (e.g., raspi-2_gn_devel). It can and should be removed once the gn
+# platforms (e.g., linux-x64x11_devel). It can and should be removed once the gn
 # check errors have been resolved for evergreen.
 # TODO: b/295702296 Fix libunwind for modular  builds.
 if (sb_is_evergreen || (sb_is_modular && host_os == "win")) {

@@ -23,11 +23,6 @@ TEST_NAME="UseMemoryMappedFile"
 TEST_FILE="test.html"
 
 function run_test() {
-  if [[ "${LOADER_PLATFORM}" == "raspi-2" ]]; then
-    echo " MemoryMappedFile extension not implemented for raspi-2, skipping"
-    return 2
-  fi
-
   if [[ "${SYSTEM_IMAGE_EXTENSION}" == ".lz4" ]]; then
     echo " MemoryMappedFile extension incompatible with compression, skipping"
     return 2

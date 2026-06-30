@@ -22,12 +22,9 @@ declare_args() {
   sb_install_content_subdir = ""
 }
 
-# TODO(b/218889313): `content` is hardcoded on linux/raspi. Override the default
+# TODO(b/218889313): `content` is hardcoded on linux. Override the default
 # content subdir until this is fixed
-platform_split = string_split(target_platform, "-")
-if (platform_split[0] == "raspi") {
-  sb_install_content_subdir = "content"
-}
+# By default, use standard subdirectory.
 
 if (sb_install_content_subdir == "") {
   sb_install_content_subdir = "usr/share/cobalt"

@@ -18,7 +18,7 @@
 #include "starboard/decode_target.h"
 #include "starboard/linux/shared/decode_target_internal.h"
 
-// TODO: Consider unifying this with that of raspi/open_max and android, since
+// TODO: Consider unifying this with that of android, since
 // the only part that changes is the info struct size.
 bool SbDecodeTargetGetInfo(SbDecodeTarget decode_target,
                            SbDecodeTargetInfo* out_info) {

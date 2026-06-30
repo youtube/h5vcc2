@@ -125,7 +125,6 @@ location. Currently these reference ports include:
 
   * `starboard/stub`
   * `starboard/linux`
-  * `starboard/raspi`
 
 The platform's `BUILD.gn` contains absolute paths, so the paths will still be
 valid if you copy it to a new directory. You can then incrementally replace
@@ -137,8 +136,8 @@ with your toolchain. You can then replace stub implementations with
 implementations from `starboard/shared` or your own custom implementations
 module-by-module, until you have gone through all modules.
 
-You may also choose to copy either the Desktop Linux or Raspberry Pi ports and
-work backwards fixing things that don't compile or work on your platform.
+You may also choose to copy the Desktop Linux port and work backwards fixing
+things that don't compile or work on your platform.
 
 For example, for `bobbox-armel`, you might do:
 
@@ -169,8 +168,7 @@ the path to the port to be able to build it.
 
   1. Recursively copy `starboard/stub` to
      `third_party/starboard/<family-name>/<binary-variant>`.  You may also
-     consider copying from another reference platform, like `raspi-2` or
-     `linux-x64x11`.
+     consider copying from another reference platform, like `linux-x64x11`.
   1. Add your platform and path to `starboard/build/platforms.py`.
   1. In `platform_configuration/configuration.gni`
       1. Delete variables in the file that are not needed for your platform.

@@ -255,12 +255,12 @@ const void* SbSystemGetExtension(const char* name) {
 ```
 
 You can browse existing extension implementations in the repository.
-For example, the reference Raspberry Pi port implements the `Graphics` extension
+For example, the reference Linux port implements the `Pleasantry` extension
 across the following files.
 
-*   `starboard/raspi/shared/graphics.h`
-*   `starboard/raspi/shared/graphics.cc`
-*   `starboard/raspi/shared/system_get_extensions.cc`
+*   `starboard/linux/shared/pleasantry.h`
+*   `starboard/linux/shared/pleasantry.cc`
+*   `starboard/linux/shared/system_get_extensions.cc`
 
 ### Exercise 1: Write and use your first extension
 
