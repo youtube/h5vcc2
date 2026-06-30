@@ -449,3 +449,31 @@ void AppEventDelegate::SetApplicationStateAnnotation(ApplicationState state) {
 }
 
 }  // namespace cobalt
+
+#if BUILDFLAG(IS_ANDROID)
+#include "cobalt/android/browser_jni_headers/AppEventBridge_jni.h"
+#include "starboard/event.h"
+
+static void JNI_AppEventBridge_HandleLifecycleEvent(JNIEnv* env, jint type) {
+  SbEvent event;
+  event.type = static_cast<SbEventType>(type);
+  event.timestamp = 0;
+  event.data = nullptr;
+
+  static cobalt::AppEventDelegate* s_lifecycle_delegate =
+      new cobalt::AppEventDelegate();
+
+  if (!s_lifecycle_delegate) {
+    return;
+  }
+
+  if (event.type == kSbEventTypeStop) {
+    s_lifecycle_delegate->HandleEvent(&event);
+    s_lifecycle_delegate->DoTeardown();
+    delete s_lifecycle_delegate;
+    s_lifecycle_delegate = nullptr;
+  } else {
+    s_lifecycle_delegate->HandleEvent(&event);
+  }
+}
+#endif  // BUILDFLAG(IS_ANDROID)

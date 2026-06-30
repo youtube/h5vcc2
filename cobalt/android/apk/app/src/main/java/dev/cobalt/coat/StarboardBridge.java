@@ -63,6 +63,17 @@ public class StarboardBridge {
     StarboardBridge getStarboardBridge();
   }
 
+  public static final int kSbEventTypePreload = 0;
+  public static final int kSbEventTypeStart = 1;
+  public static final int kSbEventTypeBlur = 2;
+  public static final int kSbEventTypeFocus = 3;
+  public static final int kSbEventTypeConceal = 4;
+  public static final int kSbEventTypeReveal = 5;
+  public static final int kSbEventTypeFreeze = 6;
+  public static final int kSbEventTypeUnfreeze = 7;
+  public static final int kSbEventTypeStop = 8;
+
+
   private CobaltSystemConfigChangeReceiver mSysConfigChangeReceiver;
   private CobaltTextToSpeechHelper mTtsHelper;
   // TODO(cobalt): Re-enable these classes or remove if unnecessary.

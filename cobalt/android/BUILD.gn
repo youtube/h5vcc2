@@ -58,12 +58,14 @@ generate_jni("jni_headers") {
 generate_jni("browser_jni_headers") {
   sources = [
     "apk/app/src/main/java/dev/cobalt/browser/CobaltContentBrowserClient.java",
+    "apk/app/src/main/java/dev/cobalt/coat/AppEventBridge.java",
   ]
 }
 
 android_library("cobalt_browser_java") {
   sources = [
     "apk/app/src/main/java/dev/cobalt/browser/CobaltContentBrowserClient.java",
+    "apk/app/src/main/java/dev/cobalt/coat/AppEventBridge.java",
   ]
   srcjar_deps = [ ":browser_jni_headers" ]
   deps = [ "//third_party/jni_zero:jni_zero_java" ]
@@ -211,6 +213,7 @@ android_assets("coat_assets") {
 shared_library_with_jni("libchrobalt") {
   remove_uncalled_jni = true
   deps = [
+    ":browser_jni_headers",
     "//cobalt:common",
     "//cobalt/browser",
     "//cobalt/browser:cobalt_crash_annotations",
