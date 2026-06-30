@@ -49,6 +49,9 @@ enum class CrxDownloaderError {
   DISK_FULL = 13,
   CANCELLED = 14,
   NO_DOWNLOAD_DIR = 15,
+#if BUILDFLAG(IS_STARBOARD)
+  OUT_OF_MEMORY = 16,
+#endif
 
   // The Windows BITS queue contains to many update client jobs. The value is
   // chosen so that it can be reported as a custom COM error on this platform.

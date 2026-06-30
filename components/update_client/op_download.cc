@@ -33,6 +33,11 @@
 #include "components/update_client/update_engine.h"
 #include "url/gurl.h"
 
+#if BUILDFLAG(IS_STARBOARD)
+#include <algorithm>
+#include "starboard/system.h"  // nogncheck
+#endif
+
 namespace update_client {
 
 namespace {
@@ -42,6 +47,11 @@ namespace {
 constexpr int64_t kBackgroundDownloadSizeThreshold = 10'000'000; /*10 MB*/
 #elif !BUILDFLAG(IS_STARBOARD)
 constexpr int64_t kBackgroundDownloadSizeThreshold = 0;
+#endif
+
+#if defined(IN_MEMORY_UPDATES)
+// Memory buffer required for downloading the update in memory.
+constexpr int64_t kMemoryBufferBytes = 35 * 1024 * 1024;
 #endif
 
 #if !BUILDFLAG(IS_STARBOARD)
@@ -187,6 +197,26 @@ void HandleAvailableSpace(
                  .code = static_cast<int>(CrxDownloaderError::DISK_FULL)})));
     return;
   }
+
+#if BUILDFLAG(IS_STARBOARD) && defined(IN_MEMORY_UPDATES)
+  int64_t total_memory = SbSystemGetTotalCPUMemory();
+  int64_t used_memory = SbSystemGetUsedCPUMemory();
+  int64_t available_memory = std::max(int64_t{0}, total_memory - used_memory);
+
+  if (total_memory > 0 && available_memory < size + kMemoryBufferBytes) {
+    VLOG(1)
+        << "Insufficient memory for the update plus 20MB buffer. Available memory: "
+        << available_memory << ", download size: " << size;
+    base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+        FROM_HERE,
+        base::BindOnce(
+            std::move(callback),
+            base::unexpected<CategorizedError>(
+                {.category = ErrorCategory::kDownload,
+                 .code = static_cast<int>(CrxDownloaderError::OUT_OF_MEMORY)})));
+    return;
+  }
+#endif
   scoped_refptr<CrxDownloader> crx_downloader =
 #if BUILDFLAG(IS_STARBOARD)
       config->GetCrxDownloaderFactory()->MakeCrxDownloader(config);
