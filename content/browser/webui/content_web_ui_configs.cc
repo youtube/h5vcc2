@@ -6,7 +6,15 @@
 
 #include <memory>
 
+// clang-format off
+// Remove these two includes after CHROMIUM_MILESTONE_LE_138
+#include "content/public/common/buildflags.h"
+#include "content/public/common/content_milestone_features.h"
+// clang-format on
+
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/attribution_reporting/attribution_internals_ui.h"
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/gpu/gpu_internals_ui.h"
 #include "content/browser/indexed_db/indexed_db_internals_ui.h"
 #include "content/browser/media/media_internals_ui.h"
@@ -33,7 +41,9 @@ namespace content {
 
 void RegisterContentWebUIConfigs() {
   auto& map = WebUIConfigMap::GetInstance();
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   map.AddWebUIConfig(std::make_unique<AttributionInternalsUIConfig>());
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   map.AddWebUIConfig(std::make_unique<GpuInternalsUIConfig>());
   map.AddWebUIConfig(
       std::make_unique<indexed_db::IndexedDBInternalsUIConfig>());

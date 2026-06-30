@@ -4,6 +4,12 @@
 
 #include "content/browser/loader/keep_alive_attribution_request_helper.h"
 
+// clang-format off
+// Remove these two includes after CHROMIUM_MILESTONE_LE_138
+#include "content/public/common/buildflags.h"
+#include "content/public/common/content_milestone_features.h"
+// clang-format on
+
 #include <stdint.h>
 
 #include <memory>
@@ -24,9 +30,11 @@
 #include "components/attribution_reporting/features.h"
 #include "components/attribution_reporting/registration_eligibility.mojom-forward.h"
 #include "components/attribution_reporting/suitable_origin.h"
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/attribution_reporting/attribution_background_registrations_id.h"
 #include "content/browser/attribution_reporting/attribution_data_host_manager.h"
 #include "content/browser/attribution_reporting/attribution_suitable_context.h"
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/renderer_host/document_associated_data.h"
 #include "content/browser/renderer_host/render_frame_host_impl.h"
 #include "content/public/browser/global_routing_id.h"
@@ -40,6 +48,7 @@
 
 namespace content {
 
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 namespace {
 
 using ::attribution_reporting::AttributionSrcRequestStatus;
@@ -263,5 +272,37 @@ void KeepAliveAttributionRequestHelper::RecordAttributionSrcRequestStatus(
 KeepAliveAttributionRequestHelper::~KeepAliveAttributionRequestHelper() {
   OnComplete();
 }
+#else
+// static
+std::unique_ptr<KeepAliveAttributionRequestHelper>
+KeepAliveAttributionRequestHelper::CreateIfNeeded(
+    network::mojom::AttributionReportingEligibility,
+    const GURL&,
+    const std::optional<base::UnguessableToken>&,
+    const std::optional<std::string>&,
+    const std::optional<AttributionSuitableContext>&,
+    WeakDocumentPtr) {
+  return nullptr;
+}
+
+KeepAliveAttributionRequestHelper::KeepAliveAttributionRequestHelper(
+    BackgroundRegistrationsId,
+    AttributionDataHostManager*,
+    const GURL&,
+    bool,
+    WeakDocumentPtr) {}
+
+KeepAliveAttributionRequestHelper::~KeepAliveAttributionRequestHelper() =
+    default;
+
+void KeepAliveAttributionRequestHelper::OnReceiveRedirect(
+    scoped_refptr<net::HttpResponseHeaders>,
+    const GURL&) {}
+
+void KeepAliveAttributionRequestHelper::OnReceiveResponse(
+    scoped_refptr<net::HttpResponseHeaders>) {}
+
+void KeepAliveAttributionRequestHelper::OnError() {}
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 
 }  // namespace content

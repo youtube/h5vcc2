@@ -15,6 +15,12 @@
 #include <variant>
 #include <vector>
 
+// clang-format off
+// Remove these two includes after CHROMIUM_MILESTONE_LE_138
+#include "content/public/common/buildflags.h"
+#include "content/public/common/content_milestone_features.h"
+// clang-format on
+
 #include "base/atomic_sequence_num.h"
 #include "base/check.h"
 #include "base/check_op.h"
@@ -28,11 +34,13 @@
 #include "base/notreached.h"
 #include "base/strings/strcat.h"
 #include "base/types/pass_key.h"
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/attribution_reporting/attribution_beacon_id.h"
 #include "content/browser/attribution_reporting/attribution_data_host_manager.h"
 #include "content/browser/attribution_reporting/attribution_host.h"
 #include "content/browser/attribution_reporting/attribution_manager.h"
 #include "content/browser/attribution_reporting/attribution_suitable_context.h"
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/devtools/devtools_instrumentation.h"
 #include "content/browser/devtools/network_service_devtools_observer.h"
 #include "content/browser/devtools/protocol/network_handler.h"
@@ -310,8 +318,12 @@ FencedFrameReporter::FencedFrameReporter(
     const std::optional<url::Origin>& winner_aggregation_coordinator_origin,
     const std::optional<std::vector<url::Origin>>& allowed_reporting_origins)
     : url_loader_factory_(std::move(url_loader_factory)),
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
       attribution_manager_(
           AttributionManager::FromBrowserContext(browser_context)),
+#else
+      attribution_manager_(nullptr),
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
       browser_context_(browser_context),
       main_frame_origin_(main_frame_origin),
       private_aggregation_manager_(private_aggregation_manager),
@@ -408,7 +420,9 @@ bool FencedFrameReporter::SendReport(
     return false;
   }
 
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   static base::AtomicSequenceNumber unique_id_counter;
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 
   std::optional<AttributionReportingData> attribution_reporting_data;
 
@@ -418,6 +432,7 @@ bool FencedFrameReporter::SendReport(
   WebContents* web_contents =
       WebContents::FromRenderFrameHost(request_initiator_frame);
   if (web_contents) {
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
     network::mojom::AttributionSupport attribution_reporting_support =
         static_cast<WebContentsImpl*>(web_contents)->GetAttributionSupport();
     auto suitable_context =
@@ -437,6 +452,7 @@ bool FencedFrameReporter::SendReport(
           .attribution_reporting_support = attribution_reporting_support,
       });
     }
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   }
 
   url::Origin request_initiator =
@@ -759,6 +775,7 @@ bool FencedFrameReporter::SendReportInternal(
 
   network::SimpleURLLoader* simple_url_loader_ptr = simple_url_loader.get();
 
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   AttributionDataHostManager* attribution_data_host_manager =
       attribution_manager_ ? attribution_manager_->GetDataHostManager()
                            : nullptr;
@@ -812,6 +829,7 @@ bool FencedFrameReporter::SendReportInternal(
             attribution_reporting_data->beacon_id, std::move(simple_url_loader),
             initiator_frame_tree_node_id, devtools_request_id));
   } else {
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
     // Send out the reporting beacon.
     simple_url_loader_ptr->DownloadHeadersOnly(
         url_loader_factory_.get(),
@@ -832,7 +850,9 @@ bool FencedFrameReporter::SendReportInternal(
             },
             event_variant, std::move(simple_url_loader),
             initiator_frame_tree_node_id, devtools_request_id));
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   }
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 
   // The associated histograms will be sent out in the FencedFrameReporter
   // destructor.
@@ -997,6 +1017,7 @@ void FencedFrameReporter::NotifyFencedFrameReportingBeaconFailed(
     return;
   }
 
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   AttributionDataHostManager* attribution_data_host_manager =
       attribution_manager_ ? attribution_manager_->GetDataHostManager()
                            : nullptr;
@@ -1008,6 +1029,7 @@ void FencedFrameReporter::NotifyFencedFrameReportingBeaconFailed(
       attribution_reporting_data->beacon_id,
       /*reporting_url=*/GURL(), /*headers=*/nullptr,
       /*is_final_response=*/true);
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 }
 
 void FencedFrameReporter::NotifyIsBeaconQueued(

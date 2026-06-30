@@ -10,6 +10,12 @@
 #include <string_view>
 #include <utility>
 
+// clang-format off
+// Remove these two includes after CHROMIUM_MILESTONE_LE_138
+#include "content/public/common/buildflags.h"
+#include "content/public/common/content_milestone_features.h"
+// clang-format on
+
 #include "base/command_line.h"
 #include "base/containers/contains.h"
 #include "base/debug/crash_logging.h"
@@ -26,7 +32,9 @@
 #include "build/build_config.h"
 #include "components/download/public/common/download_stats.h"
 #include "content/browser/about_url_loader_factory.h"
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/attribution_reporting/attribution_manager.h"
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/blob_storage/chrome_blob_storage_context.h"
 #include "content/browser/client_hints/client_hints.h"
 #include "content/browser/data_url_loader_factory.h"
@@ -319,12 +327,17 @@ std::unique_ptr<network::ResourceRequest> CreateResourceRequest(
   new_request->storage_access_api_status =
       request_info.begin_params->storage_access_api_status;
 
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   WebContentsImpl* web_contents = static_cast<WebContentsImpl*>(
       WebContents::FromFrameTreeNodeId(frame_tree_node->frame_tree_node_id()));
   new_request->attribution_reporting_support =
       web_contents ? web_contents->GetAttributionSupport()
                    : AttributionManager::GetAttributionSupport(
                          /*client_os_disabled=*/false);
+#else
+  new_request->attribution_reporting_support =
+      network::mojom::AttributionSupport::kNone;
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 
   new_request->attribution_reporting_eligibility =
       request_info.begin_params->impression.has_value()

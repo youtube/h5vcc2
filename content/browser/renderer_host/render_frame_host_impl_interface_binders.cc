@@ -6,6 +6,13 @@
 #include <vector>
 
 #include "base/debug/dump_without_crashing.h"
+
+// clang-format off
+// Remove these two includes after CHROMIUM_MILESTONE_LE_138
+#include "content/public/common/buildflags.h"
+#include "content/public/common/content_milestone_features.h"
+// clang-format on
+
 #include "base/feature_list.h"
 #include "base/functional/bind.h"
 #include "base/memory/raw_ptr.h"
@@ -13,7 +20,9 @@
 #include "base/metrics/metrics_hashes.h"
 #include "base/task/single_thread_task_runner.h"
 #include "content/browser/accessibility/render_accessibility_host.h"
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/attribution_reporting/attribution_host.h"
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "content/browser/blob_storage/chrome_blob_storage_context.h"
 #include "content/browser/file_system/file_system_manager_impl.h"
 #include "content/browser/geolocation/geolocation_service_impl.h"
@@ -330,6 +339,7 @@ void RenderFrameHostImpl::SetUpMojoConnection() {
           },
           base::Unretained(this)));
 
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   associated_registry_->AddInterface<blink::mojom::AttributionHost>(
       base::BindRepeating(
           [](RenderFrameHostImpl* impl,
@@ -338,6 +348,7 @@ void RenderFrameHostImpl::SetUpMojoConnection() {
             AttributionHost::BindReceiver(std::move(receiver), impl);
           },
           base::Unretained(this)));
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 
   associated_registry_->AddInterface<device::mojom::ScreenOrientation>(
       base::BindRepeating(

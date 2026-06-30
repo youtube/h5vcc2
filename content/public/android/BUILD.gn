@@ -4,6 +4,7 @@
 
 import("//build/config/android/config.gni")
 import("//build/config/android/rules.gni")
+import("//content/public/common/features.gni")
 import("//device/vr/buildflags/buildflags.gni")
 import("//third_party/jni_zero/jni_zero.gni")
 import("//tools/grit/grit_rule.gni")
@@ -439,6 +440,13 @@ android_library("content_full_java") {
     "java/src/org/chromium/content_public/browser/selection/SelectionDropdownMenuDelegate.java",
   ]
 
+  # If in the future privacy sandbox components are removed from the code base, ignore this if block.
+  if (!enable_privacy_sandbox_apis) {
+    sources -= [
+      "java/src/org/chromium/content/browser/AttributionOsLevelManager.java",
+    ]
+  }
+
   public_deps = [ "//ui/base/mojom:ui_base_types_java" ]
 }
 
@@ -544,6 +552,13 @@ generate_jni("content_jni_headers") {
     "java/src/org/chromium/content_public/browser/NavigationHandle.java",
     "java/src/org/chromium/content_public/browser/Page.java",
   ]
+
+  # If in the future privacy sandbox components are removed from the code base, ignore this if block.
+  if (!enable_privacy_sandbox_apis) {
+    sources -= [
+      "java/src/org/chromium/content/browser/AttributionOsLevelManager.java",
+    ]
+  }
 }
 
 group("browser_jni") {
