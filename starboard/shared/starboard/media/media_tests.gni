@@ -22,3 +22,13 @@ media_tests_sources = [
   "//starboard/shared/starboard/media/parsed_mime_info_test.cc",
   "//starboard/shared/starboard/media/vp9_util_test.cc",
 ]
+
+# SbMediaGetVideoBufferBudgetTest is excluded on Android because the budget
+# calculation triggers JNI calls to StarboardBridge/ResourceOverlay.
+# The native test runner (starboard_platform_tests) on Android does not
+# initialize the Java JNI bridge, leading to crashes during test execution.
+if (!is_android) {
+  media_tests_sources += [
+    "//starboard/shared/starboard/media/media_get_video_buffer_budget_test.cc",
+  ]
+}

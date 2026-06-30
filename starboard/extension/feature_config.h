@@ -102,6 +102,11 @@ FEATURE_LIST_START
 
 #if BUILDFLAG(IS_ANDROID) && (SB_API_VERSION >= 17)
 // keep-sorted start newline_separated=yes
+// Set to true to enable area-based video buffer budget calculation.
+STARBOARD_FEATURE(kAreaBasedVideoBufferBudget,
+                  "AreaBasedVideoBufferBudget",
+                  false)
+
 // By default, app provisioning is disabled. Set the following variable to true
 // to enable app provisioning.
 STARBOARD_FEATURE(kEnableAppProvisioning, "EnableAppProvisioning", false)

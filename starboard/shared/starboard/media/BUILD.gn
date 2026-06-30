@@ -34,6 +34,8 @@ static_library("media_util") {
     "//starboard/shared/starboard/media/media_tracing.h",
     "//starboard/shared/starboard/media/media_util.cc",
     "//starboard/shared/starboard/media/media_util.h",
+    "//starboard/shared/starboard/media/media_video_budget.cc",
+    "//starboard/shared/starboard/media/media_video_budget.h",
     "//starboard/shared/starboard/media/mime_supportability_cache.cc",
     "//starboard/shared/starboard/media/mime_supportability_cache.h",
     "//starboard/shared/starboard/media/mime_type.cc",

@@ -1,4 +1,4 @@
-// Copyright 2018 The Cobalt Authors. All Rights Reserved.
+// Copyright 2026 The Cobalt Authors. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "starboard/media.h"
+#ifndef STARBOARD_SHARED_STARBOARD_MEDIA_MEDIA_VIDEO_BUDGET_H_
+#define STARBOARD_SHARED_STARBOARD_MEDIA_MEDIA_VIDEO_BUDGET_H_
 
-#include "starboard/common/log.h"
-#include "starboard/shared/starboard/media/media_video_budget.h"
+#include "starboard/common/size.h"
 
-int SbMediaGetVideoBufferBudget(SbMediaVideoCodec codec,
-                                int resolution_width,
-                                int resolution_height,
-                                int bits_per_pixel) {
-  SB_UNREFERENCED_PARAMETER(codec);
-  return starboard::GetVideoBufferBudget(
-      {resolution_width, resolution_height}, bits_per_pixel);
-}
+namespace starboard {
 
+int GetVideoBufferBudget(Size resolution, int bits_per_pixel);
+
+}  // namespace starboard
+
+#endif  // STARBOARD_SHARED_STARBOARD_MEDIA_MEDIA_VIDEO_BUDGET_H_

@@ -17,11 +17,12 @@
 #include "starboard/android/shared/runtime_resource_overlay.h"
 #include "starboard/common/log.h"
 #include "starboard/media.h"
-#include "starboard/shared/starboard/media/resolutions.h"
+#include "starboard/shared/starboard/media/media_video_budget.h"
 
-namespace {
-
-// We set the maximum memory budget to 200MB, balancing the following factors:
+// This is different than max budget defined in
+// starboard/shared/starboard/media/media_video_budget.cc
+// We set the maximum memory budget to 200MB on Android (and 300MB on other
+// platforms), balancing the following factors:
 //
 // 1. 8K Video Playback
 // Playing 8K video requires significant memory for decoded frames. For
@@ -33,11 +34,7 @@ namespace {
 // 2. Chromium's Budget
 // Chromium has a max memory budget of 150MB.
 // https://github.com/youtube/cobalt/blob/a3c966f929aabea1d71813c31d404e1b319c2fcd/media/base/demuxer_memory_limit.h#L44
-// TODO: b/416039556 - Allow starboard::feature to override this value, once
-// b/416039556 is completed.
-constexpr int kMaxVideoBufferBudget = 200 * 1024 * 1024;
-
-}  // namespace
+constexpr int kMaxVideoBufferBudgetForAndroid = 200 * 1024 * 1024;
 
 int SbMediaGetVideoBufferBudget(SbMediaVideoCodec codec,
                                 int resolution_width,
@@ -47,7 +44,7 @@ int SbMediaGetVideoBufferBudget(SbMediaVideoCodec codec,
     int buffer_budget = starboard::RuntimeResourceOverlay::GetInstance()
                             ->max_video_buffer_budget();
     if (buffer_budget == 0) {
-      return kMaxVideoBufferBudget;
+      return kMaxVideoBufferBudgetForAndroid;
     }
     SB_LOG(INFO) << "RRO \"max_video_buffer_budget\" is set to "
                  << buffer_budget << " MB.";
@@ -57,33 +54,8 @@ int SbMediaGetVideoBufferBudget(SbMediaVideoCodec codec,
   static const int overlaid_video_buffer_budget =
       get_overlaid_video_buffer_budget();
 
-  int video_buffer_budget = 0;
-  starboard::Size resolution(resolution_width, resolution_height);
-  if (resolution.FitsWithin(starboard::Resolution::k1080p) ||
-      resolution_width == kSbMediaVideoResolutionDimensionInvalid ||
-      resolution_height == kSbMediaVideoResolutionDimensionInvalid) {
-    // Specifies the maximum amount of memory used by video buffers of media
-    // source before triggering a garbage collection when the video resolution
-    // is up to 1080p (1920x1080) or invalid.
-    video_buffer_budget = 30 * 1024 * 1024;
-  } else if (resolution.FitsWithin(starboard::Resolution::k4k)) {
-    if (bits_per_pixel <= 8) {
-      // Specifies the maximum amount of memory used by video buffers of media
-      // source before triggering a garbage collection when the video resolution
-      // is up to 4k (3840x2160) and bit per pixel is up to 8.
-      video_buffer_budget = 100 * 1024 * 1024;
-    } else {
-      // Specifies the maximum amount of memory used by video buffers of media
-      // source before triggering a garbage collection when video resolution is
-      // up to 4k (3840x2160) and bit per pixel is greater than 8.
-      video_buffer_budget = 160 * 1024 * 1024;
-    }
-  } else {
-    // Specifies the maximum amount of memory used by video buffers of media
-    // source before triggering a garbage collection when the video resolution
-    // is above 4K (e.g., 8K).
-    video_buffer_budget = kMaxVideoBufferBudget;
-  }
+  int video_buffer_budget = starboard::GetVideoBufferBudget(
+      {resolution_width, resolution_height}, bits_per_pixel);
 
   return std::min(video_buffer_budget, overlaid_video_buffer_budget);
 }
