@@ -39,6 +39,8 @@ source_set("browser") {
     sources += [
       "android/mojo/cobalt_interface_registrar_android.cc",
       "android/mojo/cobalt_interface_registrar_android.h",
+      "android/overlay/cobalt_video_overlay_window.cc",
+      "android/overlay/cobalt_video_overlay_window.h",
     ]
   }
 
@@ -54,6 +56,7 @@ source_set("browser") {
     ":features",
     ":global_features",
     ":metrics",
+    "//cc",
     "//cobalt/browser:switches",
     "//cobalt/browser/client_hint_headers",
     "//cobalt/browser/constants:cobalt_experiment_names",
@@ -84,13 +87,17 @@ source_set("browser") {
     "//cobalt/memory",
     "//cobalt/shell:cobalt_shell_lib",
     "//components/embedder_support:user_agent",
+    "//components/embedder_support/android:web_contents_delegate",
     "//components/metrics",
     "//components/metrics_services_manager",
     "//components/os_crypt/sync",
     "//components/prefs",
+    "//components/thin_webview",
     "//components/variations/service:service",
+    "//components/viz/common",
     "//services/resource_coordinator/public/cpp/memory_instrumentation",
     "//starboard:starboard_group",
+    "//ui/android",
   ]
 
   if (is_androidtv) {

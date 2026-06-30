@@ -71,6 +71,7 @@
 #include "content/public/browser/render_widget_host.h"
 #include "content/public/browser/storage_partition.h"
 #include "content/public/browser/web_contents.h"
+#include "content/public/browser/overlay_window.h"
 #include "content/public/common/content_switch_dependent_feature_overrides.h"
 #include "mojo/public/cpp/bindings/self_owned_receiver.h"
 #include "services/network/public/cpp/features.h"
@@ -248,6 +249,12 @@ CobaltContentBrowserClient::~CobaltContentBrowserClient() {
 CobaltContentBrowserClient* CobaltContentBrowserClient::Get() {
   return static_cast<CobaltContentBrowserClient*>(
       content::ShellContentBrowserClient::Get());
+}
+
+std::unique_ptr<content::VideoOverlayWindow>
+CobaltContentBrowserClient::CreateWindowForVideoPictureInPicture(
+    content::VideoPictureInPictureWindowController* controller) {
+  return content::VideoOverlayWindow::Create(controller);
 }
 
 std::unique_ptr<content::BrowserMainParts>

@@ -200,6 +200,7 @@ class Shell : public WebContentsDelegate, public WebContentsObserver {
                                          const GURL& resource_url) override;
   PictureInPictureResult EnterPictureInPicture(
       WebContents* web_contents) override;
+  void ExitPictureInPicture() override;
   bool ShouldResumeRequestsForCreatedWindow() override;
   void SetContentsBounds(WebContents* source, const gfx::Rect& bounds) override;
   void RequestMediaAccessPermission(WebContents*,

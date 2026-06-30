@@ -254,6 +254,8 @@ ExperimentalFeatures ProcessH5vccSettings(
           settings, kH5vccSettingsKeyMediaFlushAudioTrackDuringSeek)) {
     parsed.flush_audio_track_during_seek = *val != 0;
   }
+
+  parsed.force_decode_to_texture = true;
   if (auto* val = GetSettingValue<int64_t>(
           settings, kH5vccSettingsKeyMediaForceDecodeToTexture)) {
     parsed.force_decode_to_texture = *val != 0;
