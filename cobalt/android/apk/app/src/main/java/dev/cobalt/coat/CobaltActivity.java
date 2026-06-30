@@ -344,7 +344,7 @@ public abstract class CobaltActivity extends Activity {
           public void onWebContentsReady() {
             // Inject JavaBridge objects to the WebContents.
             initializeJavaBridge();
-            getStarboardBridge().setWebContents(getActiveWebContents());
+            ((BrowserStarboardBridge) getStarboardBridge()).setWebContents(getActiveWebContents());
 
             // Load the `url` with the same shell we created above.
             mStartupUrl = ShellManagerJni.get().appendMigrationStatus(mStartupUrl);

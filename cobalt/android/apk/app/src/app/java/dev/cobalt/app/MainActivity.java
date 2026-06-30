@@ -18,6 +18,7 @@ import android.app.Activity;
 import android.app.Service;
 import android.os.Bundle;
 import dev.cobalt.coat.ArtworkDownloaderDefault;
+import dev.cobalt.coat.BrowserStarboardBridge;
 import dev.cobalt.coat.CobaltActivity;
 import dev.cobalt.coat.CobaltService;
 import dev.cobalt.coat.StarboardBridge;
@@ -37,7 +38,7 @@ public class MainActivity extends CobaltActivity {
     Holder<Activity> activityHolder = new Holder<>();
     Holder<Service> serviceHolder = new Holder<>();
     StarboardBridge bridge =
-        new StarboardBridge(
+        new BrowserStarboardBridge(
             getApplicationContext(),
             activityHolder,
             serviceHolder,
