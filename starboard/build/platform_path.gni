@@ -50,8 +50,6 @@ if (starboard_path == "") {
     } else if (target_os == "linux") {
       if (target_cpu == "x64") {
         starboard_target_platform = "linux-x64x11"
-      } else if (target_cpu == "arm") {
-        starboard_target_platform = "raspi-2"
       } else {
         assert(false, "Unsupported linux target cpu ${target_cpu}.")
       }
