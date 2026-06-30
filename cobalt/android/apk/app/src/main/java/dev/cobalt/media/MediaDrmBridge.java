@@ -41,6 +41,7 @@ import java.util.Locale;
 import java.util.UUID;
 import org.chromium.base.Log;
 import org.jni_zero.CalledByNative;
+import org.jni_zero.CalledByNativeUnchecked;
 import org.jni_zero.JNINamespace;
 import org.jni_zero.JniType;
 import org.jni_zero.NativeMethods;
@@ -204,7 +205,7 @@ public class MediaDrmBridge {
   }
 
   /** Destroy the MediaDrmBridge object. */
-  @CalledByNative
+  @CalledByNativeUnchecked
   void destroy() {
     mNativeMediaDrmBridge = INVALID_NATIVE_MEDIA_DRM_BRIDGE;
     if (mMediaDrm != null) {
@@ -364,7 +365,7 @@ public class MediaDrmBridge {
    *
    * @param sessionId ID of session to be closed.
    */
-  @CalledByNative
+  @CalledByNativeUnchecked
   void closeSession(byte[] sessionId) {
     Log.d(TAG, "closeSession()");
     if (mMediaDrm == null) {

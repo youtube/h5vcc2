@@ -155,7 +155,11 @@ MediaDrmBridge::MediaDrmBridge(PassKey<MediaDrmBridge>,
 
 MediaDrmBridge::~MediaDrmBridge() {
   if (!j_media_drm_bridge_.is_null()) {
-    Java_MediaDrmBridge_destroy(AttachCurrentThread(), j_media_drm_bridge_);
+    JNIEnv* env = AttachCurrentThread();
+    Java_MediaDrmBridge_destroy(env, j_media_drm_bridge_);
+    if (jni_zero::ClearException(env)) {
+      SB_LOG(WARNING) << "Ignored JNI exception during MediaDrmBridge destroy in teardown.";
+    }
   }
 }
 
@@ -222,6 +226,9 @@ void MediaDrmBridge::CloseSession(std::string_view session_id) const {
   auto j_session_id = ToScopedJavaByteArray(env, session_id);
 
   Java_MediaDrmBridge_closeSession(env, j_media_drm_bridge_, j_session_id);
+  if (jni_zero::ClearException(env)) {
+    SB_LOG(WARNING) << "Ignored JNI exception during MediaDrmBridge closeSession in teardown.";
+  }
 }
 
 const void* MediaDrmBridge::GetMetrics(int* size) {

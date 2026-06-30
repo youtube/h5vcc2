@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Locale;
 import org.jni_zero.CalledByNative;
+import org.jni_zero.CalledByNativeUnchecked;
 import org.jni_zero.JNINamespace;
 
 /**
@@ -322,7 +323,7 @@ public class AudioTrackBridge {
   }
 
   // TODO (b/262608024): Have this method return a boolean and return false on failure.
-  @CalledByNative
+  @CalledByNativeUnchecked
   private void pause() {
     if (mAudioTrack == null) {
       Log.e(TAG, "Unable to pause with NULL audio track.");
@@ -336,7 +337,7 @@ public class AudioTrackBridge {
   }
 
   // TODO (b/262608024): Have this method return a boolean and return false on failure.
-  @CalledByNative
+  @CalledByNativeUnchecked
   private void stop() {
     if (mAudioTrack == null) {
       Log.e(TAG, "Unable to stop with NULL audio track.");
@@ -349,7 +350,7 @@ public class AudioTrackBridge {
     }
   }
 
-  @CalledByNative
+  @CalledByNativeUnchecked
   private void flush() {
     if (mAudioTrack == null) {
       Log.e(TAG, "Unable to flush with NULL audio track.");

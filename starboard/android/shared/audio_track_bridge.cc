@@ -146,12 +146,20 @@ void AudioTrackBridge::Play() {
 void AudioTrackBridge::Pause() {
   JNIEnv* env = AttachCurrentThread();
   Java_AudioTrackBridge_pause(env, j_audio_track_bridge_);
+  if (jni_zero::ClearException(env)) {
+    SB_LOG(WARNING) << "Ignored JNI exception during AudioTrackBridge Pause.";
+    return;
+  }
   SB_LOG(INFO) << "AudioTrackBridge paused.";
 }
 
 void AudioTrackBridge::Stop() {
   JNIEnv* env = AttachCurrentThread();
   Java_AudioTrackBridge_stop(env, j_audio_track_bridge_);
+  if (jni_zero::ClearException(env)) {
+    SB_LOG(WARNING) << "Ignored JNI exception during AudioTrackBridge Stop.";
+    return;
+  }
   SB_LOG(INFO) << "AudioTrackBridge stopped.";
 }
 
@@ -160,9 +168,16 @@ void AudioTrackBridge::PauseAndFlush() {
   // For an immediate stop, use pause(), followed by flush() to discard audio
   // data that hasn't been played back yet.
   Java_AudioTrackBridge_pause(env, j_audio_track_bridge_);
+  if (jni_zero::ClearException(env)) {
+    SB_LOG(WARNING) << "Ignored JNI exception during AudioTrackBridge pause in PauseAndFlush.";
+    return;
+  }
   // Flushes the audio data currently queued for playback. Any data that has
   // been written but not yet presented will be discarded.
   Java_AudioTrackBridge_flush(env, j_audio_track_bridge_);
+  if (jni_zero::ClearException(env)) {
+    SB_LOG(WARNING) << "Ignored JNI exception during AudioTrackBridge flush in PauseAndFlush.";
+  }
 }
 
 int AudioTrackBridge::WriteSample(Span<const float> samples) {

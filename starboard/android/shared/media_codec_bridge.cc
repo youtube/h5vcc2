@@ -252,6 +252,9 @@ MediaCodecBridge::~MediaCodecBridge() {
 
   JNIEnv* env = AttachCurrentThread();
   Java_MediaCodecBridge_release(env, j_media_codec_bridge_);
+  if (jni_zero::ClearException(env)) {
+    SB_LOG(WARNING) << "Ignored JNI exception during MediaCodecBridge release in teardown.";
+  }
 }
 
 void MediaCodecBridge::Initialize(jobject j_media_codec_bridge) {
@@ -370,7 +373,12 @@ bool MediaCodecBridge::Restart() {
 
 jint MediaCodecBridge::Flush() {
   JNIEnv* env = AttachCurrentThread();
-  return Java_MediaCodecBridge_flush(env, j_media_codec_bridge_);
+  jint status = Java_MediaCodecBridge_flush(env, j_media_codec_bridge_);
+  if (jni_zero::ClearException(env)) {
+    SB_LOG(ERROR) << "JNI exception occurred during MediaCodecBridge Flush.";
+    return MEDIA_CODEC_ERROR;
+  }
+  return status;
 }
 
 std::optional<FrameSize> MediaCodecBridge::GetOutputSize() {

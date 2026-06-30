@@ -44,6 +44,7 @@ import java.nio.ByteOrder;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Locale;
 import org.jni_zero.CalledByNative;
+import org.jni_zero.CalledByNativeUnchecked;
 import org.jni_zero.JNINamespace;
 import org.jni_zero.NativeMethods;
 
@@ -702,7 +703,7 @@ class MediaCodecBridge {
     Log.i(TAG, "Set operating rate to " + operatingRate);
   }
 
-  @CalledByNative
+  @CalledByNativeUnchecked
   private int flush() {
     // When a flush is initiated on the player thread, there could still be pending
     // callbacks (e.g. onOutputBufferAvailable) already posted to the main thread's
@@ -737,7 +738,7 @@ class MediaCodecBridge {
     return MediaCodecStatus.OK;
   }
 
-  @CalledByNative
+  @CalledByNativeUnchecked
   public void release() {
     MediaCodecOutputTracker.get().unregister(this);
     synchronized (mNativeBridgeLock) {
