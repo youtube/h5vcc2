@@ -38,16 +38,14 @@ _ON_DEVICE_TESTS_GATEWAY_SERVICE_PORT = '50052'
 # These paths are hardcoded in various places. DO NOT CHANGE!
 _DIR_ON_DEV_MAP = {
     'android': '/sdcard/Download',
-    'raspi': '/home/pi/test/results',
     'rdk': '/data/test/results',
 }
 
 _DEPS_ARCH_MAP = {
     'android': '/sdcard/chromium_tests_root/deps.tar.gz',
-    'raspi': '/home/pi/test/',
     'rdk': '/data/test/',
 }
-_GCS_ARCHIVE_DEVICE_FAMILIES = ('rdk', 'raspi')
+_GCS_ARCHIVE_DEVICE_FAMILIES = ('rdk',)
 
 # This is needed because driver expects cobalt.apk, but we publish
 # Cobalt.apk
@@ -174,19 +172,12 @@ def _get_gtest_filter(filter_json_dir: str, target_name: str) -> str:
 
 def _unit_test_files(args: argparse.Namespace, target_name: str) -> List[str]:
   """Builds the list of files for a unit test request."""
-  is_modular_raspi = 'builder-raspi-2-modular' in args.label
-
   # TODO: b/432536319 - Use flag to determine file ending.
 
   if args.device_family == 'android':
     return [
         f'test_apk={args.gcs_archive_path}/{target_name}-debug.apk',
         f'build_apk={args.gcs_archive_path}/{target_name}-debug.apk',
-        f'test_runtime_deps={args.gcs_archive_path}/{target_name}_deps.tar.gz',
-    ]
-  elif is_modular_raspi and args.device_family == 'raspi':
-    return [
-        f'bin={args.gcs_archive_path}/{target_name}',
         f'test_runtime_deps={args.gcs_archive_path}/{target_name}_deps.tar.gz',
     ]
   elif args.device_family in _GCS_ARCHIVE_DEVICE_FAMILIES:

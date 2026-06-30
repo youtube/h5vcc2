@@ -58,10 +58,10 @@ def AddPlatformConfigArguments(arg_parser):
       '--loader_platform',
       default=None,
       help='Specifies the platform to build the loader with. This flag is only '
-      'relevant for Evergreen builds, and should be the platform you intend to '
-      "run your tests on (eg 'linux-x64x11', or 'raspi-2'). Requires that "
-      '--loader_config be given, and that you have already run gn.py for '
-      'the desired loader platform.')
+      'relevant for Evergreen builds, and should be the platform you intend '
+      "to run your tests on (eg 'linux-x64x11', or 'rdk-arm'). "
+      'Requires that --loader_config be given, and that you have already '
+      'run gn.py for the desired loader platform.')
   arg_parser.add_argument(
       '-C',
       '--loader_config',
