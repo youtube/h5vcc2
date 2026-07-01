@@ -94,6 +94,7 @@
 #include "services/network/public/mojom/network_context.mojom.h"
 #include "services/network/public/mojom/network_service.mojom.h"
 #include "services/network/public/mojom/permissions_policy/permissions_policy_feature.mojom-shared.h"
+#include "starboard/system.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/user_agent/user_agent_metadata.h"
 #include "third_party/blink/public/common/web_preferences/web_preferences.h"
@@ -224,6 +225,13 @@ SharedState& GetSharedState() {
 }
 
 std::string GetShellLanguage() {
+  // Defer to the Starboard layer, which is the single source of truth for
+  // the platform's presentation language and already returns a normalised
+  // BCP-47 tag.
+  const char* locale = SbSystemGetLocaleId();
+  if (locale && *locale) {
+    return locale;
+  }
   return "en-us,en";
 }
 

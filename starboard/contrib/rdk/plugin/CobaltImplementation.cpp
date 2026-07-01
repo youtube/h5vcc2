@@ -291,6 +291,9 @@ private:
       }
 
       if (config.Language.IsSet() == true) {
+        // Explicit config override always wins; SbSystemGetLocaleId() reads
+        // UserSettings directly when LANG is unset, so no fallback is
+        // needed here.
         string lang = config.Language.Value();
         Core::SystemInfo::SetEnvironment(_T("LANG"), lang);
       }
