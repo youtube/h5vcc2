@@ -223,6 +223,7 @@ class PLATFORM_EXPORT ResourceLoader final
   void DidStartLoadingResponseBodyInternal(BytesConsumer& bytes_consumer);
 
   void CancelTimerFired(TimerBase*);
+  void DeferredFinishTimeoutFired(TimerBase*);
 
   void OnProgress(uint64_t delta) override;
   void FinishedCreatingBlob(const scoped_refptr<BlobDataHandle>&);
@@ -294,6 +295,10 @@ class PLATFORM_EXPORT ResourceLoader final
   bool defers_handling_data_url_ = false;
 
   HeapTaskRunnerTimer<ResourceLoader> cancel_timer_;
+
+  // See DeferredFinishTimeoutFired()'s rationale at the call site in
+  // resource_loader.cc.
+  HeapTaskRunnerTimer<ResourceLoader> deferred_finish_timeout_timer_;
 
   FrameScheduler::SchedulingAffectingFeatureHandle
       feature_handle_for_scheduler_;

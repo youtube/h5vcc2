@@ -45,6 +45,7 @@
 #include "base/rand_util.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/unguessable_token.h"
+#include "build/build_config.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "net/base/load_flags.h"
 #include "services/metrics/public/cpp/metrics_utils.h"
@@ -272,7 +273,11 @@ ResourceLoader::ResourceLoader(ResourceFetcher* fetcher,
       progress_receiver_(this, context),
       cancel_timer_(fetcher_->GetTaskRunner(),
                     this,
-                    &ResourceLoader::CancelTimerFired) {
+                    &ResourceLoader::CancelTimerFired),
+      deferred_finish_timeout_timer_(
+          fetcher_->GetTaskRunner(),
+          this,
+          &ResourceLoader::DeferredFinishTimeoutFired) {
   DCHECK(resource_);
   DCHECK(fetcher_);
 
@@ -308,6 +313,7 @@ void ResourceLoader::Trace(Visitor* visitor) const {
   visitor->Trace(response_body_loader_);
   visitor->Trace(data_pipe_completion_notifier_);
   visitor->Trace(cancel_timer_);
+  visitor->Trace(deferred_finish_timeout_timer_);
   visitor->Trace(progress_receiver_);
   ResourceLoadSchedulerClient::Trace(visitor);
 }
@@ -416,10 +422,31 @@ void ResourceLoader::DidFinishLoadingBody() {
 
   const ResourceResponse& response = resource_->GetResponse();
   if (deferred_finish_loading_info_) {
+    deferred_finish_timeout_timer_.Stop();
     DidFinishLoading(deferred_finish_loading_info_->response_end_time,
                      response.EncodedDataLength(), response.EncodedBodyLength(),
                      response.DecodedBodyLength());
   }
+}
+
+void ResourceLoader::DeferredFinishTimeoutFired(TimerBase*) {
+  if (!deferred_finish_loading_info_) {
+    return;
+  }
+  LOG(WARNING) << "ResourceLoader: force-finishing load stuck in deferred "
+                  "completion after timeout, url="
+               << resource_->Url().GetString().Utf8();
+  // Abort the body loader before forcing completion. has_seen_end_of_body_
+  // (set by DidFinishLoadingBody() below) already prevents DidFinishLoading()
+  // from re-deferring in this exact call chain, but leaving the loader
+  // un-aborted here means the underlying body drain is just dropped instead
+  // of explicitly torn down, unlike every other early-exit path in this file
+  // (HandleError(), Cancel(), etc.), which all call Abort() first.
+  if (response_body_loader_) {
+    response_body_loader_->Abort();
+    response_body_loader_ = nullptr;
+  }
+  DidFinishLoadingBody();
 }
 
 void ResourceLoader::DidFailLoadingBody() {
@@ -1169,6 +1196,13 @@ void ResourceLoader::DidFinishLoading(base::TimeTicks response_end_time,
     if (data_pipe_completion_notifier_) {
       data_pipe_completion_notifier_->SignalComplete();
     }
+
+#if BUILDFLAG(IS_STARBOARD)
+    // Some response bodies never get drained (e.g. unconsumed fetch()
+    // beacons), pinning this loader forever. Force-finish after a grace
+    // period; 5s is generous since we're only waiting on bytes already in.
+    deferred_finish_timeout_timer_.StartOneShot(base::Seconds(5), FROM_HERE);
+#endif
     return;
   }
 
@@ -1265,6 +1299,10 @@ void ResourceLoader::HandleError(const ResourceError& error) {
           false /* discard_duplicates */,
           mojom::blink::ConsoleMessageCategory::Cors);
     }
+  }
+
+  if (deferred_finish_loading_info_) {
+    deferred_finish_timeout_timer_.Stop();
   }
 
   Release(ResourceLoadScheduler::ReleaseOption::kReleaseAndSchedule,

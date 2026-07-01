@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "base/containers/span.h"
+#include "build/build_config.h"
 #include "base/location.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/task/single_thread_task_runner.h"
@@ -50,7 +51,15 @@ DataPipeBytesConsumer::DataPipeBytesConsumer(
   watcher_.Watch(
       data_pipe_.get(),
       MOJO_HANDLE_SIGNAL_READABLE | MOJO_HANDLE_SIGNAL_PEER_CLOSED,
+#if BUILDFLAG(IS_STARBOARD)
+      // Weak self-reference so an abandoned consumer (e.g. a canceled media
+      // fetch dropped without Cancel()) can be garbage collected instead of
+      // being pinned alive forever, leaking its response-body data pipe's fd.
+      WTF::BindRepeating(&DataPipeBytesConsumer::Notify,
+                         WrapWeakPersistent(this)));
+#else
       WTF::BindRepeating(&DataPipeBytesConsumer::Notify, WrapPersistent(this)));
+#endif
 }
 
 DataPipeBytesConsumer::~DataPipeBytesConsumer() {}
@@ -127,9 +136,18 @@ BytesConsumer::Result DataPipeBytesConsumer::EndRead(size_t read) {
 
   if (has_pending_notification_) {
     has_pending_notification_ = false;
+#if BUILDFLAG(IS_STARBOARD)
+    // Same weak-reference reasoning as the constructor's watcher_.Watch():
+    // a strong Persistent here would re-pin an abandoned consumer for this
+    // task's lifetime. No-ops if the consumer is already collected.
+    task_runner_->PostTask(FROM_HERE,
+                           WTF::BindOnce(&DataPipeBytesConsumer::Notify,
+                                         WrapWeakPersistent(this), MOJO_RESULT_OK));
+#else
     task_runner_->PostTask(FROM_HERE,
                            WTF::BindOnce(&DataPipeBytesConsumer::Notify,
                                          WrapPersistent(this), MOJO_RESULT_OK));
+#endif
   }
   return Result::kOk;
 }
