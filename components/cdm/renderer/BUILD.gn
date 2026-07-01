@@ -3,7 +3,12 @@
 # found in the LICENSE file.
 
 import("//components/cdm/common/playready.gni")
+import("//media/media_options.gni")
 import("//third_party/widevine/cdm/widevine.gni")
+
+if (is_cobalt && is_ios) {
+  import("//build/config/apple/mobile_config.gni")
+}
 
 static_library("renderer") {
   # See //components/cdm/README.md
@@ -62,5 +67,12 @@ static_library("renderer") {
       "playready_key_system_info.h",
     ]
     deps += [ "//components/cdm/common" ]
+  }
+
+  if (is_cobalt && use_starboard_media && is_ios && target_platform == "tvos") {
+    sources += [
+      "fairplay_key_system_info.cc",
+      "fairplay_key_system_info.h",
+    ]
   }
 }
