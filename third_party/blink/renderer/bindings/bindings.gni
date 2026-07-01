@@ -308,4 +308,14 @@ if (is_cobalt) {
     "*v8_create_monitor*",
     "*v8_language_detector*",
   ]
+
+  if (!enable_privacy_sandbox_apis) {
+    cobalt_bindings_exclude_patterns += [
+      "*shared_storage*",
+      "*browsing_topic*",
+      "*v8_private_aggregation*",
+      "*private_attribution*",
+      "*storage_access*",
+    ]
+  }
 }

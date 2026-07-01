@@ -175,6 +175,16 @@ component("modules") {
     "//third_party/blink/renderer/modules/xr",
   ]
 
+  # If in the future privacy sandbox components are removed from the code base, ignore this if block.
+  if (!enable_privacy_sandbox_apis) {
+    sub_modules -= [
+      "//third_party/blink/renderer/modules/browsing_topics",
+      "//third_party/blink/renderer/modules/private_attribution",
+      "//third_party/blink/renderer/modules/shared_storage",
+      "//third_party/blink/renderer/modules/storage_access",
+    ]
+  }
+
   if (is_cobalt) {
     sub_modules -= [
       "//third_party/blink/renderer/modules/ml",
@@ -812,6 +822,12 @@ source_set("unit_tests") {
     "//ui/strings:ax_strings_grit",
     "//v8",
   ]
+
+  # If in the future privacy sandbox components are removed from the code base, ignore this if block.
+  if (!enable_privacy_sandbox_apis) {
+    sources -= [ "shared_storage/shared_storage_worklet_unittest.cc" ]
+    deps -= [ "//third_party/blink/renderer/modules/storage_access:unit_tests" ]
+  }
 
   if (is_cobalt) {
     deps += [ "//third_party/blink/renderer/modules/cobalt/h5vcc_experiments:experiments_utils" ]

@@ -3773,6 +3773,7 @@ source_set("browser") {
                                        [
                                          "browsing_topics/*",
                                          "attribution_reporting/*",
+                                         "shared_storage/*",
                                        ])
     sources = []
     sources = _filtered_sources

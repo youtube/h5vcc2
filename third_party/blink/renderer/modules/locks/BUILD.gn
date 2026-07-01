@@ -14,4 +14,11 @@ blink_modules_sources("locks") {
 
   deps =
       [ "//third_party/blink/renderer/modules/shared_storage:shared_storage" ]
+
+  #TODO(b/505811196): If in the future privacy sandbox components are removed from the code base,
+  # ignore this if block.
+  if (!enable_privacy_sandbox_apis) {
+    deps -=
+        [ "//third_party/blink/renderer/modules/shared_storage:shared_storage" ]
+  }
 }

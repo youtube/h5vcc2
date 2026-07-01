@@ -19,7 +19,9 @@
 #include "third_party/blink/renderer/bindings/modules/v8/v8_permission_descriptor.h"
 #include "third_party/blink/renderer/bindings/modules/v8/v8_permission_name.h"
 #include "third_party/blink/renderer/bindings/modules/v8/v8_push_permission_descriptor.h"
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 #include "third_party/blink/renderer/bindings/modules/v8/v8_top_level_storage_access_permission_descriptor.h"
+#endif
 #include "third_party/blink/renderer/core/dom/document.h"
 #include "third_party/blink/renderer/core/execution_context/execution_context.h"
 #include "third_party/blink/renderer/core/workers/worker_global_scope.h"
@@ -187,6 +189,7 @@ PermissionDescriptorPtr CreateVideoCapturePermissionDescriptor(
   return descriptor;
 }
 
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 PermissionDescriptorPtr CreateTopLevelStorageAccessPermissionDescriptor(
     const KURL& origin_as_kurl) {
   auto descriptor =
@@ -201,6 +204,7 @@ PermissionDescriptorPtr CreateTopLevelStorageAccessPermissionDescriptor(
           std::move(top_level_storage_access_extension));
   return descriptor;
 }
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 
 PermissionDescriptorPtr CreateFullscreenPermissionDescriptor(
     bool allow_without_user_gesture) {
@@ -347,6 +351,7 @@ PermissionDescriptorPtr ParsePermissionDescriptor(
     return CreatePermissionDescriptor(PermissionName::STORAGE_ACCESS);
   }
   if (name == V8PermissionName::Enum::kTopLevelStorageAccess) {
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
     TopLevelStorageAccessPermissionDescriptor*
         top_level_storage_access_permission =
             NativeValueTraits<TopLevelStorageAccessPermissionDescriptor>::
@@ -362,6 +367,11 @@ PermissionDescriptorPtr ParsePermissionDescriptor(
     }
 
     return CreateTopLevelStorageAccessPermissionDescriptor(origin_as_kurl);
+#else
+    exception_state.ThrowTypeError(
+        "Top-level storage access permission is not enabled.");
+    return nullptr;
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   }
   if (name == V8PermissionName::Enum::kWindowManagement) {
     return CreatePermissionDescriptor(PermissionName::WINDOW_MANAGEMENT);

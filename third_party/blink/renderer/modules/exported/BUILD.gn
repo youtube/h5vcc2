@@ -29,6 +29,14 @@ blink_modules_sources("exported") {
     "//ui/accessibility:ax_enums_mojo_blink",
   ]
 
+  # If in the future privacy sandbox components are removed from the code base, ignore this if block.
+  if (!enable_privacy_sandbox_apis) {
+    sources -= [
+      "web_shared_storage_worklet_thread_impl.cc",
+      "web_shared_storage_worklet_thread_impl.h",
+    ]
+    deps -= [ "//third_party/blink/renderer/modules/shared_storage" ]
+  }
   if (is_cobalt) {
     deps -= [ "//third_party/blink/renderer/modules/ai" ]
   }

@@ -1424,6 +1424,23 @@ if (enable_compute_pressure) {
   ]
 }
 
+# If in the future privacy sandbox components are removed from the code base, we should
+# delete this if block.
+if (!enable_privacy_sandbox_apis) {
+  _filtered_static_idl_files = filter_exclude(
+      static_idl_files_in_modules,
+      [
+        "//third_party/blink/renderer/modules/browsing_topics/*",
+        "//third_party/blink/renderer/modules/private_attribution/*",
+        "//third_party/blink/renderer/modules/shared_storage/*",
+        "//third_party/blink/renderer/modules/storage_access/*",
+        "//third_party/blink/renderer/modules/locks/shared_storage_worklet_navigator_locks.idl",
+        "//third_party/blink/renderer/modules/permissions/top_level_storage_access_permission_descriptor.idl",
+      ])
+  static_idl_files_in_modules = []
+  static_idl_files_in_modules = _filtered_static_idl_files
+}
+
 # Statically-defined (not runtime-generated) IDL files in 'modules' component.
 # These IDL definitions are used only for testing.
 static_idl_files_in_modules_for_testing = [

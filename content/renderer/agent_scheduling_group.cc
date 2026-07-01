@@ -452,9 +452,11 @@ void AgentSchedulingGroup::CreateSharedStorageWorkletService(
     mojo::PendingReceiver<blink::mojom::SharedStorageWorkletService> receiver,
     blink::mojom::WorkletGlobalScopeCreationParamsPtr
         global_scope_creation_params) {
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
   blink::WebSharedStorageWorkletThread::Start(
       agent_group_scheduler_->DefaultTaskRunner(), std::move(receiver),
       std::move(global_scope_creation_params));
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_138
 }
 
 void AgentSchedulingGroup::BindAssociatedInterfaces(
