@@ -143,6 +143,13 @@ component("services") {
     sources += [ "gpu_mojo_media_client_stubs.cc" ]
   }
 
+  if (is_cobalt && use_starboard_url_player) {
+    sources += [
+      "starboard/url_player_renderer_wrapper.cc",
+      "starboard/url_player_renderer_wrapper.h",
+    ]
+  }
+
   if (is_chromeos) {
     deps +=
         [ "//chromeos/components/cdm_factory_daemon:cdm_factory_daemon_gpu" ]
@@ -365,6 +372,9 @@ source_set("unit_tests") {
       "//cobalt/media/service",
       "//starboard/common",
     ]
+  }
+  if (is_cobalt && use_starboard_url_player) {
+    sources += [ "starboard/url_player_renderer_wrapper_unittest.cc" ]
   }
 }
 

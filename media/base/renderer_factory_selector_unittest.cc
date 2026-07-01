@@ -2,13 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "media/base/renderer_factory_selector.h"
+
 #include <memory>
 
 #include "base/functional/bind.h"
 #include "base/task/sequenced_task_runner.h"
 #include "media/base/overlay_info.h"
-#include "media/base/renderer_factory_selector.h"
+#include "media/media_buildflags.h"
 #include "testing/gtest/include/gtest/gtest.h"
+
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+#include "media/starboard/url_player_demuxer.h"
+#include "url/gurl.h"
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
 namespace media {
 
@@ -56,6 +63,17 @@ class RendererFactorySelectorTest : public testing::Test {
                             base::Unretained(this), type));
   }
 
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  void AddUrlPlayerConditionalFactory() {
+    selector_.AddConditionalFactory(
+        RendererType::kUrlPlayer,
+        std::make_unique<FakeFactory>(RendererType::kUrlPlayer),
+        base::BindRepeating(
+            [](const GURL* url) { return media::IsHlsUrl(*url); },
+            &current_url_));
+  }
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+
   RendererType GetCurrentlySelectedRendererType() {
     return reinterpret_cast<FakeFactory*>(selector_.GetCurrentFactory())
         ->factory_type();
@@ -69,6 +87,9 @@ class RendererFactorySelectorTest : public testing::Test {
  protected:
   RendererFactorySelector selector_;
   std::map<RendererType, bool> condition_met_map_;
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  GURL current_url_;
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 };
 
 TEST_F(RendererFactorySelectorTest, SingleFactory) {
@@ -124,5 +145,36 @@ TEST_F(RendererFactorySelectorTest, MultipleConditionalFactories) {
   EXPECT_TRUE(GetCurrentlySelectedRendererType() == RendererType::kFlinging ||
               GetCurrentlySelectedRendererType() == RendererType::kCourier);
 }
+
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+TEST_F(RendererFactorySelectorTest, UrlPlayerConditionalFactorySelectsM3u8) {
+  AddBaseFactory(RendererType::kStarboard);
+  AddUrlPlayerConditionalFactory();
+
+  current_url_ = GURL("https://example.test/master.m3u8");
+
+  EXPECT_EQ(RendererType::kUrlPlayer, GetCurrentlySelectedRendererType());
+}
+
+TEST_F(RendererFactorySelectorTest,
+       UrlPlayerConditionalFactorySelectsHlsVariant) {
+  AddBaseFactory(RendererType::kStarboard);
+  AddUrlPlayerConditionalFactory();
+
+  current_url_ = GURL("https://example.test/hls_variant/video");
+
+  EXPECT_EQ(RendererType::kUrlPlayer, GetCurrentlySelectedRendererType());
+}
+
+TEST_F(RendererFactorySelectorTest,
+       UrlPlayerConditionalFactorySkipsOrdinaryUrl) {
+  AddBaseFactory(RendererType::kStarboard);
+  AddUrlPlayerConditionalFactory();
+
+  current_url_ = GURL("https://example.test/video.mp4");
+
+  EXPECT_EQ(RendererType::kStarboard, GetCurrentlySelectedRendererType());
+}
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
 }  // namespace media

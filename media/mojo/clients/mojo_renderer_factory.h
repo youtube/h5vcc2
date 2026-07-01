@@ -86,6 +86,17 @@ class MojoRendererFactory final : public RendererFactory {
       const scoped_refptr<base::SequencedTaskRunner>& media_task_runner,
       VideoRendererSink* video_renderer_sink);
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  std::unique_ptr<MojoRenderer> CreateUrlPlayerRenderer(
+      mojo::PendingRemote<mojom::MediaLog> media_log_remote,
+      const StarboardRendererConfig& config,
+      mojo::PendingReceiver<mojom::StarboardRendererExtension>
+          renderer_extension_receiver,
+      mojo::PendingRemote<mojom::StarboardRendererClientExtension>
+          client_extension_remote,
+      const scoped_refptr<base::SequencedTaskRunner>& media_task_runner,
+      VideoRendererSink* video_renderer_sink);
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
  private:
   // InterfaceFactory or InterfaceProvider used to create or connect to remote

@@ -23,11 +23,13 @@
 #include "media/base/renderer_client.h"
 #include "media/mojo/mojom/renderer.mojom.h"
 #include "media/mojo/services/media_mojo_export.h"
+#include "build/build_config.h"
 #include "mojo/public/cpp/bindings/associated_remote.h"
 #include "mojo/public/cpp/bindings/pending_associated_remote.h"
 #include "mojo/public/cpp/bindings/pending_receiver.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "mojo/public/cpp/bindings/self_owned_receiver.h"
+#include "url/gurl.h"
 
 namespace media {
 
@@ -67,6 +69,12 @@ class MEDIA_MOJO_EXPORT MojoRendererService final : public mojom::Renderer,
       std::optional<std::vector<mojo::PendingRemote<mojom::DemuxerStream>>>
           streams,
       InitializeCallback callback) final;
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  void InitializeWithUrl(
+      mojo::PendingAssociatedRemote<mojom::RendererClient> client,
+      const GURL& source_url,
+      InitializeWithUrlCallback callback) final;
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
   void InitializeWithBypassBridge(
       mojo::PendingAssociatedRemote<mojom::RendererClient> client,

@@ -92,6 +92,16 @@ class MediaInterfaceFactory final : public media::mojom::InterfaceFactory {
       mojo::PendingRemote<media::mojom::StarboardRendererClientExtension>
           client_extension_remote) final;
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  void CreateUrlPlayerRenderer(
+      mojo::PendingRemote<media::mojom::MediaLog> media_log_remote,
+      const media::StarboardRendererConfig& config,
+      mojo::PendingReceiver<media::mojom::Renderer> receiver,
+      mojo::PendingReceiver<media::mojom::StarboardRendererExtension>
+          renderer_extension_receiver,
+      mojo::PendingRemote<media::mojom::StarboardRendererClientExtension>
+          client_extension_remote) final;
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
   void CreateCdm(const media::CdmConfig& cdm_config,
                  CreateCdmCallback callback) final;
 

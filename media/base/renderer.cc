@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "media/base/renderer.h"
+
 #include "base/logging.h"
+#include "build/build_config.h"
 
 namespace media {
 
@@ -34,7 +36,11 @@ std::string GetRendererName(RendererType renderer_type) {
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
     case RendererType::kStarboard:
       return "StarboardRenderer";
-#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+    case RendererType::kUrlPlayer:
+      return "UrlPlayerRenderer";
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
   }
 }
 

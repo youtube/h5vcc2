@@ -9,6 +9,7 @@
 
 #include "base/functional/callback.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "media/base/buffering_state.h"
 #include "media/base/demuxer_stream.h"
 #include "media/base/media_export.h"
@@ -39,10 +40,15 @@ enum class RendererType {
   kTest = 11,                    // Renderer implementations used in tests
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
   kStarboard = 12,       // StarboardRendererFactory
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  kUrlPlayer = 13,       // UrlPlayerRendererClientFactory
+  kMaxValue = kUrlPlayer,
+#elif BUILDFLAG(USE_STARBOARD_MEDIA)
   kMaxValue = kStarboard,
-#else // BUILDFLAG(USE_STARBOARD_MEDIA)
+#else
   kMaxValue = kTest,
-#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
+#endif // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 };
 
 // Get the name of the Renderer for `renderer_type`. The returned name could be

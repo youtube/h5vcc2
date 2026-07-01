@@ -141,7 +141,11 @@
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
 #include "media/base/starboard/renderer_factory_traits.h"
 #include "media/mojo/clients/starboard/starboard_renderer_client_factory.h"
-#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+#include "media/mojo/clients/starboard/url_player_renderer_client_factory.h"
+#include "media/starboard/url_player_demuxer.h"
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
 
 namespace {
 
@@ -616,7 +620,17 @@ MediaFactory::CreateRendererFactorySelector(
         base::BindRepeating(&RenderThreadImpl::GetGpuFactories,
           base::Unretained(render_thread)),
         &renderer_factory_traits));
-#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
+#if BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+  GURL media_url(url);
+  factory_selector->AddConditionalFactory(
+      RendererType::kUrlPlayer,
+      std::make_unique<media::UrlPlayerRendererClientFactory>(
+          media_log, CreateMojoRendererFactory(), &renderer_factory_traits),
+      base::BindRepeating(
+          [](const GURL& u) { return media::IsHlsUrl(u); },
+          media_url));
+#endif  // BUILDFLAG(USE_STARBOARD_URL_PLAYER)
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
   if (!is_base_renderer_factory_set &&
       renderer_media_playback_options.is_mojo_renderer_enabled()) {
     is_base_renderer_factory_set = true;
