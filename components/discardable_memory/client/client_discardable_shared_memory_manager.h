@@ -161,9 +161,14 @@ class DISCARDABLE_MEMORY_EXPORT ClientDiscardableSharedMemoryManager
   void ScheduledPurge(base::MemoryReductionTaskContext task_type)
       LOCKS_EXCLUDED(lock_);
 
-  // This is only virtual for testing.
+  // Protected (not private) so that platform-specific subclasses can call
+  // the base implementation from an override. This is also virtual for
+  // testing.
+ protected:
   virtual std::unique_ptr<base::DiscardableSharedMemory>
   AllocateLockedDiscardableSharedMemory(size_t size, int32_t id);
+
+ private:
   void AllocateOnIO(size_t size,
                     int32_t id,
                     base::UnsafeSharedMemoryRegion* region,

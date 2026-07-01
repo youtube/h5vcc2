@@ -334,6 +334,7 @@ target(link_target_type, "renderer") {
   if (is_cobalt) {
     deps += [
       "//cobalt/media/audio:audio_decoder",
+      "//cobalt/renderer:discardable_memory",
     ]
   }
 

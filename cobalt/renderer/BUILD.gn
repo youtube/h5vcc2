@@ -14,6 +14,20 @@
 import("//starboard/build/buildflags.gni")
 import("//testing/test.gni")
 
+source_set("discardable_memory") {
+  sources = [
+    "cobalt_discardable_shared_memory_manager.cc",
+    "cobalt_discardable_shared_memory_manager.h",
+  ]
+
+  deps = [
+    "//base",
+    "//components/discardable_memory/client",
+    "//components/discardable_memory/public/mojom",
+    "//mojo/public/cpp/bindings",
+  ]
+}
+
 source_set("renderer") {
   sources = [
     "cobalt_content_renderer_client.cc",
