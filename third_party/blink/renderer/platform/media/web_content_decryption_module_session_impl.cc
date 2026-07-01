@@ -14,6 +14,7 @@
 
 #include "base/check_op.h"
 #include "base/metrics/histogram_functions.h"
+#include "build/build_config.h"
 #include "base/notreached.h"
 #include "base/numerics/safe_conversions.h"
 #include "base/strings/string_util.h"
@@ -111,6 +112,19 @@ bool SanitizeInitData(media::EmeInitDataType init_data_type,
       media::CreateKeyIdsInitData(key_ids, sanitized_init_data);
       return true;
     }
+
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+    // Apple FairPlay Streaming uses vendor-specific initialization data formats
+    // (SINF atoms, SKD URIs) that are not part of the W3C EME spec's standard
+    // init data types (cenc, keyids, webm). These are passed through without
+    // sanitization because the Starboard CDM handles parsing and validation
+    // of FairPlay-specific init data directly.
+    case media::EmeInitDataType::SINF:
+    case media::EmeInitDataType::SKD:
+    case media::EmeInitDataType::FAIRPLAY:
+      sanitized_init_data->assign(init_data, init_data + init_data_length);
+      return true;
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
 
     case media::EmeInitDataType::UNKNOWN:
       break;

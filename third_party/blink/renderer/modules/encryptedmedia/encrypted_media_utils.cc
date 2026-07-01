@@ -5,6 +5,7 @@
 #include "third_party/blink/renderer/modules/encryptedmedia/encrypted_media_utils.h"
 
 #include "base/notreached.h"
+#include "build/build_config.h"
 #include "media/base/eme_constants.h"
 #include "media/base/key_systems.h"
 #include "services/metrics/public/cpp/ukm_builders.h"
@@ -32,6 +33,14 @@ media::EmeInitDataType EncryptedMediaUtils::ConvertToInitDataType(
     return media::EmeInitDataType::KEYIDS;
   if (init_data_type == "webm")
     return media::EmeInitDataType::WEBM;
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+  if (init_data_type == "sinf")
+    return media::EmeInitDataType::SINF;
+  if (init_data_type == "skd")
+    return media::EmeInitDataType::SKD;
+  if (init_data_type == "fairplay")
+    return media::EmeInitDataType::FAIRPLAY;
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
 
   // |initDataType| is not restricted in the idl, so anything is possible.
   return media::EmeInitDataType::UNKNOWN;
@@ -47,6 +56,14 @@ String EncryptedMediaUtils::ConvertFromInitDataType(
       return "keyids";
     case media::EmeInitDataType::WEBM:
       return "webm";
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+    case media::EmeInitDataType::SINF:
+      return "sinf";
+    case media::EmeInitDataType::SKD:
+      return "skd";
+    case media::EmeInitDataType::FAIRPLAY:
+      return "fairplay";
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
     case media::EmeInitDataType::UNKNOWN:
       // Chromium should not use Unknown, but we use it in Blink when the
       // actual value has been blocked for non-same-origin or mixed content.
