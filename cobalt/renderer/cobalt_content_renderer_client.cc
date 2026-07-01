@@ -14,6 +14,7 @@
 
 #include "cobalt/renderer/cobalt_content_renderer_client.h"
 
+#include <memory>
 #include <string>
 #include <variant>
 
@@ -41,6 +42,10 @@
 #include "third_party/blink/public/web/web_security_policy.h"
 #include "third_party/blink/public/web/web_view.h"
 #include "ui/gfx/geometry/size_conversions.h"
+
+#if BUILDFLAG(IS_IOS_TVOS)
+#include "components/cdm/renderer/fairplay_key_system_info.h"
+#endif  // BUILDFLAG(IS_IOS_TVOS)
 
 namespace cobalt {
 
@@ -422,6 +427,18 @@ void AddStarboardCmaKeySystems(::media::KeySystemInfos* key_system_infos) {
       Robustness::SW_SECURE_DECODE,  // Max video robustness.
       ::media::EmeFeatureSupport::ALWAYS_ENABLED,    // Persistent state.
       ::media::EmeFeatureSupport::ALWAYS_ENABLED));  // Distinctive identifier.
+
+#if BUILDFLAG(IS_IOS_TVOS)
+  const base::flat_set<::media::EncryptionScheme> kFairPlayEncryptionSchemes = {
+      ::media::EncryptionScheme::kCbcs};
+
+  key_system_infos->emplace_back(std::make_unique<cdm::FairplayKeySystemInfo>(
+      codecs,                                        // Regular codecs.
+      kFairPlayEncryptionSchemes,                    // Encryption schemes.
+      codecs,                                        // Hardware secure codecs.
+      ::media::EmeFeatureSupport::ALWAYS_ENABLED,    // Persistent state.
+      ::media::EmeFeatureSupport::ALWAYS_ENABLED));  // Distinctive identifier.
+#endif  // BUILDFLAG(IS_IOS_TVOS)
 }
 
 std::unique_ptr<::media::KeySystemSupportRegistration>
