@@ -391,6 +391,8 @@ static_library("test_support") {
 
   configs += [ "//starboard/build/config:starboard_implementation" ]
 
+  public_deps = [ "//starboard/testing:test_runner" ]
+
   deps = [
     ":starboard_platform",
     "//testing/gmock",
@@ -407,6 +409,7 @@ static_library("test_support") {
     "fake_media_codec.h",
     "starboard_test_environment.cc",
     "starboard_test_environment.h",
+    "test_runner.cc",
   ]
 }
 

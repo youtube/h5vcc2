@@ -27,11 +27,7 @@
 #include "starboard/nplb/player_test_util.h"
 #include "starboard/player.h"
 #include "starboard/testing/fake_graphics_context_provider.h"
-#include "testing/gtest/include/gtest/gtest.h"
-
-#if BUILDFLAG(IS_IOS_TVOS)
-#include "starboard/tvos/shared/run_in_background_thread_and_wait.h"
-#endif  // BUILDFLAG(IS_IOS_TVOS)
+#include "starboard/testing/test_runner.h"
 
 namespace nplb {
 namespace {
@@ -120,15 +116,10 @@ class SbPlayerTest : public ::testing::Test {
         break;
       }
 
-#if BUILDFLAG(IS_IOS_TVOS)
-      RunInBackgroundThreadAndWait([&] {
+      starboard::RunTestBlockingAction([&] {
         condition_variable_.wait_for(lock,
                                      std::chrono::microseconds(wait_end - now));
       });
-#else
-      condition_variable_.wait_for(lock,
-                                   std::chrono::microseconds(wait_end - now));
-#endif  // BUILDFLAG(IS_IOS_TVOS)
     }
 
     SB_LOG(INFO) << "WaitForPlayerInitializedOrError() timed out.";

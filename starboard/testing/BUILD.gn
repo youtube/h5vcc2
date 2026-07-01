@@ -53,3 +53,13 @@ source_set("testing_test") {
     "//testing/gtest",
   ]
 }
+
+static_library("test_runner") {
+  testonly = true
+
+  sources = [ "test_runner.h" ]
+
+  if (!is_ios && !is_android) {
+    sources += [ "test_runner.cc" ]
+  }
+}
