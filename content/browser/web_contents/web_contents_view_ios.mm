@@ -79,7 +79,9 @@ WebContentsViewIOS::WebContentsViewIOS(
 #endif
 }
 
-WebContentsViewIOS::~WebContentsViewIOS() {}
+WebContentsViewIOS::~WebContentsViewIOS() {
+  [ui_view_->view_ removeFromSuperview];
+}
 
 gfx::NativeView WebContentsViewIOS::GetNativeView() const {
   return gfx::NativeView(ui_view_->view_);
