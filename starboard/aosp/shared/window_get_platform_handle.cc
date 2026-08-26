@@ -20,6 +20,8 @@ void* SbWindowGetPlatformHandle(SbWindow window) {
     return nullptr;
   }
   // EGLNativeWindowType and ANativeWindow* are the same on Android, so it
-  // can be handled straight to eglCreateWindowSurface().
-  return window->native_window;
+  // can be handed straight to eglCreateWindowSurface(). Refreshed first so a
+  // window that outlived a background/foreground cycle won't use surfaces
+  // that Android already destroyed.
+  return starboard::RefreshWindowSurface(window);
 }

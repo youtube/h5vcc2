@@ -23,4 +23,13 @@ struct SbWindowPrivate {
   ANativeWindow* native_window;
 };
 
+namespace starboard {
+
+// Gets the reference to the current surface or nullptr when Android has no
+// surface right now. Releases the reference the window held to the surface
+// it replaces.
+ANativeWindow* RefreshWindowSurface(SbWindow window);
+
+}  // namespace starboard
+
 #endif  // STARBOARD_AOSP_SHARED_WINDOW_INTERNAL_H_

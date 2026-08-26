@@ -27,13 +27,14 @@ bool SbWindowGetSize(SbWindow window, SbWindowSize* size) {
     SB_DLOG(ERROR) << __FUNCTION__ << ": Invalid window.";
     return false;
   }
-  if (window->native_window == nullptr) {
+  ANativeWindow* native_window = starboard::RefreshWindowSurface(window);
+  if (native_window == nullptr) {
     SB_DLOG(ERROR) << __FUNCTION__ << ": Native window has been destroyed.";
     return false;
   }
 
-  size->width = ANativeWindow_getWidth(window->native_window);
-  size->height = ANativeWindow_getHeight(window->native_window);
+  size->width = ANativeWindow_getWidth(native_window);
+  size->height = ANativeWindow_getHeight(native_window);
   if (size->width <= 0 || size->height <= 0) {
     SB_DLOG(ERROR) << __FUNCTION__ << ": Native window has no size yet.";
     return false;

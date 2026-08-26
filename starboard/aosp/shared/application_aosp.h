@@ -16,7 +16,9 @@
 #define STARBOARD_AOSP_SHARED_APPLICATION_AOSP_H_
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
+#include <mutex>
 
 #include "starboard/shared/starboard/queue_application.h"
 #include "starboard/window.h"
@@ -73,6 +75,23 @@ class ApplicationAOSP : public QueueApplication {
                       int unicode_char,
                       int meta_state);
 
+  // Injects kSbEventTypeConceal and blocks the caller until the engine has
+  // destroyed the Starboard window, or times out.
+  //
+  // Android invalidates the Surface as soon as SurfaceHolder.surfaceDestroyed()
+  // returns, so the engine has to let go of the ANativeWindow first, otherwise
+  // it could use a stale surface.
+  bool ReleaseWindowSurfaceAndWait(int64_t timeout_usec);
+
+  // Reports that the engine has let go of the Android surface, releasing a
+  // caller blocked in ReleaseWindowSurfaceAndWait().
+  void NotifySurfaceReleased();
+
+  // Same, but only when the conceal found no window to destroy and nothing
+  // will ever reach DestroyWindow(). Avoids waiting for the whole timeout if
+  // the window was already destroyed. Starboard thread only.
+  void NotifySurfaceReleaseIfNoWindow();
+
  protected:
   // Creates the platform audio sink. Android TV does it from the
   // CobaltActivity, which AOSP doesn't have.
@@ -99,6 +118,12 @@ class ApplicationAOSP : public QueueApplication {
   // The window CreateWindow() handed out, so injected input events can name the
   // window they belong to.
   SbWindow window_ = kSbWindowInvalid;
+
+  std::mutex surface_release_mutex_;
+  std::condition_variable surface_release_cv_;
+  // Tells if the engine has let go of the Android surface. Guarded by
+  // |surface_release_mutex_|.
+  bool surface_released_ = false;
 };
 
 }  // namespace starboard

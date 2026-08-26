@@ -29,6 +29,7 @@ static_library("starboard_platform") {
     "window_destroy.cc",
     "window_get_platform_handle.cc",
     "window_get_size.cc",
+    "window_internal.cc",
     "window_internal.h",
     "window_surface.cc",
     "window_surface.h",
