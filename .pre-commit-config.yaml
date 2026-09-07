@@ -138,3 +138,8 @@ repos:
         entry: gn format
         language: system
         files: '.*\.gni?$'
+    -   id: check-java-strings-have-locale
+        name: Check Java String.format includes Locale
+        entry: python3 ./cobalt/precommit/check_java_strings_have_locale.py
+        language: python
+        types: [java]
