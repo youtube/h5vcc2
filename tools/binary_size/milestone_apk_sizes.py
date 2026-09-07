@@ -46,7 +46,7 @@ class _Artifact:
     os.makedirs(os.path.dirname(self._path), exist_ok=True)
 
   def FetchAndMeasure(self):
-    args = [_GSUTIL, 'cp', self._gs_url, self._path]
+    args = ['gcloud', 'storage', 'cp', self._gs_url, self._path]
     logging.warning(' '.join(args))
     if not os.path.exists(self._path):
       subprocess.check_call(args)
@@ -233,7 +233,7 @@ def _DownloadAndAnalyze(signed_prefix,
 
 
 def _CheckGnArgs(unsigned_prefix, version):
-  args = [_GSUTIL, 'cat', unsigned_prefix + '/arm/gn-args-derived.txt']
+  args = ['gcloud', 'storage', 'cat', unsigned_prefix + '/arm/gn-args-derived.txt']
   logging.warning(' '.join(args))
   gn_args_data = subprocess.check_output(args, text=True)
 

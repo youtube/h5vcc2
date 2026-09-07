@@ -240,7 +240,7 @@ class ChromeEnterpriseTestCase(EnterpriseTestCase):
   def GetFileFromGCSBucket(self, path):
     """Get file from GCS bucket"""
     path = "gs://%s/%s" % (self.gsbucket, path)
-    cmd = r'gsutil cat ' + path
+    cmd = r'gcloud storage cat ' + path
     return self.RunCommand(self.win_config['client'], cmd).rstrip().decode()
 
   def InstallWebDriver(self, instance_name):
@@ -319,7 +319,7 @@ class ChromeEnterpriseTestCase(EnterpriseTestCase):
 
     # Install Visual C++ Redistributable package as demo agent's dependency
     gspath = "gs://%s/%s" % (self.gsbucket, 'secrets/VC_redist.x64.exe')
-    cmd = r'gsutil cp ' + gspath + ' ' + dest_path
+    cmd = r'gcloud storage cp ' + gspath + ' ' + dest_path
 
     self.RunCommand(instance_name, cmd)
 

@@ -225,9 +225,9 @@ echo "**************************************************************************
 echo "* For the following command you first have to authenticate with google cloud"
 echo "* storage. For that you have to execute"
 echo "*"
-echo "* > gsutil.py config"
+echo "* > gcloud auth login"
 echo "*"
-echo "* When the script asks you for your project-id, use 0."
+echo "* And set a project with: gcloud config set project <project-id>"
 echo "****************************************************************************"
 log_and_run cd ${SPEC_TEST_DIR}
 log_and_run upload_to_google_storage.py -a -b v8-wasm-spec-tests tests

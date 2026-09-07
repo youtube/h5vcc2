@@ -187,7 +187,7 @@ class ProfileDownloader:
 
       # Download new profiles.
       path = self._remote_profile_path
-      cmd = ['cp', '-R', f'gs://{path}/*', str(PGO_PROFILE_DIR)]
+      cmd = ['storage', 'cp', '--recursive', f'gs://{path}/*', str(PGO_PROFILE_DIR)]
       failure_hint = f'https://storage.googleapis.com/{path} does not exist.'
       self._call_gsutil(cmd, failure_hint)
 
@@ -228,7 +228,7 @@ class ProfileDownloader:
 
   def _validate(self):
     meta_json = f'{self._remote_profile_path}/meta.json'
-    cmd = ['stat', f'gs://{meta_json}']
+    cmd = ['storage', 'objects', 'list', '--stat', '--fetch-encrypted-object-hashes', f'gs://{meta_json}']
     failure_hint = (
         f'https://storage.googleapis.com/{meta_json} does not exist. This '
         f'error might be transient. Creating PGO data takes ~20 min after a '

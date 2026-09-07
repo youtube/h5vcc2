@@ -203,7 +203,7 @@ def _DownloadOneSizeFile(arg_tuples):
   src = '{}/{}'.format(base_url, subpath)
   dest = os.path.join(temp_dir, subpath)
   _MakeDirectory(os.path.dirname(dest))
-  subprocess.check_call([_GSUTIL, '-q', 'cp', src, dest])
+  subprocess.check_call(['gcloud', 'storage', 'cp', src, dest])
 
 
 @contextlib.contextmanager
@@ -280,14 +280,14 @@ def main():
 
     if args.sync:
       subprocess.check_call(
-          [_GSUTIL, '-m', 'rsync', '-r', staging_dir, _PUSH_URL])
+          ['gcloud', 'storage', 'rsync', '--recursive', staging_dir, _PUSH_URL])
       milestones_json = _PUSH_URL + 'milestones.json'
       # The main index.html page has no authentication code, so make .json file
       # world-readable.
       subprocess.check_call(
-          [_GSUTIL, 'acl', 'set', '-a', 'public-read', milestones_json])
+          ['gcloud', 'storage', 'objects', 'update', milestones_json, '--all-versions', '--predefined-acl=public-read'])
       subprocess.check_call(
-          [_GSUTIL, 'setmeta', '-h', 'Cache-Control:no-cache', milestones_json])
+          ['gcloud', 'storage', 'objects', 'update', milestones_json, '--cache-control=no-cache'])
     else:
       logging.warning('Finished dry run. Run with --sync to upload.')
     if args.wait:

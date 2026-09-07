@@ -123,7 +123,7 @@ def main():
         help='Include testonly targets, otherwise excluded by default.')
     args = parser.parse_args()
     gsutil_cmd = [
-        'gsutil.py', 'cp', 'gs://clank-dependency-graphs/latest/all.json',
+        'gcloud', 'storage', 'cp', 'gs://clank-dependency-graphs/latest/all.json',
         _DEPENDENCY_JSON_PATH
     ]
     subprocess.run(gsutil_cmd, capture_output=True)

@@ -192,14 +192,14 @@ Cloud Storage (GCS) bucket used by ClusterFuzz.
 seed corpus to the Chromium repository is the preferred way.
 ***
 
-You can do the same thing by using the [gsutil] command line tool:
+You can do the same thing by using the [gcloud storage] command line tool:
 
 ```bash
-gsutil -m rsync <path_to_corpus> gs://clusterfuzz-corpus/libfuzzer/<my_fuzzer>
+gcloud storage rsync <path_to_corpus> gs://clusterfuzz-corpus/libfuzzer/<my_fuzzer>
 ```
 
 *** note
-**Note:** To write to this bucket using `gsutil`, you must be logged into your
+**Note:** To write to this bucket using `gcloud storage`, you must be logged into your
 @google.com account (@chromium.org will not work). You can use the `gcloud auth
 login` command to log into your account in `gsutil` if you installed `gsutil`
 through `gcloud`.
@@ -305,7 +305,7 @@ crashes).
 [corpus from ClusterFuzz]: libFuzzer_integration.md#Corpus
 [coverage script]: https://cs.chromium.org/chromium/src/tools/code_coverage/coverage.py
 [fuzzing coverage]: https://analysis.chromium.org/coverage/p/chromium?platform=fuzz
-[gsutil]: https://cloud.google.com/storage/docs/gsutil
+[gcloud storage]: https://cloud.google.com/sdk/gcloud/reference/storage
 [startup initialization]: https://llvm.org/docs/LibFuzzer.html#startup-initialization
 [libfuzzer]: getting_started_with_libfuzzer.md
 [fuzztests]: getting_started.md

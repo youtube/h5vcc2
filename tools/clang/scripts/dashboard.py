@@ -24,7 +24,7 @@ RUST_REPO = ''  # This gets filled in by main().
 # Usage:
 #
 # ./dashboard.py > /tmp/toolchain-dashboard.html
-# gsutil.py cp -a public-read /tmp/toolchain-dashboard.html gs://chromium-browser-clang/
+# gcloud storage cp --predefined-acl=publicRead /tmp/toolchain-dashboard.html gs://chromium-browser-clang/
 
 #TODO: Plot 30-day moving averages.
 #TODO: Overview with current age of each toolchain component.

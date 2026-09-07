@@ -114,6 +114,7 @@ def get_commit_from_cr_position(position: str) -> str:
 def get_bucket_copies() -> List[str]:
   """Retrieves list of test subdirectories from Cloud Storage"""
   copies = []
+  # The -d flag is not supported in gcloud storage ls.
   dirs = run_readonly('gsutil.py', 'ls', '-d', BUCKET)
   strip_len = len(BUCKET) + 1
   for rev in dirs.splitlines():
