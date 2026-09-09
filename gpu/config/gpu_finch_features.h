@@ -23,15 +23,12 @@ struct GpuFeatureInfo;
 
 namespace features {
 
-<<<<<<< HEAD
-=======
 GPU_CONFIG_EXPORT BASE_DECLARE_FEATURE(kUseGles2ForOopR);
 
 #if BUILDFLAG(IS_COBALT)
 GPU_CONFIG_EXPORT BASE_DECLARE_FEATURE(kCobaltInProcessDirectRaster);
 #endif  // BUILDFLAG(IS_COBALT)
 
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
 // All features in alphabetical order. The features should be documented
 // alongside the definition of their values in the .cc file.
 GPU_CONFIG_EXPORT BASE_DECLARE_FEATURE(kAggressiveShaderCacheLimits);

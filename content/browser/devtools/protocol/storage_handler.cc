@@ -59,29 +59,21 @@
 #include "content/browser/attribution_reporting/event_level_result.mojom.h"  // nogncheck
 #include "content/browser/attribution_reporting/send_result.h"
 #include "content/browser/attribution_reporting/storable_source.h"
-<<<<<<< HEAD
-#include "content/browser/attribution_reporting/store_source_result.mojom.h"
-#include "content/browser/devtools/dedicated_worker_devtools_agent_host.h"
-=======
 #include "content/browser/attribution_reporting/store_source_result.mojom.h"  // nogncheck
 #endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_150
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
+#include "content/browser/devtools/dedicated_worker_devtools_agent_host.h"
 #include "content/browser/devtools/devtools_agent_host_impl.h"
 #include "content/browser/devtools/protocol/browser_handler.h"
 #include "content/browser/devtools/protocol/handler_helpers.h"
 #include "content/browser/devtools/protocol/network.h"
 #include "content/browser/devtools/protocol/network_handler.h"
 #include "content/browser/devtools/protocol/storage.h"
-<<<<<<< HEAD
 #include "content/browser/devtools/service_worker_devtools_agent_host.h"
 #include "content/browser/devtools/shared_worker_devtools_agent_host.h"
-#include "content/browser/interest_group/interest_group_manager_impl.h"
-#include "content/browser/renderer_host/frame_tree_node.h"
-=======
 #if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_150
 #include "content/browser/interest_group/interest_group_manager_impl.h"
 #endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_150
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
+#include "content/browser/renderer_host/frame_tree_node.h"
 #include "content/browser/renderer_host/render_frame_host_impl.h"
 #include "content/public/browser/browser_context.h"
 #include "content/public/browser/browser_task_traits.h"
@@ -565,9 +557,6 @@ void StorageHandler::ClearCookies(
                      std::move(callback)));
 }
 
-<<<<<<< HEAD
-Response StorageHandler::GetStorageKeyForFrameInternal(
-=======
 #if BUILDFLAG(IS_COBALT) && CHROMIUM_MILESTONE_LE_150
 Response StorageHandler::SerializeStorageKey(
     RenderFrameHostImpl* rfh,
@@ -586,8 +575,7 @@ Response StorageHandler::SerializeStorageKey(
 }
 #endif
 
-Response StorageHandler::GetStorageKeyForFrame(
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
+Response StorageHandler::GetStorageKeyForFrameInternal(
     const std::string& frame_id,
     std::string* serialized_storage_key) {
   if (!frame_host_) {
@@ -613,7 +601,6 @@ Response StorageHandler::GetStorageKeyForFrame(
 #endif
 }
 
-<<<<<<< HEAD
 // TODO(crbug.com/445966299): This method is deprecated and
 // will be removed once all clients, including the DevTools frontend, have
 // migrated to using GetStorageKey.
@@ -668,29 +655,6 @@ Response StorageHandler::GetStorageKey(std::optional<std::string> frame_id,
   *serialized_storage_key = storage_key.value().Serialize();
   return Response::Success();
 }
-=======
-#if CHROMIUM_MILESTONE_LE_150
-Response StorageHandler::GetStorageKey(std::optional<std::string> frame_id,
-                                       std::string* serialized_storage_key) {
-#if BUILDFLAG(IS_COBALT)
-  if (frame_id.has_value()) {
-    return GetStorageKeyForFrame(frame_id.value(), serialized_storage_key);
-  }
-
-  if (frame_host_) {
-    return SerializeStorageKey(frame_host_, serialized_storage_key);
-  }
-
-  return Response::ServerError(
-      "Could not determine storage key for the target (workers not supported "
-      "yet in this implementation).");
-#else
-  return Response::ServerError("Not implemented");
-#endif
-}
-#endif
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-
 namespace {
 uint32_t GetRemoveDataMask(const std::string& storage_types) {
   std::vector<std::string> types = base::SplitString(

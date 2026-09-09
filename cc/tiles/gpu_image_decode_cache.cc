@@ -2040,7 +2040,6 @@ void GpuImageDecodeCache::OwnershipChanged(ImageData* image_data) {
   // of the cpu fallback (in case we don't find this image in gpu memory) is
   // too low to cache this data.
   if (image_data->decode.ref_count == 0 &&
-      image_data->mode != DecodedDataMode::kCpu &&
       image_data->HasUploadedData()) {
     image_data->decode.ResetData();
     image_data->speculative_decode_usage_stats_.reset();
@@ -2048,20 +2047,13 @@ void GpuImageDecodeCache::OwnershipChanged(ImageData* image_data) {
 
   // If we have no refs on an uploaded image, it should be unlocked. Do this
   // before any attempts to delete the image.
-  if (image_data->IsGpuOrTransferCache() && image_data->upload.ref_count == 0 &&
+  if (image_data->upload.ref_count == 0 &&
       image_data->upload.is_locked()) {
     UnlockImage(image_data);
   }
 
   // Don't keep around orphaned images.
   if (image_data->is_orphaned && !has_any_refs) {
-    DeleteImage(image_data);
-  }
-
-  // Don't keep CPU images if they are unused, these images can be recreated by
-  // re-locking discardable (rather than requiring a full upload like GPU
-  // images).
-  if (image_data->mode == DecodedDataMode::kCpu && !has_any_refs) {
     DeleteImage(image_data);
   }
 
@@ -2095,10 +2087,7 @@ void GpuImageDecodeCache::OwnershipChanged(ImageData* image_data) {
 
 #if DCHECK_IS_ON()
   // Sanity check the above logic.
-  if (image_data->HasUploadedData()) {
-    if (image_data->mode == DecodedDataMode::kCpu)
-      DCHECK(image_data->decode.is_locked());
-  } else {
+  if (!image_data->HasUploadedData()) {
     DCHECK(!image_data->is_budgeted || has_any_refs);
   }
 #endif

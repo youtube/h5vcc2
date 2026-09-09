@@ -9639,9 +9639,6 @@ crbug.com/439456643 [ Linux ] external/wpt/content-security-policy/parsing/inval
 crbug.com/428101918 [ Linux ] external/wpt/service-workers/service-worker/same-site-cookies.https.html [ Failure Timeout ]
 crbug.com/395962971 [ Linux ] external/wpt/webdriver/tests/bidi/browsing_context/navigate/navigate_beforeunload.py [ Failure Timeout ]
 crbug.com/439269634 [ Linux ] external/wpt/webdriver/tests/classic/execute_script/arguments.py [ Failure Timeout ]
-<<<<<<< HEAD
-=======
-
 crbug.com/440589865 [ Mac14-arm64 ] virtual/webnn-service-with-gpu/external/wpt/webnn/conformance_tests/tensor.https.any.html?gpu [ Failure ]
 crbug.com/440589865 [ Mac15-arm64 ] virtual/webnn-service-with-gpu/external/wpt/webnn/conformance_tests/tensor.https.any.html?gpu [ Failure ]
 crbug.com/440589865 [ Mac14-arm64 ] virtual/webnn-service-with-gpu/external/wpt/webnn/conformance_tests/tensor.https.any.serviceworker.html?gpu [ Failure ]
@@ -9650,8 +9647,6 @@ crbug.com/440589865 [ Mac14-arm64 ] virtual/webnn-service-with-gpu/external/wpt/
 crbug.com/440589865 [ Mac15-arm64 ] virtual/webnn-service-with-gpu/external/wpt/webnn/conformance_tests/tensor.https.any.sharedworker.html?gpu [ Failure ]
 crbug.com/440589865 [ Mac14-arm64 ] virtual/webnn-service-with-gpu/external/wpt/webnn/conformance_tests/tensor.https.any.worker.html?gpu [ Failure ]
 crbug.com/440589865 [ Mac15-arm64 ] virtual/webnn-service-with-gpu/external/wpt/webnn/conformance_tests/tensor.https.any.worker.html?gpu [ Failure ]
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-
 # Gardener 2025-08-27
 crbug.com/419705502 [ Win10.20h2 ] http/tests/devtools/elements/styles-2/nested-pseudo-elements.js [ Failure Pass ]
 
@@ -9689,7 +9684,6 @@ crbug.com/444150315 [ Linux ] external/wpt/webdriver/tests/bidi/browsing_context
 
 # Gardener 2025-09-19
 crbug.com/446017690 [ Linux ] virtual/threaded-prefer-compositing/fast/scroll-behavior/smooth-scroll/track-scroll.html [ Pass Timeout ]
-<<<<<<< HEAD
 crbug.com/446017690 [ Linux ] virtual/threaded-prefer-compositing/fast/scrolling/overflow-clip-with-page-scale.html [ Failure Pass ]
 
 # Gardener 2025-09-23
@@ -9707,11 +9701,8 @@ crbug.com/414630818 http/tests/devtools/coverage/coverage-view-filter.js [ Failu
 crbug.com/414630818 http/tests/devtools/coverage/coverage-view-per-function.js [ Failure Pass ]
 crbug.com/414630818 http/tests/devtools/coverage/coverage-view.js [ Failure Pass ]
 
-
 # Gardener 2025-09-25
 crbug.com/444048840 [ Linux ] inspector-protocol/sessions/page-set-document-content.js [ Pass Timeout ]
-=======
-crbug.com/446017690 [ Linux ] virtual/threaded-prefer-compositing/fast/scrolling/overflow-clip-with-page-scale.html [ Pass Failure ]
 
 # Cobalt bug: b/461834934.
 wpt_internal/cobalt/HTMLVideoElementExtension/getAndSetMaxVideoCapabilities.html [ Timeout ]
@@ -9725,4 +9716,3 @@ wpt_internal/cobalt/h5vcc-system/h5vcc-system-exit.https.any.html [ Failure Time
 wpt_internal/cobalt/h5vcc-system/h5vcc-system-limitAdTracking.https.any.html [ Failure Timeout ]
 wpt_internal/cobalt/h5vcc-system/h5vcc-system-trackingAuthorizationStatus.https.any.html [ Failure Timeout ]
 wpt_internal/cobalt/h5vcc-system/h5vcc-system-userOnExitStrategy.https.any.html [ Failure Timeout ]
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)

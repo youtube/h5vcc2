@@ -584,7 +584,8 @@ MigrationManager::ToCanonicalCookies(const cobalt::storage::Storage& storage) {
         net::COOKIE_PRIORITY_DEFAULT,
         std::nullopt,  // PartitionKey
         // Since we use https:// in CookieTask, use kSecure here.
-        net::CookieSourceScheme::kSecure, 443, net::CookieSourceType::kOther);
+        net::CookieSourceScheme::kSecure, 443, net::CookieSourceType::kOther,
+        net::CanonicalCookieFromStorageCallSite::kCookieManager);
 
     if (cookie) {
       if (cookie->IsCanonical()) {

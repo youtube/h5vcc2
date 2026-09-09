@@ -265,8 +265,8 @@ void CobaltVideoOverlayWindow::CompositorViewCreated(
                                                            java_activity_ref_);
 
   if (!j_window_android.is_null()) {
-    window_android_ = ui::WindowAndroid::FromJavaWindowAndroid(
-        base::android::JavaParamRef<jobject>(env, j_window_android.obj()));
+    window_android_ =
+        ui::WindowAndroid::FromJavaWindowAndroid(j_window_android);
     if (window_android_) {
       window_android_->AddObserver(this);
       if (window_android_->GetCompositor() &&

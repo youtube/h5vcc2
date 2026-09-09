@@ -2741,15 +2741,8 @@ URLRequestContextOwner NetworkContext::MakeURLRequestContext(
 #if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_150
   auto* mdl_manager = network_service_->masked_domain_list_manager();
   auto* prt_registry = network_service_->probabilistic_reveal_token_registry();
-<<<<<<< HEAD
-  bool requires_ipp_proxy_delegate =
-      (mdl_manager->IsEnabled() ||
-       !net::features::kIpPrivacyUnconditionalProxyDomainList.Get().empty()) &&
-=======
-  requires_ipp_proxy_delegate =
-      mdl_manager && mdl_manager->IsEnabled() &&
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-      (params_->ip_protection_core_host ||
+requires_ipp_proxy_delegate =
+      mdl_manager && mdl_manager->IsEnabled() &&      (params_->ip_protection_core_host ||
        net::features::kIpPrivacyAlwaysCreateCore.Get());
   if (requires_ipp_proxy_delegate) {
     CHECK(!params_->initial_custom_proxy_config);

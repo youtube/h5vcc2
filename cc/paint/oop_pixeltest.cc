@@ -150,19 +150,13 @@ class OopPixelTest : public testing::Test,
     const int raster_max_texture_size =
         raster_context_provider_->ContextCapabilities().max_texture_size;
     oop_image_cache_ = std::make_unique<GpuImageDecodeCache>(
-<<<<<<< HEAD
-        raster_context_provider_.get(), kRGBA_8888_SkColorType, kWorkingSetSize,
-        raster_max_texture_size, nullptr);
-=======
-        raster_context_provider_.get(), true, kRGBA_8888_SkColorType,
-        kWorkingSetSize, raster_max_texture_size,
+raster_context_provider_.get(), kRGBA_8888_SkColorType, kWorkingSetSize,
+        raster_max_texture_size,
 #if BUILDFLAG(IS_COBALT)
         /*max_persistent_cache_items=*/2000,
         /*max_persistent_cache_memory_size=*/std::numeric_limits<size_t>::max(),
 #endif
-        nullptr);
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-  }
+        nullptr);  }
 
   class RasterOptions {
    public:

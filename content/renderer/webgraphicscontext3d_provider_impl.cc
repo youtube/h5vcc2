@@ -179,19 +179,13 @@ cc::ImageDecodeCache* WebGraphicsContext3DProviderImpl::ImageDecodeCache(
   auto insertion_result = image_decode_cache_map_.emplace(
       color_type,
       std::make_unique<cc::GpuImageDecodeCache>(
-<<<<<<< HEAD
-          provider_.get(), color_type, kMaxWorkingSetBytes,
-          provider_->ContextCapabilities().max_texture_size, nullptr));
-=======
-          provider_.get(), use_transfer_cache, color_type, kMaxWorkingSetBytes,
+provider_.get(), color_type, kMaxWorkingSetBytes,
           provider_->ContextCapabilities().max_texture_size,
 #if BUILDFLAG(IS_COBALT)
           cc::ImageDecodeCacheUtils::GetPersistentCacheBudgetCount(),
           cc::ImageDecodeCacheUtils::GetPersistentCacheBudgetBytes(),
 #endif
-          nullptr));
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-  DCHECK(insertion_result.second);
+          nullptr));  DCHECK(insertion_result.second);
   cache_iterator = insertion_result.first;
   return cache_iterator->second.get();
 }

@@ -58,19 +58,13 @@ class GpuImageDecodeCachePerfTest : public testing::Test {
         context_provider_->ContextCapabilities().max_texture_size;
     ASSERT_EQ(result, gpu::ContextResult::kSuccess);
     cache_ = std::make_unique<GpuImageDecodeCache>(
-<<<<<<< HEAD
-        context_provider_.get(), kRGBA_8888_SkColorType, kCacheSize,
-        MaxTextureSize(), nullptr);
-=======
-        context_provider_.get(), UseTransferCache(), kRGBA_8888_SkColorType,
-        kCacheSize, MaxTextureSize(),
+context_provider_.get(), kRGBA_8888_SkColorType, kCacheSize,
+        MaxTextureSize(),
 #if BUILDFLAG(IS_COBALT)
         /*max_persistent_cache_items=*/2000,
         /*max_persistent_cache_memory_size=*/std::numeric_limits<size_t>::max(),
 #endif
-        nullptr);
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-  }
+        nullptr);  }
 
  protected:
   size_t MaxTextureSize() const { return 4096; }

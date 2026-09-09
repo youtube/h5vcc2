@@ -308,15 +308,9 @@ void ModulesInitializer::InitInspectorAgentSession(
     InspectorDOMAgent* dom_agent,
     InspectedFrames* inspected_frames,
     Page* page) const {
-<<<<<<< HEAD
-  session->CreateAndAppend<InspectorIndexedDBAgent>(
-      inspected_frames, /*worker_global_scope=*/nullptr, session->V8Session());
-=======
 #if BUILDFLAG(ENABLE_DEVTOOLS_BACKEND)
-  session->CreateAndAppend<InspectorIndexedDBAgent>(inspected_frames,
-                                                    session->V8Session());
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-  session->CreateAndAppend<DeviceOrientationInspectorAgent>(inspected_frames);
+  session->CreateAndAppend<InspectorIndexedDBAgent>(
+      inspected_frames, /*worker_global_scope=*/nullptr, session->V8Session());  session->CreateAndAppend<DeviceOrientationInspectorAgent>(inspected_frames);
   session->CreateAndAppend<InspectorDOMStorageAgent>(inspected_frames);
   session->CreateAndAppend<InspectorAccessibilityAgent>(inspected_frames,
                                                         dom_agent);

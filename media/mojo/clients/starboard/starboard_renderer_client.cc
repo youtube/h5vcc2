@@ -97,7 +97,7 @@ StarboardRendererClient::~StarboardRendererClient() {
 
 #if BUILDFLAG(IS_ANDROID)
   if (request_overlay_info_cb_ && overlay_info_requested_) {
-    request_overlay_info_cb_.Run(false, base::NullCallback());
+    request_overlay_info_cb_.Run(base::NullCallback());
     overlay_info_requested_ = false;
   }
 #endif  // BUILDFLAG(IS_ANDROID)
@@ -323,7 +323,6 @@ void StarboardRendererClient::RequestOverlayInfo(bool restart_for_transitions) {
 
   overlay_info_requested_ = true;
   request_overlay_info_cb_.Run(
-      restart_for_transitions,
       base::BindPostTaskToCurrentDefault(
           base::BindRepeating(&StarboardRendererClient::OnOverlayInfoChanged,
                               weak_factory_.GetWeakPtr())));

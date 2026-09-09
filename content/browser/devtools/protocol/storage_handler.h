@@ -24,13 +24,7 @@
 #endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_150
 #include "content/browser/devtools/protocol/devtools_domain_handler.h"
 #include "content/browser/devtools/protocol/storage.h"
-<<<<<<< HEAD
-#include "content/browser/interest_group/devtools_enums.h"
-#include "content/browser/interest_group/interest_group_manager_impl.h"
-#include "content/browser/shared_storage/shared_storage_runtime_manager.h"
-=======
 #include "content/browser/renderer_host/frame_tree_node.h"
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
 #include "content/public/browser/global_routing_id.h"
 #include "storage/browser/quota/quota_manager.h"
 
@@ -85,16 +79,8 @@ class StorageHandler
   // content::protocol::storage::Backend
   Response GetStorageKeyForFrame(const std::string& frame_id,
                                  std::string* serialized_storage_key) override;
-<<<<<<< HEAD
-  Response GetStorageKey(std::optional<std::string> frame_id,
-                         std::string* serialized_storage_key) override;
-=======
-#if CHROMIUM_MILESTONE_LE_150
-  Response GetStorageKey(std::optional<std::string> frame_id,
-                         std::string* serialized_storage_key) override;
-#endif
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-  void ClearDataForOrigin(
+Response GetStorageKey(std::optional<std::string> frame_id,
+                         std::string* serialized_storage_key) override;  void ClearDataForOrigin(
       const std::string& origin,
       const std::string& storage_types,
       std::unique_ptr<ClearDataForOriginCallback> callback) override;
@@ -300,11 +286,11 @@ class StorageHandler
       const std::optional<std::string>& browser_context_id,
       StoragePartition** storage_partition);
 
-#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_150
-  void ResetAttributionReporting();
-
   Response GetStorageKeyForFrameInternal(const std::string& frame_id,
                                          std::string* serialized_storage_key);
+
+#if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS) && CHROMIUM_MILESTONE_LE_150
+  void ResetAttributionReporting();
 
   // This doesn't update `interest_group_auction_tracking_enabled_` and does not
   // have to work on `storage_partition_`, unlike the public version.
@@ -315,15 +301,12 @@ class StorageHandler
       std::unique_ptr<Storage::Backend::GetCookiesCallback> callback,
       const std::vector<net::CanonicalCookie>& cookies);
 
-<<<<<<< HEAD
-  const raw_ptr<DevToolsAgentHostImpl> host_;
-=======
 #if BUILDFLAG(IS_COBALT) && CHROMIUM_MILESTONE_LE_150
   Response SerializeStorageKey(RenderFrameHostImpl* rfh,
                                std::string* serialized_storage_key) const;
 #endif
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
 
+  const raw_ptr<DevToolsAgentHostImpl> host_;
   std::unique_ptr<Storage::Frontend> frontend_;
   raw_ptr<StoragePartition> storage_partition_{nullptr};
   raw_ptr<RenderFrameHostImpl> frame_host_ = nullptr;

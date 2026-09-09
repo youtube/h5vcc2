@@ -50,8 +50,6 @@ bool IsDeviceBlocked(std::string_view field, std::string_view block_list) {
 
 }  // namespace
 
-<<<<<<< HEAD
-=======
 // Used to limit GL version to 2.0 for skia raster and compositing.
 BASE_FEATURE(kUseGles2ForOopR, base::FEATURE_DISABLED_BY_DEFAULT);
 
@@ -63,7 +61,6 @@ BASE_FEATURE(kCobaltInProcessDirectRaster,
              base::FEATURE_DISABLED_BY_DEFAULT);
 #endif  // BUILDFLAG(IS_COBALT)
 
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
 // More aggressive behavior for the shader cache: increase size, and do not
 // purge as much in case of memory pressure.
 BASE_FEATURE(kAggressiveShaderCacheLimits, base::FEATURE_DISABLED_BY_DEFAULT);

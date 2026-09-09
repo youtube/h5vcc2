@@ -42,8 +42,6 @@
 #include "chrome/browser/ui/webui/discards/site_data.mojom.h"
 #endif
 
-<<<<<<< HEAD
-=======
 #if BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX)
 #include "chrome/browser/ui/webui/app_settings/web_app_settings_ui.h"
 #include "chrome/browser/ui/webui/on_device_translation_internals/on_device_translation_internals_ui.h"
@@ -380,10 +378,7 @@
 
 #if BUILDFLAG(ENTERPRISE_WATERMARK)
 #include "chrome/browser/ui/webui/watermark/watermark_ui.h"
-#endif
-
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-namespace chrome::internal {
+#endifnamespace chrome::internal {
 
 using content::RegisterWebUIControllerInterfaceBinder;
 
@@ -480,131 +475,8 @@ void PopulateChromeWebUIFrameBinders(
                                          DiscardsUI>(map);
 #endif
 
-<<<<<<< HEAD
-  // When possible, please one one of the Parts functions above and avoid making
-  // this function longer.
-=======
-#if BUILDFLAG(IS_ANDROID)
-  RegisterWebUIControllerInterfaceBinder<feed_internals::mojom::PageHandler,
-                                         FeedInternalsUI>(map);
-  RegisterWebUIControllerInterfaceBinder<
-      notifications_internals::mojom::PageHandler, NotificationsInternalsUI>(
-      map);
-#endif
-
-#if BUILDFLAG(FULL_SAFE_BROWSING)
-  RegisterWebUIControllerInterfaceBinder<::mojom::ResetPasswordHandler,
-                                         ResetPasswordUI>(map);
-#endif
-
-#if BUILDFLAG(IS_CHROMEOS)
-  // Because Nearby Share is only currently supported for the primary profile,
-  // we should only register binders in that scenario. However, we don't want to
-  // plumb the profile through to this function, so we 1) ensure that
-  // NearbyShareDialogUI will not be created for non-primary profiles, and 2)
-  // rely on the BindInterface implementation of OSSettingsUI to ensure that no
-  // Nearby Share receivers are bound.
-  RegisterWebUIControllerInterfaceBinder<
-      nearby_share::mojom::NearbyShareSettings, ash::settings::OSSettingsUI,
-      nearby_share::NearbyShareDialogUI>(map);
-  RegisterWebUIControllerInterfaceBinder<nearby_share::mojom::ContactManager,
-                                         ash::settings::OSSettingsUI,
-                                         nearby_share::NearbyShareDialogUI>(
-      map);
-  RegisterWebUIControllerInterfaceBinder<nearby_share::mojom::DiscoveryManager,
-                                         nearby_share::NearbyShareDialogUI>(
-      map);
-  RegisterWebUIControllerInterfaceBinder<nearby_share::mojom::ReceiveManager,
-                                         ash::settings::OSSettingsUI>(map);
-#endif  // BUILDFLAG(IS_CHROMEOS)
-
-#if !BUILDFLAG(IS_CHROMEOS) && !BUILDFLAG(IS_ANDROID)
-  RegisterWebUIControllerInterfaceBinder<::app_home::mojom::PageHandlerFactory,
-                                         webapps::AppHomeUI>(map);
-#endif  // !BUILDFLAG(IS_CHROMEOS) && !BUILDFLAG(IS_ANDROID)
-
-#if !BUILDFLAG(IS_ANDROID)
-  RegisterWebUIControllerInterfaceBinder<::mojom::WebAppInternalsHandler,
-                                         WebAppInternalsUI>(map);
-#endif
-
-  RegisterWebUIControllerInterfaceBinder<::mojom::LocationInternalsHandler,
-                                         LocationInternalsUI>(map);
-
-#if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_COBALT)
-  if (base::FeatureList::IsEnabled(
-          optimization_guide::features::kOptimizationGuideOnDeviceModel)) {
-    RegisterWebUIControllerInterfaceBinder<
-        on_device_internals::mojom::PageHandlerFactory,
-        on_device_internals::OnDeviceInternalsUI>(map);
-  }
-#endif  // !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_COBALT)
-
-  RegisterWebUIControllerInterfaceBinder<
-      privacy_sandbox_internals::mojom::PageHandler,
-      privacy_sandbox_internals::PrivacySandboxInternalsUI>(map);
-
-#if !BUILDFLAG(IS_ANDROID)
-  if (base::FeatureList::IsEnabled(privacy_sandbox::kRelatedWebsiteSetsDevUI)) {
-    RegisterWebUIControllerInterfaceBinder<
-        related_website_sets::mojom::RelatedWebsiteSetsPageHandler,
-        privacy_sandbox_internals::PrivacySandboxInternalsUI>(map);
-  }
-
-  if (base::FeatureList::IsEnabled(privacy_sandbox::kPrivateStateTokensDevUI)) {
-    RegisterWebUIControllerInterfaceBinder<
-        private_state_tokens::mojom::PrivateStateTokensPageHandler,
-        privacy_sandbox_internals::PrivacySandboxInternalsUI>(map);
-  }
-
-  RegisterWebUIControllerInterfaceBinder<
-      privacy_sandbox::dialog::mojom::BaseDialogPageHandlerFactory,
-      privacy_sandbox::BaseDialogUI>(map);
-#endif
-
-#if BUILDFLAG(ENABLE_DICE_SUPPORT)
-  RegisterWebUIControllerInterfaceBinder<
-      batch_upload::mojom::PageHandlerFactory, BatchUploadUI>(map);
-
-  RegisterWebUIControllerInterfaceBinder<
-      signout_confirmation::mojom::PageHandlerFactory, SignoutConfirmationUI>(
-      map);
-#endif  // BUILDFLAG(ENABLE_DICE_SUPPORT)
-
-#if BUILDFLAG(IS_CHROMEOS)
-  RegisterWebUIControllerInterfaceBinder<ash::focus_mode::mojom::TrackProvider,
-                                         ash::FocusModeUI>(map);
-
-  RegisterWebUIControllerInterfaceBinder<
-      ash::sanitize_ui::mojom::SettingsResetter, ash::SanitizeDialogUI>(map);
-
-  if (ash::features::IsGraduationEnabled()) {
-    RegisterWebUIControllerInterfaceBinder<
-        ash::graduation_ui::mojom::GraduationUiHandler,
-        ash::graduation::GraduationUI>(map);
-  }
-#endif  // BUILDFLAG(IS_CHROMEOS)
-
-#if BUILDFLAG(ENABLE_EXTENSIONS)
-  RegisterWebUIControllerInterfaceBinder<
-      zero_state_promo::mojom::PageHandlerFactory,
-      extensions::ZeroStatePromoController>(map);
-  RegisterWebUIControllerInterfaceBinder<
-      custom_help_bubble::mojom::CustomHelpBubbleHandlerFactory,
-      extensions::ZeroStatePromoController>(map);
-#endif
-
-#if BUILDFLAG(ENTERPRISE_WATERMARK)
-  RegisterWebUIControllerInterfaceBinder<watermark::mojom::PageHandlerFactory,
-                                         WatermarkUI>(map);
-#endif
-
-#if !BUILDFLAG(IS_ANDROID)
-  RegisterWebUIControllerInterfaceBinder<
-      guest_contents::mojom::GuestContentsHost, WebUIBrowserUI>(map);
-#endif
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-}
+// When possible, please one one of the Parts functions above and avoid making
+  // this function longer.}
 
 void PopulateChromeWebUIFrameInterfaceBrokers(
     content::WebUIBrowserInterfaceBrokerRegistry& registry) {

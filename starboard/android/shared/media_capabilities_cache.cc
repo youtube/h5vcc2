@@ -58,10 +58,10 @@ const jint HDR_TYPE_HDR10_PLUS = 4;
 
 const char SECURE_DECODER_SUFFIX[] = ".secure";
 
-Range ConvertJavaRangeToRange(JNIEnv* env, jobject j_range) {
-  const auto j_range_ref = JavaParamRef<jobject>(env, j_range);
-  return Range(Java_MediaCodecUtil_getRangeLower(env, j_range_ref),
-               Java_MediaCodecUtil_getRangeUpper(env, j_range_ref));
+Range ConvertJavaRangeToRange(JNIEnv* env,
+                              const jni_zero::JavaRef<jobject>& j_range) {
+  return Range(Java_MediaCodecUtil_getRangeLower(env, j_range),
+               Java_MediaCodecUtil_getRangeUpper(env, j_range));
 }
 
 template <typename GetRangeFunc>
@@ -72,7 +72,7 @@ Range GetRange(JNIEnv* env,
   SB_CHECK(j_capabilities);
   ScopedJavaLocalRef<jobject> j_range = get_range_func(env, j_capabilities);
   SB_CHECK(j_range);
-  return ConvertJavaRangeToRange(env, j_range.obj());
+  return ConvertJavaRangeToRange(env, j_range);
 }
 
 void ConvertStringToLowerCase(std::string* str) {

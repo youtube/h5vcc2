@@ -14,13 +14,8 @@
 #include "gpu/command_buffer/service/shared_image/gpu_memory_buffer_factory_io_surface.h"
 #endif
 
-<<<<<<< HEAD:gpu/command_buffer/service/shared_image/gpu_memory_buffer_factory.cc
-#if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
-#include "gpu/command_buffer/service/shared_image/gpu_memory_buffer_factory_native_pixmap.h"
-=======
 #if BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_STARBOARD) || BUILDFLAG(IS_CHROMEOS) || BUILDFLAG(IS_FUCHSIA)
-#include "gpu/ipc/service/gpu_memory_buffer_factory_native_pixmap.h"
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.):gpu/ipc/service/gpu_memory_buffer_factory.cc
+#include "gpu/command_buffer/service/shared_image/gpu_memory_buffer_factory_native_pixmap.h"
 #endif
 
 #if BUILDFLAG(IS_WIN)

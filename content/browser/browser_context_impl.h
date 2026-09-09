@@ -40,12 +40,7 @@ class BrowsingDataRemoverImpl;
 class DownloadManager;
 #if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS)
 class InMemoryFederatedPermissionContext;
-<<<<<<< HEAD
-=======
-#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS)
-class NavigationEntryScreenshotManager;
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-class PermissionController;
+#endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS)class PermissionController;
 class PrefetchService;
 class StoragePartitionImplMap;
 
@@ -172,11 +167,8 @@ class CONTENT_EXPORT BrowserContextImpl {
 #if BUILDFLAG(IS_ANDROID)
   std::unique_ptr<NavigationEntryScreenshotManager>
       nav_entry_screenshot_manager_;
-<<<<<<< HEAD
 #endif  // BUILDFLAG(IS_ANDROID)
-=======
 #if BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS)
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
   std::unique_ptr<InMemoryFederatedPermissionContext>
       federated_permission_context_;
 #endif  // BUILDFLAG(ENABLE_PRIVACY_SANDBOX_APIS)

@@ -6,6 +6,7 @@ import("//build/config/apple/mobile_config.gni")
 import("//build/config/features.gni")
 import("//build/config/ui.gni")
 import("//media/media_options.gni")
+import("//services/video_effects/args.gni")
 import("//testing/test.gni")
 import("//third_party/webrtc/webrtc.gni")
 
@@ -176,16 +177,6 @@ component("capture_lib") {
     "//ui/gfx",
   ]
 
-<<<<<<< HEAD
-  if (is_android) {
-=======
-  if (enable_video_effects) {
-    sources += [
-      "video/video_capture_effects_processor.cc",
-      "video/video_capture_effects_processor.h",
-    ]
-  }
-
   if (is_cobalt) {
     sources -= [
       "video/create_video_capture_device_factory.cc",
@@ -194,7 +185,6 @@ component("capture_lib") {
   }
 
   if (is_android && !is_cobalt) {
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
     public_deps += [ "video/android" ]
     deps += [ "video/android:capture_jni_headers" ]
   }
@@ -537,19 +527,14 @@ test("capture_unittests") {
     "//ui/gfx:test_support",
   ]
 
-<<<<<<< HEAD
-  if (is_linux) {
-=======
-  if (enable_video_effects) {
+if (enable_video_effects) {
     deps += [
       "//components/viz/test:test_support",
       "//services/video_effects/test:test_support",
     ]
   }
 
-  if (is_linux && !is_cobalt) {
->>>>>>> parent of c8aad912c2a (CONFLICTED Chromium Cherry pick: Revert Cobalt.)
-    sources += [
+  if (is_linux && !is_cobalt) {    sources += [
       "video/linux/v4l2_capture_delegate_unittest.cc",
       "video/linux/video_capture_device_factory_v4l2_unittest.cc",
     ]
