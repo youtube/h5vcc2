@@ -37,7 +37,7 @@ int InitAndRunAllTests(int argc, char** argv) {
 #if BUILDFLAG(IS_IOS_TVOS)
   std::vector<std::string> arg_strings;
   std::vector<char*> new_argv;
-  char cache_dir[512] = {0};
+  char cache_dir[kSbFileMaxPath] = {0};
   bool has_cache_dir = SbSystemGetPath(kSbSystemPathCacheDirectory, cache_dir,
                                        sizeof(cache_dir));
 
