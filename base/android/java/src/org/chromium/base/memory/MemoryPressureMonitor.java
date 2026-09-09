@@ -254,8 +254,16 @@ public class MemoryPressureMonitor {
         }
     }
 
+    private int getThrottlingIntervalMs() {
+        if (mThrottlingIntervalMs != DEFAULT_THROTTLING_INTERVAL_MS) {
+            return mThrottlingIntervalMs;
+        }
+        int cooldownSeconds = MemoryPressureListener.getMemoryPressureCooldownSeconds();
+        return cooldownSeconds > 0 ? cooldownSeconds * 1000 : DEFAULT_THROTTLING_INTERVAL_MS;
+    }
+
     private void startThrottlingInterval() {
-        ThreadUtils.postOnUiThreadDelayed(mThrottlingIntervalTask, mThrottlingIntervalMs);
+        ThreadUtils.postOnUiThreadDelayed(mThrottlingIntervalTask, getThrottlingIntervalMs());
         mIsInsideThrottlingInterval = true;
     }
 
@@ -303,6 +311,10 @@ public class MemoryPressureMonitor {
             return MemoryPressureListener.isTrimMemoryBackgroundCritical()
                     ? MemoryPressureLevel.CRITICAL
                     : MemoryPressureLevel.MODERATE;
+        } else if (MemoryPressureListener.isModerateMemoryPressureEnabled()
+                && (level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW
+                        || level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_MODERATE)) {
+            return MemoryPressureLevel.MODERATE;
         }
         return null;
     }

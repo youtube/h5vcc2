@@ -26,12 +26,13 @@ import org.jni_zero.NativeMethods;
  * Abstract class that provides an interface for Cobalt to interact with a platform service.
  *
  * <p>Threading model:
+ *
  * <ul>
- *   <li>{@code openCobaltService}, {@code closeCobaltService}, and {@link #receiveFromClient}
- *       are invoked on the browser UI thread (Android main looper) and are serialized with
- *       Activity lifecycle callbacks.</li>
+ *   <li>{@code openCobaltService}, {@code closeCobaltService}, and {@link #receiveFromClient} are
+ *       invoked on the browser UI thread (Android main looper) and are serialized with Activity
+ *       lifecycle callbacks.
  *   <li>{@link #sendToClient} may be invoked from any thread; synchronization ensures safety
- *       against concurrent {@link #onClose}.</li>
+ *       against concurrent {@link #onClose}.
  * </ul>
  */
 public abstract class CobaltService {

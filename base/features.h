@@ -16,9 +16,22 @@ namespace base::features {
 
 // Alphabetical:
 #if BUILDFLAG(IS_COBALT)
+// When enabled, Cobalt will handle TRIM_MEMORY_RUNNING_LOW and
+// TRIM_MEMORY_RUNNING_MODERATE signals as moderate memory pressure on Android.
+BASE_EXPORT BASE_DECLARE_FEATURE(kCobaltEnableModerateMemoryPressure);
+
 // When enabled, image transfer cache entries bypass serialization and transfer
 // images directly to the GPU service thread in-process.
 BASE_EXPORT BASE_DECLARE_FEATURE(kCobaltInProcessImageTransferCache);
+
+// When enabled, overrides the memory pressure throttling cooldown (60s default)
+// with the configured cooldown_seconds parameter on Android.
+BASE_EXPORT BASE_DECLARE_FEATURE(kCobaltMemoryPressureCooldown);
+
+// The throttling cooldown in seconds between memory pressure notifications when
+// kCobaltMemoryPressureCooldown is enabled.
+BASE_EXPORT BASE_DECLARE_FEATURE_PARAM(int,
+                                       kCobaltMemoryPressureCooldownSeconds);
 #endif  // BUILDFLAG(IS_COBALT)
 
 BASE_EXPORT BASE_DECLARE_FEATURE(kFeatureParamWithCache);

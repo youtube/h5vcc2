@@ -87,8 +87,9 @@ public abstract class CobaltActivity extends BaseCobaltActivity {
 
   // Maintain the list of JavaScript-exposed objects as a member variable
   // to prevent them from being garbage collected prematurely.
-  private List<CobaltJavaScriptAndroidObject> mJavaScriptAndroidObjectList = new ArrayList<>();
-  private Map<String, String> mJavaSwitches = new HashMap<>();
+  private final List<CobaltJavaScriptAndroidObject> mJavaScriptAndroidObjectList =
+      new ArrayList<>();
+  private final Map<String, String> mJavaSwitches = new HashMap<>();
 
   @SuppressWarnings("unused")
   private CobaltA11yHelper mA11yHelper;
@@ -310,7 +311,8 @@ public abstract class CobaltActivity extends BaseCobaltActivity {
                   Log.i(TAG, "Browser process init succeeded");
 
                   if (isDestroyed() || isFinishing()) {
-                    Log.w(TAG, "Activity is finishing or destroyed; skipping finishInitialization.");
+                    Log.w(
+                        TAG, "Activity is finishing or destroyed; skipping finishInitialization.");
                     return;
                   }
 

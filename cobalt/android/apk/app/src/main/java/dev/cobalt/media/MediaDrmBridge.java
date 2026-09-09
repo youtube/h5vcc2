@@ -98,7 +98,7 @@ public class MediaDrmBridge {
 
   // The map of all opened sessions (excluding mMediaCryptoSession) to their
   // mime types.
-  private HashMap<ByteBuffer, String> mSessionIds = new HashMap<>();
+  private final HashMap<ByteBuffer, String> mSessionIds = new HashMap<>();
 
   private MediaCrypto mMediaCrypto;
 

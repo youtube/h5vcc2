@@ -98,3 +98,7 @@ enable_backup_ref_ptr_feature_flag = false
 # Disable vectorized HTML scanning (SIMD speedups for HTML parsing
 # are not needed).
 enable_vectorized_html_scanning = false
+
+# Disable Media Remoting (Casting / Remoter Mojo endpoints) for Cobalt.
+enable_media_remoting = false
+enable_media_remoting_rpc = false

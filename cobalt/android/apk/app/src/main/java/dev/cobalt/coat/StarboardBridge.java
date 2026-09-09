@@ -31,8 +31,8 @@ public class StarboardBridge extends BaseStarboardBridge {
     StarboardBridge getStarboardBridge();
   }
 
-  private CobaltMediaSession mCobaltMediaSession;
-  private VolumeStateReceiver mVolumeStateReceiver;
+  private final CobaltMediaSession mCobaltMediaSession;
+  private final VolumeStateReceiver mVolumeStateReceiver;
   private volatile PlatformError mPlatformError;
 
   public StarboardBridge(

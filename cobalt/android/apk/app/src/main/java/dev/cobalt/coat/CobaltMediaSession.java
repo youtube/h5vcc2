@@ -64,7 +64,7 @@ public class CobaltMediaSession implements ArtworkLoader.Callback {
   private Set<Integer> mActions;
   private MediaPosition mPosition;
   private Bitmap mArtworkImage;
-  private MediaSessionCompat.Callback mMediaSessionCallback;
+  private final MediaSessionCompat.Callback mMediaSessionCallback;
   private LifecycleCallback mLifecycleCallback = null;
 
   // TODO: decouple LifecycleCallback and CobaltMediaSession implementation.

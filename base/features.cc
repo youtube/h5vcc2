@@ -39,6 +39,20 @@ namespace base::features {
 // Alphabetical:
 
 #if BUILDFLAG(IS_COBALT)
+BASE_FEATURE(kCobaltEnableModerateMemoryPressure,
+             "CobaltEnableModerateMemoryPressure",
+             FEATURE_DISABLED_BY_DEFAULT);
+
+BASE_FEATURE(kCobaltMemoryPressureCooldown,
+             "CobaltMemoryPressureCooldown",
+             FEATURE_ENABLED_BY_DEFAULT);
+
+BASE_FEATURE_PARAM(int,
+                   kCobaltMemoryPressureCooldownSeconds,
+                   &kCobaltMemoryPressureCooldown,
+                   "cooldown-seconds",
+                   60);
+
 // When enabled, image transfer cache entries bypass serialization and transfer
 // images directly to the GPU service thread in-process.
 BASE_FEATURE(kCobaltInProcessImageTransferCache,

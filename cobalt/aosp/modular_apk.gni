@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import("//build/config/android/internal_rules.gni")
 import("//build/config/android/rules.gni")
 import("//cobalt/android/manifest.gni")
 import("//starboard/content/fonts/variables.gni")
@@ -20,6 +21,7 @@ import("//starboard/content/ssl/certs.gni")
 template("modular_apk") {
   _name = invoker.module_name
   _lib_name = invoker.lib_name
+  _testonly = defined(invoker.testonly) && invoker.testonly
 
   if (_name == "cobalt") {
     _loader = "//starboard/loader_app"
@@ -79,6 +81,14 @@ template("modular_apk") {
   android_apk(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     apk_name = _name
+
+    # Test apks are emitted at the Chromium native-test convention path
+    # (<out>/<name>_apk/<name>-debug.apk) so build/android/test_runner.py
+    # finds them.
+    if (_testonly) {
+      final_apk_path = "$root_build_dir/${_name}_apk/${_name}-debug.apk"
+    }
+
     android_manifest = cobalt_manifest
     android_manifest_dep = "//cobalt/android:cobalt_manifest"
     include_size_info = is_official_build
@@ -90,6 +100,10 @@ template("modular_apk") {
       "//components/crash/core/app:chrome_crashpad_handler_named_as_so($native_toolchain)",
     ]
 
+    if (_name == "nplb") {
+      deps += [ "//cobalt/aosp:nplb_instrumentation_java" ]
+    }
+
     loadable_modules = [
       "$root_build_dir/libc++_shared.so",
       "$root_build_dir/native_target/libchrome_crashpad_handler.so",
@@ -98,5 +112,16 @@ template("modular_apk") {
 
     srcjar_deps =
         [ get_label_info(_loader, "label_no_toolchain") + "__jni_registration" ]
+  }
+
+  # For test apks, generate a bin/run_<name> wrapper so upstream
+  # build/android/test_runner.py can drive the suite (`--suite <name>`).
+  if (_testonly) {
+    test_runner_script("${_name}__test_runner_script") {
+      apk_target = ":${_name}_apk"
+      test_name = _name
+      test_suite = _name
+      test_type = "gtest"
+    }
   }
 }

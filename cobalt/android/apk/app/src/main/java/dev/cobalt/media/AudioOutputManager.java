@@ -39,7 +39,7 @@ import org.jni_zero.NativeMethods;
 @JNINamespace("starboard")
 public class AudioOutputManager {
   @NonNull private final List<AudioTrackBridge> mAudioTrackBridgeList;
-  private Context mContext;
+  private final Context mContext;
 
   boolean mHasRegisteredAudioDeviceCallback = false;
 

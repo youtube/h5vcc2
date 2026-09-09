@@ -14,11 +14,15 @@
 
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <jni.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <string>
@@ -71,6 +75,27 @@ void* StarboardMain(void* /*context*/) {
   // With this switch it falls back to GetTempDir().
   args.push_back("--disable-dev-shm-usage");
   starboard::StarboardBridge::GetInstance()->AppendArgs(env, &args);
+
+  // For Android instrumentation test runs the runner provides a stdout file.
+  // Redirect stdout/stderr to it.
+  const std::string kStdoutFlag = "--android_stdout_file=";
+  for (auto it = args.begin(); it != args.end();) {
+    if (it->rfind(kStdoutFlag, 0) == 0) {
+      const std::string path = it->substr(kStdoutFlag.size());
+      int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+      if (fd < 0) {
+        SB_LOG(ERROR) << "Failed to open stdout redirect file " << path << ": "
+                      << strerror(errno);
+        exit(EXIT_FAILURE);
+      }
+      dup2(fd, STDOUT_FILENO);
+      dup2(fd, STDERR_FILENO);
+      close(fd);
+      it = args.erase(it);
+    } else {
+      ++it;
+    }
+  }
 
   std::vector<char*> argv;
   argv.reserve(args.size() + 1);

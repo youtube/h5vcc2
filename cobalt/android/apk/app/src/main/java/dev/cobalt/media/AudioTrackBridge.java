@@ -49,8 +49,9 @@ public class AudioTrackBridge {
   // mRawAudioTimestamp is used to retrieve the timestamp directly from android.media.AudioTrack.
   // mAudioTimestamp is a wrapper that ensures the framePosition is monotonically increasing
   // before it is passed to the native side.
-  private android.media.AudioTimestamp mRawAudioTimestamp = new android.media.AudioTimestamp();
-  private AudioTimestamp mAudioTimestamp = new AudioTimestamp(0, 0);
+  private final android.media.AudioTimestamp mRawAudioTimestamp =
+      new android.media.AudioTimestamp();
+  private final AudioTimestamp mAudioTimestamp = new AudioTimestamp(0, 0);
 
   private final Object mPositionLock = new Object();
 

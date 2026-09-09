@@ -60,6 +60,11 @@ public class CobaltPrefNamesTestHelper {
   }
 
   @CalledByNative
+  public static String getVariationsBeaconFilename() {
+    return CobaltPrefNames.VARIATIONS_BEACON_FILENAME;
+  }
+
+  @CalledByNative
   public static String getExperimentConfigFilename() {
     return CobaltPrefNames.EXPERIMENT_CONFIG_FILENAME;
   }

@@ -72,7 +72,7 @@ class MediaCodecBridge {
   private volatile boolean mIsFlushing = false;
   private final boolean mEnableIgnoreCallbacksDuringFlushing;
 
-  private MediaCodec.Callback mCallback;
+  private final MediaCodec.Callback mCallback;
   private double mPlaybackRate = 1.0;
   private int mFps = 30;
   private double mOperatingRate = mPlaybackRate * mFps;
@@ -80,7 +80,7 @@ class MediaCodecBridge {
   private final boolean mIsTunnelingPlayback;
   private final boolean mEnableFrameRendererListener;
 
-  private MediaCodec.OnFrameRenderedListener mFrameRendererListener;
+  private final MediaCodec.OnFrameRenderedListener mFrameRendererListener;
   private MediaCodec.OnFirstTunnelFrameReadyListener mFirstTunnelFrameReadyListener;
 
   private boolean shouldSkipVideoFrame(long presentationTimeUs, boolean isDecodeOnly) {
@@ -381,6 +381,8 @@ class MediaCodecBridge {
       } else {
         mMediaCodec.get().setOnFrameRenderedListener(mFrameRendererListener, null);
       }
+    } else {
+      mFrameRendererListener = null;
     }
 
     if (mIsTunnelingPlayback) {

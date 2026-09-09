@@ -80,17 +80,18 @@ public class BaseStarboardBridge {
 
   private Surface mVideoSurface;
   private final Object mVideoSurfaceLock = new Object();
-  private CobaltSystemConfigChangeReceiver mSysConfigChangeReceiver;
-  private CobaltTextToSpeechHelper mTtsHelper;
+  private final CobaltSystemConfigChangeReceiver mSysConfigChangeReceiver;
+  private final CobaltTextToSpeechHelper mTtsHelper;
   // TODO(cobalt): Re-enable these classes or remove if unnecessary.
-  private AudioOutputManager mAudioOutputManager;
-  private AudioPermissionRequester mAudioPermissionRequester;
-  private ResourceOverlay mResourceOverlay;
-  private AdvertisingId mAdvertisingId;
+  private final AudioOutputManager mAudioOutputManager;
+  private final AudioPermissionRequester mAudioPermissionRequester;
+  private final ResourceOverlay mResourceOverlay;
+  private final AdvertisingId mAdvertisingId;
   private final Context mAppContext;
   protected final Holder<Activity> mActivityHolder;
   private final Holder<Service> mServiceHolder;
-  // Maps each live Activity to whether it is currently started (Boolean.TRUE) or stopped (Boolean.FALSE).
+  // Maps each live Activity to whether it is currently started (Boolean.TRUE) or stopped
+  // (Boolean.FALSE).
   // Backed by WeakHashMap to prevent pinning Activity instances in the singleton bridge.
   private final Map<Activity, Boolean> mActivities =
       Collections.synchronizedMap(new WeakHashMap<>());
@@ -146,7 +147,12 @@ public class BaseStarboardBridge {
     mActivityHolder = activityHolder;
     mServiceHolder = serviceHolder;
     mArgs = new String[0];
+    mSysConfigChangeReceiver = null;
+    mTtsHelper = null;
     mAudioOutputManager = new AudioOutputManager(appContext);
+    mAudioPermissionRequester = null;
+    mResourceOverlay = null;
+    mAdvertisingId = null;
     mIsAmatiDevice = false;
     mNativeApp = 0;
   }
@@ -262,7 +268,8 @@ public class BaseStarboardBridge {
       Log.w(
           TAG,
           String.format(
-              "onActivityStart: New activity %s starting while there are previous %d activities are still active.",
+              "onActivityStart: New activity %s starting while there are previous %d activities are"
+                  + " still active.",
               activity, activeActivityCount));
     }
     mActivities.put(activity, Boolean.TRUE);
@@ -296,7 +303,8 @@ public class BaseStarboardBridge {
         }
         Log.i(
             TAG,
-            "onActivityStop: Another activity is still started; skipping suspend and foreground change.");
+            "onActivityStop: Another activity is still started; skipping suspend and foreground"
+                + " change.");
       }
     } else {
       beforeSuspend();
@@ -336,7 +344,8 @@ public class BaseStarboardBridge {
         Log.w(
             TAG,
             String.format(
-                "onActivityDestroy: %d CobaltService instance(s) still open after last activity destroyed; force cleaning up.",
+                "onActivityDestroy: %d CobaltService instance(s) still open after last activity"
+                    + " destroyed; force cleaning up.",
                 mCobaltServices.size()));
         closeAllCobaltService();
       }
@@ -740,9 +749,9 @@ public class BaseStarboardBridge {
   /**
    * Called when a VideoSurfaceView creates its underlying Surface.
    *
-   * Note: Starboard assumes a single active video surface at any given time for
-   * punch-out video decoding. During activity recreation or overlapping transitions,
-   * the newest activity's surface supersedes any previous surface as the active target.
+   * <p>Note: Starboard assumes a single active video surface at any given time for punch-out video
+   * decoding. During activity recreation or overlapping transitions, the newest activity's surface
+   * supersedes any previous surface as the active target.
    */
   public void onVideoSurfaceCreated(Surface surface) {
     Log.i(TAG, String.format("onVideoSurfaceCreated: surface=%s", surface));
@@ -755,9 +764,9 @@ public class BaseStarboardBridge {
   /**
    * Called when a VideoSurfaceView destroys its underlying Surface.
    *
-   * If this destruction event is for an old surface that was already superseded by a newer
-   * activity's surface, it is safely ignored so that the active video decoding target is not
-   * torn down prematurely.
+   * <p>If this destruction event is for an old surface that was already superseded by a newer
+   * activity's surface, it is safely ignored so that the active video decoding target is not torn
+   * down prematurely.
    */
   public void onVideoSurfaceDestroyed(Surface surface) {
     Log.i(TAG, String.format("onVideoSurfaceDestroyed: surface=%s", surface));
@@ -765,7 +774,8 @@ public class BaseStarboardBridge {
     synchronized (mVideoSurfaceLock) {
       if (isActivityLifecycleCoordinationEnabled()) {
         // If this destruction is for a surface that is no longer active (e.g. from an old activity
-        // during an overlapping activity transition), ignore it to avoid tearing down the new surface.
+        // during an overlapping activity transition), ignore it to avoid tearing down the new
+        // surface.
         if (mVideoSurface != surface) {
           Log.i(
               TAG,
@@ -846,8 +856,7 @@ public class BaseStarboardBridge {
       mCobaltServices.put(nativeService, service);
       Log.i(
           TAG,
-          String.format(
-              "Opened platform service %s [handle: 0x%x].", serviceName, nativeService));
+          String.format("Opened platform service %s [handle: 0x%x].", serviceName, nativeService));
     }
     return service;
   }
@@ -857,7 +866,8 @@ public class BaseStarboardBridge {
       return null;
     }
     CobaltService matchedService = null;
-    // Count matching instances across open handles to detect and warn if name-based lookup is ambiguous.
+    // Count matching instances across open handles to detect and warn if name-based lookup is
+    // ambiguous.
     int count = 0;
     for (CobaltService service : mCobaltServices.values()) {
       if (!serviceName.equals(service.getServiceName())) {

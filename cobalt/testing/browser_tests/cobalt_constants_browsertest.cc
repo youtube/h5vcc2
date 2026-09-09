@@ -39,8 +39,9 @@ class CobaltConstantsBrowserTest : public content::ContentBrowserTest {
     base::ScopedAllowBlockingForTesting allow_blocking;
     base::FilePath native_cache_dir;
     if (base::PathService::Get(base::DIR_CACHE, &native_cache_dir)) {
-      base::DeleteFile(native_cache_dir.Append(kMetricsConfigFilename));
-      base::DeleteFile(native_cache_dir.Append(kExperimentConfigFilename));
+      base::DeleteFile(native_cache_dir.AppendASCII(kMetricsConfigFilename));
+      base::DeleteFile(native_cache_dir.AppendASCII(kExperimentConfigFilename));
+      base::DeleteFile(native_cache_dir.AppendASCII(kVariationsBeaconFilename));
     }
     content::ContentBrowserTest::TearDown();
   }
@@ -65,9 +66,20 @@ IN_PROC_BROWSER_TEST_F(CobaltConstantsBrowserTest,
 
   EXPECT_EQ(native_cache_dir.value(), java_cache_dir);
 
+  base::FilePath metrics_file =
+      native_cache_dir.AppendASCII(kMetricsConfigFilename);
+  base::FilePath experiment_file =
+      native_cache_dir.AppendASCII(kExperimentConfigFilename);
+  base::FilePath beacon_file =
+      native_cache_dir.AppendASCII(kVariationsBeaconFilename);
+
+  // Clean up any existing files first to avoid test pollution.
+  base::DeleteFile(metrics_file);
+  base::DeleteFile(experiment_file);
+  base::DeleteFile(beacon_file);
+
   // 2. Native writes to kMetricsConfigFilename ("Metrics Config") in
   // base::DIR_CACHE.
-  base::FilePath metrics_file = native_cache_dir.Append(kMetricsConfigFilename);
   const std::string kMetricsPayload = "{\"variations_crash_streak\": 3}";
   ASSERT_TRUE(base::WriteFile(metrics_file, kMetricsPayload));
 
@@ -85,8 +97,6 @@ IN_PROC_BROWSER_TEST_F(CobaltConstantsBrowserTest,
 
   // 4. Native writes to kExperimentConfigFilename ("Experiment Config") in
   // base::DIR_CACHE.
-  base::FilePath experiment_file =
-      native_cache_dir.Append(kExperimentConfigFilename);
   const std::string kExperimentPayload =
       "{\"finch_parameters\": {\"crash_streak_empty_config_threshold\": 5}}";
   ASSERT_TRUE(base::WriteFile(experiment_file, kExperimentPayload));
@@ -103,6 +113,25 @@ IN_PROC_BROWSER_TEST_F(CobaltConstantsBrowserTest,
   std::string read_experiment_str =
       base::android::ConvertJavaStringToUTF8(env, read_experiment_content);
   EXPECT_EQ(kExperimentPayload, read_experiment_str);
+
+  // 6. Native writes to kVariationsBeaconFilename ("Variations") in
+  // base::DIR_CACHE.
+  const std::string kBeaconPayload =
+      "{\"variations_crash_streak\": 2, "
+      "\"user_experience_metrics.stability.exited_cleanly\": false}";
+  ASSERT_TRUE(base::WriteFile(beacon_file, kBeaconPayload));
+
+  // 7. Java reads the file using Java's
+  // CobaltPrefNames.VARIATIONS_BEACON_FILENAME.
+  base::android::ScopedJavaLocalRef<jstring> beacon_filename_java =
+      Java_CobaltPrefNamesTestHelper_getVariationsBeaconFilename(env);
+  base::android::ScopedJavaLocalRef<jstring> read_beacon_content =
+      Java_CobaltPrefNamesTestHelper_readCacheFile(env, beacon_filename_java);
+  ASSERT_TRUE(read_beacon_content);
+
+  std::string read_beacon_str =
+      base::android::ConvertJavaStringToUTF8(env, read_beacon_content);
+  EXPECT_EQ(kBeaconPayload, read_beacon_str);
 }
 #endif  // BUILDFLAG(IS_ANDROID)
 

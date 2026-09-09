@@ -1,50 +1,8 @@
 #include "stdio_impl.h"
 #include <sys/uio.h>
 
-#if defined(STARBOARD)
-#include <unistd.h>
-
-#include "starboard/log.h"
-#endif  // defined(STARBOARD)
-
 size_t __stdio_write(FILE *f, const unsigned char *buf, size_t len)
 {
-#if defined(STARBOARD)
-	// Starboard routes stdout/stderr through SbLogRaw so that platforms that
-	// handle them specially (e.g. Android logcat) don't miss any output.
-	if (f->fd == STDOUT_FILENO || f->fd == STDERR_FILENO) {
-		// Two spans to drain, in write order: the bytes already pending in
-		// the stream's own buffer (f->wbase..f->wpos) from earlier writes,
-		// then the newly written data (buf/len).
-		const unsigned char *spans[2] = {f->wbase, buf};
-		size_t span_lens[2] = {f->wpos - f->wbase, len};
-		// Accumulate into a fixed on-stack buffer and flush a line at a time, to
-		// avoid truncation. One byte is kept for the NUL.
-		char line[4096];
-		size_t n = 0;
-		for (size_t i = 0; i < sizeof(spans) / sizeof(spans[0]); i++) {
-			const unsigned char *p = spans[i];
-			for (size_t j = 0; j < span_lens[i]; j++) {
-				line[n++] = p[j];
-				// Flush at a newline or when the buffer is full.
-				if (p[j] == '\n' || n == sizeof line - 1) {
-					line[n] = '\0';
-					SbLogRaw(line);
-					n = 0;
-				}
-			}
-		}
-		// Flush a trailing partial line that had no terminating newline.
-		if (n) {
-			line[n] = '\0';
-			SbLogRaw(line);
-		}
-		f->wend = f->buf + f->buf_size;
-		f->wpos = f->wbase = f->buf;
-		return len;
-	}
-#endif  // defined(STARBOARD)
-
 	struct iovec iovs[2] = {
 		{ .iov_base = f->wbase, .iov_len = f->wpos-f->wbase },
 		{ .iov_base = (void *)buf, .iov_len = len }

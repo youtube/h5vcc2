@@ -13,6 +13,7 @@
     "PrivacySandboxDisabledBrowserTest.VerifyPrivacySandboxApisDisabled",
     "PrivacySandboxDisabledBrowserTest.FetchWithPrivateTokenParamIgnored",
     "PrivacySandboxDisabledBrowserTest.FedCmAndCredentialApisNotExposed",
+    "ExperimentConfigBrowserTest.NavigationWithExperimentConfig",
     "H5vccSchemeURLLoaderFactoryBrowserTest.*",
     "H5vccSchemeURLLoaderFactoryCacheBrowserTest.*",
     "H5vccRuntimeBrowserTest.*",

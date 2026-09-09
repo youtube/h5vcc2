@@ -72,6 +72,7 @@ generate_jni("jni_headers") {
     "apk/app/src/main/java/dev/cobalt/media/VideoSurfaceView.java",
     "apk/app/src/main/java/dev/cobalt/util/CobaltPrefNamesTestHelper.java",
     "apk/app/src/main/java/dev/cobalt/util/DisplayUtil.java",
+    "apk/app/src/main/java/dev/cobalt/util/JavaSwitches.java",
   ]
 
   if (!use_evergreen) {

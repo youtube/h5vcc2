@@ -218,6 +218,7 @@ test("cobalt_browsertests") {
   sources = [
     # TODO(b/458665232): restore browser tests in M138.
     "//cobalt/browser/cache_storage_browsertest.cc",
+    "//cobalt/browser/experiments/experiment_config_browsertest.cc",
     "//cobalt/browser/h5vcc_memory_browsertest.cc",
     "//cobalt/browser/h5vcc_runtime_browsertest.cc",
     "//cobalt/browser/h5vcc_system_browsertest.cc",
@@ -424,6 +425,7 @@ test("cobalt_browsertests") {
   if (is_android) {
     deps += [
       ":content_browsertests_java",
+      "//cobalt/android:jni_headers",
       "//cobalt/shell:cobalt_shell_app",
       "//cobalt/shell/android:cobalt_shell_assets",
       "//cobalt/shell/android:cobalt_shell_java_resources",

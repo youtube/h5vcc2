@@ -22,7 +22,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import android.app.Activity;
 import android.app.Service;
@@ -341,7 +340,8 @@ public class BaseStarboardBridgeTest {
     assertEquals(surface2, bridge.getVideoSurface());
     verify(mockVideoNatives).onVideoSurfaceChanged(surface2);
 
-    // When coordination is disabled (legacy), destroying surface1 resets surface and notifies JNI null
+    // When coordination is disabled (legacy), destroying surface1 resets surface and notifies JNI
+    // null
     bridge.onVideoSurfaceDestroyed(surface1);
     assertNull(bridge.getVideoSurface());
     verify(mockVideoNatives).onVideoSurfaceChanged(null);
@@ -375,7 +375,8 @@ public class BaseStarboardBridgeTest {
     bridge.onActivityStart(act2);
     assertEquals(2, service.startOrResumeCount);
 
-    // When coordination is disabled, stopping act1 immediately calls beforeSuspend even though act2 is active
+    // When coordination is disabled, stopping act1 immediately calls beforeSuspend even though act2
+    // is active
     bridge.onActivityStop(act1);
     assertEquals(1, service.suspendCount);
 

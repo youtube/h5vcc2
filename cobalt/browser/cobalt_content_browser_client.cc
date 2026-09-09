@@ -460,6 +460,12 @@ void CobaltContentBrowserClient::ConfigureNetworkContextParams(
   network_context_params->sct_auditing_mode =
       network::mojom::SCTAuditingMode::kDisabled;
 
+  // Avoid closing idle HTTP/2 sessions on memory pressure signals. On resource-
+  // constrained TV hardware, PartitionAlloc memory compaction cycles repeatedly
+  // trigger memory pressure, which otherwise results in high connection churn
+  // and aborted session spikes (ERR_ABORTED).
+  network_context_params->disable_idle_sockets_close_on_memory_pressure = true;
+
   // All consumers of the main NetworkContext must provide
   // NetworkAnonymizationKey / IsolationInfos, so storage can be isolated on a
   // per-site basis.

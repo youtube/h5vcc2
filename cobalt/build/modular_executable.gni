@@ -137,6 +137,10 @@ template("evergreen_final_target") {
       if (_is_aosp && filter_include([ original_target_name ],
                                      _failing_android_targets) == []) {
         data_deps += [ ":${original_target_name}_apk($starboard_toolchain)" ]
+
+        if (defined(invoker.testonly) && invoker.testonly) {
+          data_deps += [ ":${original_target_name}__test_runner_script($starboard_toolchain)" ]
+        }
       }
 
       write_runtime_deps = "$root_build_dir/${target_name}.runtime_deps"
