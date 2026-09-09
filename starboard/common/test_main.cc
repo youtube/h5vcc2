@@ -41,12 +41,16 @@ int InitAndRunAllTests(int argc, char** argv) {
   bool has_cache_dir = SbSystemGetPath(kSbSystemPathCacheDirectory, cache_dir,
                                        sizeof(cache_dir));
 
+  const char kGTestOutputPrefix[] = "--gtest_output=xml:";
+  const size_t kGTestOutputPrefixLen = sizeof(kGTestOutputPrefix) - 1;
+
   for (int i = 0; i < argc; ++i) {
     std::string arg(argv[i]);
-    if (has_cache_dir && arg.rfind("--gtest_output=xml:", 0) == 0) {
-      std::string file_path = arg.substr(19);
+    if (has_cache_dir &&
+        arg.compare(0, kGTestOutputPrefixLen, kGTestOutputPrefix) == 0) {
+      std::string file_path = arg.substr(kGTestOutputPrefixLen);
       if (!file_path.empty() && file_path[0] != '/') {
-        arg = "--gtest_output=xml:" + std::string(cache_dir) + "/" + file_path;
+        arg = kGTestOutputPrefix + std::string(cache_dir) + "/" + file_path;
       }
     }
     arg_strings.push_back(arg);
