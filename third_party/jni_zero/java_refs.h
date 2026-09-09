@@ -9,7 +9,9 @@
 
 #include <jni.h>
 
+#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 #include <concepts>
+#endif
 #include <cstddef>
 #include <type_traits>
 #include <utility>
@@ -17,7 +19,9 @@
 #include "third_party/jni_zero/jni_export.h"
 #include "third_party/jni_zero/logging.h"
 
-#if !defined(JNI_ZERO_ENABLE_COMPAT_API) && defined(WEBRTC_ANDROID)
+#if !defined(JNI_ZERO_ENABLE_COMPAT_API) && \
+    (defined(WEBRTC_ANDROID) || defined(ENABLE_BUILDFLAG_IS_COBALT) || \
+     defined(COBALT))
 #define JNI_ZERO_ENABLE_COMPAT_API 1
 #else
 #define JNI_ZERO_ENABLE_COMPAT_API 0
@@ -26,9 +30,11 @@
 namespace jni_zero {
 
 namespace internal {
+#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 template <typename T>
 concept IsJobject =
     std::derived_from<std::remove_pointer_t<T>, std::remove_pointer_t<jobject>>;
+#endif
 }
 
 // Creates a new local reference frame, in which at least a given number of
@@ -52,7 +58,9 @@ class JNI_ZERO_COMPONENT_BUILD_EXPORT ScopedJavaLocalFrame {
 
 // Forward declare the generic java reference template class.
 template <typename T = jobject>
+#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
   requires internal::IsJobject<T>
+#endif
 class JavaRef;
 
 // Template specialization of JavaRef, which acts as the base class for all
@@ -138,7 +146,9 @@ class JavaObjectArrayReader;
 // for allowing functions to accept a reference without having to mandate
 // whether it is a local or global type.
 template <typename T>
+#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
   requires internal::IsJobject<T>
+#endif
 class JavaRef : public JavaRef<jobject> {
  public:
   constexpr JavaRef() {}

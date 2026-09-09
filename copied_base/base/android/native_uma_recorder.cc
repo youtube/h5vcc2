@@ -51,7 +51,7 @@ static HistogramBase* HistogramFromHint(jlong j_histogram_hint) {
 }
 
 void CheckHistogramArgs(JNIEnv* env,
-                        jstring j_histogram_name,
+                        const JavaRef<jstring>& j_histogram_name,
                         int32_t expected_min,
                         int32_t expected_max,
                         size_t expected_bucket_count,
@@ -68,7 +68,7 @@ void CheckHistogramArgs(JNIEnv* env,
 }
 
 HistogramBase* BooleanHistogram(JNIEnv* env,
-                                jstring j_histogram_name,
+                                const JavaRef<jstring>& j_histogram_name,
                                 jlong j_histogram_hint) {
   DCHECK(j_histogram_name);
   HistogramBase* histogram = HistogramFromHint(j_histogram_hint);
@@ -82,7 +82,7 @@ HistogramBase* BooleanHistogram(JNIEnv* env,
 }
 
 HistogramBase* ExponentialHistogram(JNIEnv* env,
-                                    jstring j_histogram_name,
+                                    const JavaRef<jstring>& j_histogram_name,
                                     jlong j_histogram_hint,
                                     jint j_min,
                                     jint j_max,
@@ -106,7 +106,7 @@ HistogramBase* ExponentialHistogram(JNIEnv* env,
 }
 
 HistogramBase* LinearHistogram(JNIEnv* env,
-                               jstring j_histogram_name,
+                               const JavaRef<jstring>& j_histogram_name,
                                jlong j_histogram_hint,
                                jint j_min,
                                jint j_max,
@@ -129,7 +129,7 @@ HistogramBase* LinearHistogram(JNIEnv* env,
 }
 
 HistogramBase* SparseHistogram(JNIEnv* env,
-                               jstring j_histogram_name,
+                               const JavaRef<jstring>& j_histogram_name,
                                jlong j_histogram_hint) {
   DCHECK(j_histogram_name);
   HistogramBase* histogram = HistogramFromHint(j_histogram_hint);

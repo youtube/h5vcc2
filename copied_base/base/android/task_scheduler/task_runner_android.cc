@@ -87,7 +87,7 @@ void TaskRunnerAndroid::PostDelayedTask(
     JNIEnv* env,
     const base::android::JavaRef<jobject>& task,
     jlong delay,
-    jstring runnable_class_name) {
+    const base::android::JavaRef<jstring>& runnable_class_name) {
   // This could be run on any java thread, so we can't cache |env| in the
   // BindOnce because JNIEnv is thread specific.
   task_runner_->PostDelayedTask(

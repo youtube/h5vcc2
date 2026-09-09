@@ -19,6 +19,9 @@ namespace android {
 BASE_EXPORT void ConvertJavaStringToUTF8(JNIEnv* env,
                                          jstring str,
                                          std::string* result);
+BASE_EXPORT void ConvertJavaStringToUTF8(JNIEnv* env,
+                                         const JavaRef<jstring>& str,
+                                         std::string* result);
 BASE_EXPORT std::string ConvertJavaStringToUTF8(JNIEnv* env, jstring str);
 BASE_EXPORT std::string ConvertJavaStringToUTF8(const JavaRef<jstring>& str);
 BASE_EXPORT std::string ConvertJavaStringToUTF8(JNIEnv* env,
@@ -32,6 +35,9 @@ BASE_EXPORT ScopedJavaLocalRef<jstring> ConvertUTF8ToJavaString(
 // Convert a Java string to UTF16. Returns a std::u16string.
 BASE_EXPORT void ConvertJavaStringToUTF16(JNIEnv* env,
                                           jstring str,
+                                          std::u16string* result);
+BASE_EXPORT void ConvertJavaStringToUTF16(JNIEnv* env,
+                                          const JavaRef<jstring>& str,
                                           std::u16string* result);
 BASE_EXPORT std::u16string ConvertJavaStringToUTF16(JNIEnv* env, jstring str);
 BASE_EXPORT std::u16string ConvertJavaStringToUTF16(

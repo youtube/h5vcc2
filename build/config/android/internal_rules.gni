@@ -273,7 +273,6 @@ template("write_build_config") {
         }
       }
     }
-    _inputs += _deps_configs
     if (defined(invoker.possible_config_public_deps)) {
       _public_deps_configs = []
       foreach(_possible_dep, invoker.possible_config_public_deps) {

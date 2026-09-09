@@ -49,6 +49,12 @@ void ConvertJavaStringToUTF8(JNIEnv* env, jstring str, std::string* result) {
   CheckException(env);
 }
 
+void ConvertJavaStringToUTF8(JNIEnv* env,
+                             const JavaRef<jstring>& str,
+                             std::string* result) {
+  ConvertJavaStringToUTF8(env, str.obj(), result);
+}
+
 std::string ConvertJavaStringToUTF8(JNIEnv* env, jstring str) {
   std::string result;
   ConvertJavaStringToUTF8(env, str, &result);
@@ -99,6 +105,12 @@ void ConvertJavaStringToUTF16(JNIEnv* env,
                  static_cast<size_t>(length));
   env->ReleaseStringChars(str, chars);
   CheckException(env);
+}
+
+void ConvertJavaStringToUTF16(JNIEnv* env,
+                              const JavaRef<jstring>& str,
+                              std::u16string* result) {
+  ConvertJavaStringToUTF16(env, str.obj(), result);
 }
 
 std::u16string ConvertJavaStringToUTF16(JNIEnv* env, jstring str) {

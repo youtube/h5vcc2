@@ -91,7 +91,7 @@ runs:
         PLATFORM: ${{ matrix.platform }}
       run: |
         if ! grep -q "target_os" .gclient; then
-          if [[ "${PLATFORM}" == *"android"* ]]; then
+          if [[ "${PLATFORM}" == *"android"* ]] || [[ "${PLATFORM}" == *"aosp"* ]]; then
             echo "target_os=['android']" >> .gclient
           elif [[ "${PLATFORM}" == *"tvos"* ]]; then
             echo "target_os=['ios']" >> .gclient
@@ -108,7 +108,7 @@ runs:
         if ! grep -q "target_cpu" .gclient; then
           if [[ "${PLATFORM}" == *"evergreen-arm64"* ]]; then
             echo "target_cpu=['x64', 'arm64']" >> .gclient
-          elif [[ "${PLATFORM}" == *"evergreen-arm"* ]]; then
+          elif [[ "${PLATFORM}" == *"evergreen-arm"* ]] || [[ "${PLATFORM}" == *"aosp-arm"* ]]; then
             echo "target_cpu=['x64', 'arm']" >> .gclient
           fi
         fi

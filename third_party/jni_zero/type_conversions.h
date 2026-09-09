@@ -71,6 +71,9 @@ concept HasSpecificSpecialization = requires(T t) {
   requires IsMap<T> || IsObjectContainer<T> || IsOptional<T> ||
                IsPrimitive<T> || IsJavaRef<T>;
 };
+#else
+template <typename T>
+inline constexpr bool IsJavaRef = std::is_base_of_v<JavaRef<jobject>, T>;
 #endif
 
 // Used to allow for the c++ type to be non-primitive even if the java type is
@@ -131,6 +134,7 @@ inline ScopedJavaLocalRef<jobject> ToJniType(JNIEnv* env, T obj) {
 }
 #endif
 
+#if defined(__cpp_concepts) && __cpp_concepts >= 201907L
 template <typename T>
   requires(internal::IsJavaRef<T>)
 inline ScopedJavaLocalRef<jobject> ToJniType(JNIEnv* env, const T& val) {
@@ -138,6 +142,13 @@ inline ScopedJavaLocalRef<jobject> ToJniType(JNIEnv* env, const T& val) {
   // for catching coding errors?
   static_assert(sizeof(T) == 0, "Type does not require conversion.");
 }
+#else
+template <typename T,
+          std::enable_if_t<internal::IsJavaRef<T>, int> = 0>
+inline ScopedJavaLocalRef<jobject> ToJniType(JNIEnv* env, const T& val) {
+  static_assert(sizeof(T) == 0, "Type does not require conversion.");
+}
+#endif
 
 // Allow conversions using pointers by wrapping non-pointer conversions.
 // Cannot live in default_conversions.h because we want code to be able to

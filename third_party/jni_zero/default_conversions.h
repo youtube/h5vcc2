@@ -149,7 +149,7 @@ inline ScopedJavaLocalRef<jobjectArray> ToJniArray(
     }
     ++i;
   }
-  return ScopedJavaLocalRef<jobjectArray>(env, j_array);
+  return ScopedJavaLocalRef<jobjectArray>::Adopt(env, j_array);
 }
 #endif
 
