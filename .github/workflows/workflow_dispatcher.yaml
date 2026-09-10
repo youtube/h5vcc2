@@ -49,65 +49,28 @@ jobs:
               pr = prResponse.data;
             }
 
-            // TODO: Use commit status from the ci_shepherd to determine which workflows to restart instead.
-            const logicalWorkflows = ['android', 'aosp', 'evergreen', 'linux', 'tvos'];
-
-            // Get list of workflow files in the base branch
-            const { data: fileList } = await github.rest.repos.getContent({
+            const runsResponse = await github.rest.actions.listWorkflowRunsForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              path: '.github/workflows',
-              ref: pr.base.ref
+              head_sha: pr.head.sha,
+              event: 'pull_request'
             });
 
-            const workflowFiles = fileList.map(f => f.name);
+            const targetPatterns = (labelName === 'kokoro:run' || labelName === 'kokoro:force-run')
+              ? ['tvos']
+              : ['android', 'aosp', 'evergreen', 'linux', 'tvos', 'raspi', 'gradle', 'pytest', 'stub', 'win32', 'xb1'];
 
-            // Map logical workflows to actual filenames present in the branch
-            const actualWorkflows = [];
-            for (const logical of logicalWorkflows) {
-              const match = workflowFiles.find(name =>
-                name === `${logical}.yaml` ||
-                name === `${logical}.yml` ||
-                (name.startsWith(`${logical}_`) && (name.endsWith('.yaml') || name.endsWith('.yml')))
-              );
-              if (match) {
-                actualWorkflows.push(match);
-              }
-            }
+            const targetRuns = runsResponse.data.workflow_runs.filter(run =>
+              targetPatterns.some(pattern => run.path.includes(pattern))
+            );
 
-            console.log(`Found actual workflows in branch ${pr.base.ref}:`, actualWorkflows);
+            console.log(`Triggering workflows for label ${labelName}:`, targetRuns.map(r => `${r.name} (${r.path})`));
 
-            let workflowsToTrigger = [];
-            if (labelName === 'kokoro:run' || labelName === 'kokoro:force-run') {
-              const tvosWorkflow = actualWorkflows.find(name => name.startsWith('tvos'));
-              if (tvosWorkflow) {
-                workflowsToTrigger = [tvosWorkflow];
-              }
-            } else {
-              workflowsToTrigger = actualWorkflows;
-            }
-
-            console.log(`Triggering workflows for label ${labelName}:`, workflowsToTrigger);
-
-            await Promise.all(workflowsToTrigger.map(async (workflow) => {
+            await Promise.all(targetRuns.map(async (latestRun) => {
               try {
-                const runs = await github.rest.actions.listWorkflowRuns({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  workflow_id: workflow,
-                  head_sha: pr.head.sha,
-                  event: 'pull_request'
-                });
-
-                if (runs.data.workflow_runs.length === 0) {
-                  return;
-                }
-
-                const latestRun = runs.data.workflow_runs[0];
-
                 // If the workflow is currently running or queued, cancel it first so it can be re-run
                 if (latestRun.status !== 'completed') {
-                  console.log(`Run ${latestRun.id} for ${workflow} is currently ${latestRun.status}. Cancelling...`);
+                  console.log(`Run ${latestRun.id} for ${latestRun.name} (${latestRun.path}) is currently ${latestRun.status}. Cancelling...`);
                   try {
                     await github.rest.actions.cancelWorkflowRun({
                       owner: context.repo.owner,
@@ -115,7 +78,7 @@ jobs:
                       run_id: latestRun.id
                     });
                   } catch (cancelError) {
-                    console.log(`Cancel request note for ${workflow}:`, cancelError.message);
+                    console.log(`Cancel request note for ${latestRun.name} (${latestRun.path}):`, cancelError.message);
                   }
 
                   // Wait for run to reach 'completed' status before attempting to rerun
@@ -127,21 +90,21 @@ jobs:
                       run_id: latestRun.id
                     });
                     if (checkRun.data.status === 'completed') {
-                      console.log(`Run ${latestRun.id} for ${workflow} reached completed status (${checkRun.data.conclusion}).`);
+                      console.log(`Run ${latestRun.id} for ${latestRun.name} reached completed status (${checkRun.data.conclusion}).`);
                       break;
                     }
                   }
                 }
 
-                console.log(`Rerunning ${workflow} (run ${latestRun.id})...`);
+                console.log(`Rerunning ${latestRun.name} (${latestRun.path}) (run ${latestRun.id})...`);
                 await github.rest.actions.reRunWorkflow({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   run_id: latestRun.id
                 });
-                console.log(`Successfully triggered rerun for ${workflow} (run ${latestRun.id})!`);
+                console.log(`Successfully triggered rerun for ${latestRun.name} (${latestRun.path}) (run ${latestRun.id})!`);
               } catch (error) {
-                console.error(`Failed to rerun ${workflow}:`, error);
+                console.error(`Failed to rerun ${latestRun.name} (${latestRun.path}):`, error);
               }
             }));
 
