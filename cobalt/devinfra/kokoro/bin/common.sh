@@ -90,17 +90,17 @@ get_registry_bucket_path () {
 }
 
 init_gcloud () {
-  # Check if gsutil is pre-installed on Kokoro windows container.
-  local gsutil_win="c:/gcloud-sdk/google-cloud-sdk/bin/gsutil.cmd"
-  if [[ -f "${gsutil_win}" ]]; then
-    export GSUTIL="${gsutil_win}"
+  # Check if gcloud is pre-installed on Kokoro windows container.
+  local gcloud_win="c:/gcloud-sdk/google-cloud-sdk/bin/gcloud.cmd"
+  if [[ -f "${gcloud_win}" ]]; then
+    export GCLOUD="${gcloud_win}"
     return
   fi
 
-  local gsutil="$(command -v gsutil)"
+  local gcloud="$(command -v gcloud)"
 
   # Installs Google Cloud CLI if not already present.
-  if [[ ! -f "${gsutil}" ]]; then
+  if [[ ! -f "${gcloud}" ]]; then
     apt-get update -y
     apt-get install -y apt-transport-https ca-certificates gnupg
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
@@ -112,10 +112,10 @@ init_gcloud () {
     rm -rf "/var/lib/apt/lists"/* "/tmp"/* "/var/tmp"/*
     rm -rf "/var/lib"/{apt,dpkg,cache,log}
 
-    gsutil="$(command -v gsutil)"
+    gcloud="$(command -v gcloud)"
   fi
 
-  export GSUTIL="${gsutil}"
+  export GCLOUD="${gcloud}"
 }
 
 
@@ -225,6 +225,6 @@ run_package_release_pipeline () {
     init_gcloud
     # Ensure that only package directory contents are uploaded and not the
     # directory itself.
-    "${GSUTIL}" cp -r "${package_dir}/." "${gcs_archive_path}"
+    "${GCLOUD}" storage cp --recursive "${package_dir}/." "${gcs_archive_path}"
   fi
 }
