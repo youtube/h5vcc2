@@ -52,7 +52,7 @@ interface CobaltPerformance {
 
   // Get the amount of virtual memory that has been swapped out to disk in bytes.
   [Sync]
-  MeasureUsedSwapMemory() => (uint64 bytes);
+  MeasureUsedSwapMemory() => (uint64? bytes);
 
   // Get the amount of virtual memory currently allocated to the process in bytes.
   [Sync]

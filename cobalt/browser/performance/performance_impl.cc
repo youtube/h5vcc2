@@ -195,19 +195,20 @@ void PerformanceImpl::MeasureUsedCpuMemory(
 void PerformanceImpl::MeasureUsedSwapMemory(
     MeasureUsedSwapMemoryCallback callback) {
 #if BUILDFLAG(IS_IOS_TVOS)
-  // TODO: b/497682329 - vm_swap_bytes does not exist on tvOS.
-  std::move(callback).Run(0);
+  // vm_swap_bytes does not exist on tvOS.
+  std::move(callback).Run(std::nullopt);
 #else
   base::ThreadPool::PostTaskAndReplyWithResult(
       FROM_HERE, {base::MayBlock(), base::TaskPriority::USER_VISIBLE},
-      base::BindOnce([]() -> uint64_t {
+      base::BindOnce([]() -> std::optional<uint64_t> {
         auto process_metrics = base::ProcessMetrics::CreateProcessMetrics(
             base::GetCurrentProcessHandle());
         if (!process_metrics) {
-          return 0;
+          return std::nullopt;
         }
         auto info = process_metrics->GetMemoryInfo();
-        return info.has_value() ? info->vm_swap_bytes : 0;
+        return info.has_value() ? std::make_optional(info->vm_swap_bytes)
+                                : std::nullopt;
       }),
       std::move(callback));
 #endif  // BUILDFLAG(IS_IOS_TVOS)

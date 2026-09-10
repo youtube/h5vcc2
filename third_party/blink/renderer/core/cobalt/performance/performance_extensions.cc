@@ -119,9 +119,9 @@ uint64_t PerformanceExtensions::measureUsedCpuMemory(
 
 uint64_t PerformanceExtensions::measureUsedSwapMemory(ScriptState* script_state,
                                                       const Performance&) {
-  uint64_t used_swap_memory = 0;
+  std::optional<uint64_t> used_swap_memory = std::nullopt;
   BindRemotePerformance(script_state)->MeasureUsedSwapMemory(&used_swap_memory);
-  return used_swap_memory;
+  return used_swap_memory.value_or(0);
 }
 
 uint64_t PerformanceExtensions::measureReservedVirtualMemory(
