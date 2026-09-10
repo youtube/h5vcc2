@@ -49,11 +49,19 @@ void StarboardGpuFactoryImpl::Initialize(base::UnguessableToken channel_token,
                                          int32_t route_id,
                                          base::OnceClosure callback) {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  // Unbind destruction observer from previous |stub_| if re-initializing on an
+  // existing instance.
+  if (stub_) {
+    stub_->RemoveDestructionObserver(this);
+    stub_ = nullptr;
+  }
   stub_ = get_stub_cb_.Run(channel_token, route_id);
   if (stub_) {
     stub_->AddDestructionObserver(this);
   }
-  std::move(callback).Run();
+  if (callback) {
+    std::move(callback).Run();
+  }
 }
 
 void StarboardGpuFactoryImpl::RunSbDecodeTargetFunctionOnGpu(

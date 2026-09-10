@@ -334,6 +334,23 @@ void StarboardRendererWrapper::OnGpuChannelTokenReady(
     mojom::CommandBufferIdPtr command_buffer_id) {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   command_buffer_id_ = std::move(command_buffer_id);
+
+  // Clear cached shared image and texture service IDs from previous context.
+  current_shared_image_ = nullptr;
+  last_texture_service_ids_.clear();
+
+  // Forward token updates (e.g. after sleep/wake context loss) to update
+  // |stub_| on the GPU thread.
+  base::UnguessableToken channel_token;
+  int32_t route_id = 0;
+  if (command_buffer_id_) {
+    channel_token = command_buffer_id_->channel_token;
+    route_id = command_buffer_id_->route_id;
+  }
+
+  GetGpuFactory()
+      ->AsyncCall(&StarboardGpuFactory::Initialize)
+      .WithArgs(std::move(channel_token), route_id, base::NullCallback());
 }
 
 void StarboardRendererWrapper::GetCurrentVideoFrame(

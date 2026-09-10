@@ -57,6 +57,8 @@ class MEDIA_EXPORT StarboardRendererClient
  public:
   using RendererExtension = mojom::StarboardRendererExtension;
   using ClientExtension = media::mojom::StarboardRendererClientExtension;
+  using GetGpuFactoriesCB =
+      base::RepeatingCallback<GpuVideoAcceleratorFactories*()>;
 
   StarboardRendererClient(
       const scoped_refptr<base::SequencedTaskRunner>& media_task_runner,
@@ -73,7 +75,8 @@ class MEDIA_EXPORT StarboardRendererClient
       RequestOverlayInfoCB request_overlay_info_cb
 #endif  // BUILDFLAG(IS_ANDROID)
       ,
-      bool bypass_mojo_for_media = false);
+      bool bypass_mojo_for_media = false,
+      GetGpuFactoriesCB get_gpu_factories_cb = GetGpuFactoriesCB());
 
   StarboardRendererClient(const StarboardRendererClient&) = delete;
   StarboardRendererClient& operator=(const StarboardRendererClient&) = delete;
@@ -170,6 +173,7 @@ class MEDIA_EXPORT StarboardRendererClient
   mojo::Receiver<ClientExtension> client_extension_receiver_;
   const GetSbWindowHandleCallback get_sb_window_handle_callback_;
   raw_ptr<GpuVideoAcceleratorFactories> gpu_factories_ = nullptr;
+  GetGpuFactoriesCB get_gpu_factories_cb_;
 #if BUILDFLAG(IS_ANDROID)
   RequestOverlayInfoCB request_overlay_info_cb_;
 #endif  // BUILDFLAG(IS_ANDROID)
@@ -203,6 +207,8 @@ class MEDIA_EXPORT StarboardRendererClient
   // NOTE: Do not add member variables after weak_factory_
   // It should be the first one destroyed among all members.
   // See base/memory/weak_ptr.h.
+  base::WeakPtrFactory<StarboardRendererClient> token_request_weak_factory_{
+      this};
   base::WeakPtrFactory<StarboardRendererClient> weak_factory_{this};
 };
 

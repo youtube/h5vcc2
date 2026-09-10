@@ -62,7 +62,8 @@ StarboardRendererClient::StarboardRendererClient(
     RequestOverlayInfoCB request_overlay_info_cb
 #endif  // BUILDFLAG(IS_ANDROID)
     ,
-    bool bypass_mojo_for_media)
+    bool bypass_mojo_for_media,
+    GetGpuFactoriesCB get_gpu_factories_cb)
     : MojoRendererWrapper(std::move(mojo_renderer)),
       media_task_runner_(media_task_runner),
       media_log_(std::move(media_log)),
@@ -72,7 +73,8 @@ StarboardRendererClient::StarboardRendererClient(
       pending_client_extension_receiver_(std::move(client_extension_receiver)),
       client_extension_receiver_(this),
       get_sb_window_handle_callback_(get_sb_window_handle_callback),
-      gpu_factories_(gpu_factories)
+      gpu_factories_(gpu_factories),
+      get_gpu_factories_cb_(std::move(get_gpu_factories_cb))
 #if BUILDFLAG(IS_ANDROID)
       ,
       request_overlay_info_cb_(std::move(request_overlay_info_cb))
@@ -355,8 +357,8 @@ void StarboardRendererClient::InitAndBindMojoRenderer(
   if (gpu_factories_) {
     gpu_factories_->GetChannelToken(
         base::BindOnce(&StarboardRendererClient::OnGpuChannelTokenReady,
-                       weak_factory_.GetWeakPtr(), std::move(command_buffer_id),
-                       std::move(complete_cb)));
+                       token_request_weak_factory_.GetWeakPtr(),
+                       std::move(command_buffer_id), std::move(complete_cb)));
     return;
   }
 
@@ -370,10 +372,27 @@ void StarboardRendererClient::OnGpuChannelTokenReady(
     base::OnceClosure complete_cb,
     const base::UnguessableToken& channel_token) {
   DCHECK(media_task_runner_->RunsTasksInCurrentSequence());
+
+  if (!channel_token && get_gpu_factories_cb_) {
+    GpuVideoAcceleratorFactories* fresh_factories = get_gpu_factories_cb_.Run();
+    if (fresh_factories != gpu_factories_) {
+      gpu_factories_ = fresh_factories;
+      if (gpu_factories_) {
+        token_request_weak_factory_.InvalidateWeakPtrs();
+        gpu_factories_->GetChannelToken(base::BindOnce(
+            &StarboardRendererClient::OnGpuChannelTokenReady,
+            token_request_weak_factory_.GetWeakPtr(),
+            std::move(command_buffer_id), std::move(complete_cb)));
+        return;
+      }
+    }
+  }
+
   if (channel_token) {
     command_buffer_id = mojom::CommandBufferId::New();
     command_buffer_id->channel_token = std::move(channel_token);
-    command_buffer_id->route_id = gpu_factories_->GetCommandBufferRouteId();
+    command_buffer_id->route_id =
+        gpu_factories_ ? gpu_factories_->GetCommandBufferRouteId() : 0;
   }
   InitAndConstructMojoRenderer(std::move(command_buffer_id),
                                std::move(complete_cb));

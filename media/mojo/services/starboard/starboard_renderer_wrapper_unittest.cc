@@ -137,7 +137,9 @@ class MockStarboardGpuFactory : public StarboardGpuFactory {
   void Initialize(base::UnguessableToken channel_token,
                   int32_t route_id,
                   base::OnceClosure callback) override {
-    std::move(callback).Run();
+    if (callback) {
+      std::move(callback).Run();
+    }
   }
 
   void RunSbDecodeTargetFunctionOnGpu(
