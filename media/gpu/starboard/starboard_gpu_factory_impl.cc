@@ -61,7 +61,13 @@ void StarboardGpuFactoryImpl::RunSbDecodeTargetFunctionOnGpu(
     void* target_function_context,
     base::WaitableEvent* done_event) {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-  if (MakeContextCurrent(stub_)) {
+
+  // Punch-Out playback mode decodes directly to hardware overlays rather than GL textures,
+  // so no CommandBufferStub exists (stub_ == nullptr). Standalone target functions (such as
+  // ClearNativeWindow) manage their own EGL context and do not require a CommandBufferStub.
+  const bool is_punch_out_playback = (stub_ == nullptr);
+
+  if (is_punch_out_playback || MakeContextCurrent(stub_)) {
     target_function(target_function_context);
   }
   done_event->Signal();
