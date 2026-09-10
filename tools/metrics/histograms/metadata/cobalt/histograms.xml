@@ -587,6 +587,16 @@ Always run the pretty print utility on this file after editing:
   </summary>
 </histogram>
 
+<histogram name="Cobalt.UserAgent.PreFeatureListCallCount" units="calls"
+    expires_after="never">
+  <owner>vmo@google.com</owner>
+  <summary>
+    Records the number of times GetCobaltUserAgent() was called before
+    base::FeatureList was initialized (i.e. when FeatureList::GetInstance() was
+    null). Recorded once upon FeatureList initialization.
+  </summary>
+</histogram>
+
 <histogram name="Cobalt.WebContentsObserver.FailedNavigation" enum="Boolean"
     expires_after="never">
   <owner>charleykim@google.com</owner>

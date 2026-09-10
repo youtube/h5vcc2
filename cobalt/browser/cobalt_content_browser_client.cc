@@ -14,6 +14,7 @@
 
 #include "cobalt/browser/cobalt_content_browser_client.h"
 
+#include <atomic>
 #include <string>
 
 #include "base/base_switches.h"
@@ -28,6 +29,7 @@
 #include "base/metrics/field_trial_params.h"
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
+#include "base/no_destructor.h"
 #include "base/path_service.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
@@ -201,10 +203,48 @@ static void JNI_CobaltContentBrowserClient_DispatchFocus(JNIEnv*) {
 }
 #endif  // BUILDFLAG(IS_ANDROID)
 
+namespace {
+
+struct UserAgentCache {
+  std::atomic<int> pre_feature_list_call_count{0};
+  std::atomic<bool> logged_pre_feature_count{false};
+  std::string user_agent_str;
+  bool user_agent_is_cached = false;
+};
+
+UserAgentCache& GetUserAgentCache() {
+  static base::NoDestructor<UserAgentCache> cache;
+  return *cache;
+}
+
+}  // namespace
+
 std::string GetCobaltUserAgent() {
+  auto& cache = GetUserAgentCache();
   const UserAgentPlatformInfo platform_info;
-  static const std::string user_agent_str = platform_info.ToString();
-  return user_agent_str;
+  if (base::FeatureList::GetInstance()) {
+    if (!cache.user_agent_is_cached) {
+      cache.user_agent_str = platform_info.ToString();
+      cache.user_agent_is_cached = true;
+    }
+    if (!cache.logged_pre_feature_count.exchange(true,
+                                                 std::memory_order_relaxed)) {
+      base::UmaHistogramCounts100(
+          "Cobalt.UserAgent.PreFeatureListCallCount",
+          cache.pre_feature_list_call_count.load(std::memory_order_relaxed));
+    }
+    return cache.user_agent_str;
+  }
+  cache.pre_feature_list_call_count.fetch_add(1, std::memory_order_relaxed);
+  return platform_info.ToString();
+}
+
+void ClearUserAgentCacheForTesting() {
+  auto& cache = GetUserAgentCache();
+  cache.pre_feature_list_call_count.store(0);
+  cache.logged_pre_feature_count.store(false);
+  cache.user_agent_is_cached = false;
+  cache.user_agent_str.clear();
 }
 
 blink::UserAgentMetadata GetCobaltUserAgentMetadata() {

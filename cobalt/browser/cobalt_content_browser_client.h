@@ -58,6 +58,8 @@ class CobaltWebContentsObserver;
 void ParseAndApplyH5vccSettingsForTesting(std::string_view settings_value,
                                           GlobalFeatures* global_features);
 
+void ClearUserAgentCacheForTesting();
+
 // This class allows Cobalt to inject specific logic in the business of the
 // browser (i.e. of Content), for example for startup or to override the UA.
 // TODO(b/390021478): In time CobaltContentBrowserClient should derive and
