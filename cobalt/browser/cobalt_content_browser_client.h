@@ -26,6 +26,7 @@
 #include "content/public/browser/generated_code_cache_settings.h"
 #include "mojo/public/cpp/bindings/pending_receiver.h"
 #include "starboard/window.h"
+#include "storage/browser/quota/quota_settings.h"
 
 #if BUILDFLAG(IS_STARBOARD)
 #include "ui/ozone/platform/starboard/platform_window_starboard.h"
@@ -43,6 +44,10 @@ class WebContents;
 namespace metrics_services_manager {
 class MetricsServicesManager;
 }  // namespace metrics_services_manager
+
+namespace storage {
+class QuotaDeviceInfoHelper;
+}  // namespace storage
 
 namespace mojo {
 template <typename>
@@ -107,6 +112,15 @@ class CobaltContentBrowserClient : public content::ShellContentBrowserClient {
       network::mojom::NetworkContextParams* network_context_params,
       cert_verifier::mojom::CertVerifierCreationParams*
           cert_verifier_creation_params) override;
+  void GetCacheQuotaSettings(
+      content::BrowserContext* browser_context,
+      const base::FilePath& cache_path,
+      ::storage::OptionalQuotaSettingsCallback callback) override;
+
+  static std::optional<::storage::QuotaSettings>
+  CalculateCacheQuotaSettingsForTesting(
+      const base::FilePath& cache_path,
+      ::storage::QuotaDeviceInfoHelper* device_info_helper);
   void OverrideWebPreferences(content::WebContents* web_contents,
                               content::SiteInstance& main_frame_site,
                               blink::web_pref::WebPreferences* prefs) override;

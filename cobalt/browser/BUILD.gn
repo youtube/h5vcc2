@@ -111,6 +111,7 @@ source_set("browser") {
     "//components/viz/common",
     "//services/resource_coordinator/public/cpp/memory_instrumentation",
     "//starboard:starboard_group",
+    "//storage/browser",
   ]
 
   if (!cobalt_is_release_build) {

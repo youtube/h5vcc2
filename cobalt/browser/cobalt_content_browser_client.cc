@@ -14,6 +14,7 @@
 
 #include "cobalt/browser/cobalt_content_browser_client.h"
 
+#include <algorithm>
 #include <string>
 
 #include "base/base_switches.h"
@@ -33,6 +34,8 @@
 #include "base/strings/string_split.h"
 #include "base/strings/string_util.h"
 #include "base/strings/utf_string_conversions.h"
+#include "base/task/thread_pool.h"
+#include "base/threading/scoped_blocking_call.h"
 #include "base/time/time.h"
 #include "base/timer/elapsed_timer.h"
 #include "cobalt/browser/cobalt_browser_interface_binders.h"
@@ -78,6 +81,10 @@
 #include "services/network/public/cpp/features.h"
 #include "services/network/public/mojom/network_context.mojom.h"
 #include "services/service_manager/public/cpp/binder_registry.h"
+#include "starboard/configuration_constants.h"
+#include "storage/browser/quota/quota_device_info_helper.h"
+#include "storage/browser/quota/quota_features.h"
+#include "storage/browser/quota/quota_settings.h"
 #include "third_party/blink/public/common/associated_interfaces/associated_interface_registry.h"
 #include "third_party/blink/public/common/web_preferences/web_preferences.h"
 
@@ -223,6 +230,52 @@ blink::UserAgentMetadata GetCobaltUserAgentMetadata() {
   metadata.wow64 = embedder_support::IsWoW64();
 
   return metadata;
+}
+
+std::optional<storage::QuotaSettings> CalculateCobaltCacheQuotaSettings(
+    const base::FilePath& cache_path,
+    storage::QuotaDeviceInfoHelper* device_info_helper) {
+  base::ScopedBlockingCall scoped_blocking_call(FROM_HERE,
+                                                base::BlockingType::MAY_BLOCK);
+
+  int64_t total = device_info_helper->AmountOfTotalDiskSpace(cache_path);
+  if (total <= 0) {
+    LOG(ERROR) << "Unable to compute QuotaSettings for cache path: "
+               << cache_path;
+    return std::nullopt;
+  }
+
+  int64_t pool_size = total;
+  if (kSbMaxSystemPathCacheDirectorySize > 0) {
+    pool_size = std::min(
+        pool_size, static_cast<int64_t>(kSbMaxSystemPathCacheDirectorySize));
+  }
+
+  const int64_t kMustRemainAvailableFixed =
+      static_cast<int64_t>(storage::features::kMustRemainAvailableBytes.Get());
+  const double kMustRemainAvailableRatio =
+      storage::features::kMustRemainAvailableRatio.Get();
+
+  const int64_t kShouldRemainAvailableFixed = static_cast<int64_t>(
+      storage::features::kShouldRemainAvailableBytes.Get());
+  const double kShouldRemainAvailableRatio =
+      storage::features::kShouldRemainAvailableRatio.Get();
+
+  storage::QuotaSettings settings;
+  settings.pool_size = pool_size;
+  // Cobalt only needs to cache data from a single origin (youtube.com),
+  // so allocate 100% of the pool to the storage key.
+  settings.per_storage_key_quota = pool_size;
+  settings.session_only_per_storage_key_quota = pool_size;
+  settings.should_remain_available =
+      std::min(kShouldRemainAvailableFixed,
+               static_cast<int64_t>(total * kShouldRemainAvailableRatio));
+  settings.must_remain_available =
+      std::min(kMustRemainAvailableFixed,
+               static_cast<int64_t>(total * kMustRemainAvailableRatio));
+  settings.refresh_interval = base::Seconds(60);
+
+  return settings;
 }
 
 CobaltContentBrowserClient::CobaltContentBrowserClient(
@@ -470,6 +523,34 @@ void CobaltContentBrowserClient::ConfigureNetworkContextParams(
   // NetworkAnonymizationKey / IsolationInfos, so storage can be isolated on a
   // per-site basis.
   network_context_params->require_network_anonymization_key = true;
+}
+
+void CobaltContentBrowserClient::GetCacheQuotaSettings(
+    content::BrowserContext* browser_context,
+    const base::FilePath& cache_path,
+    storage::OptionalQuotaSettingsCallback callback) {
+  if (browser_context && browser_context->IsOffTheRecord()) {
+    storage::GetNominalDynamicSettings(cache_path, /*is_incognito=*/true,
+                                       storage::GetDefaultDeviceInfoHelper(),
+                                       std::move(callback));
+    return;
+  }
+
+  base::ThreadPool::PostTaskAndReplyWithResult(
+      FROM_HERE,
+      {base::MayBlock(), base::TaskPriority::USER_VISIBLE,
+       base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
+      base::BindOnce(&CalculateCobaltCacheQuotaSettings, cache_path,
+                     storage::GetDefaultDeviceInfoHelper()),
+      std::move(callback));
+}
+
+// static
+std::optional<storage::QuotaSettings>
+CobaltContentBrowserClient::CalculateCacheQuotaSettingsForTesting(
+    const base::FilePath& cache_path,
+    storage::QuotaDeviceInfoHelper* device_info_helper) {
+  return CalculateCobaltCacheQuotaSettings(cache_path, device_info_helper);
 }
 
 void CobaltContentBrowserClient::OnWebContentsCreated(
