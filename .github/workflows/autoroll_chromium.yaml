@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           path: src
-          ref: main
+          ref: staging
           fetch-depth: 1000
           token: ${{ secrets.CHERRY_PICK_TOKEN }}
 
@@ -53,6 +53,7 @@ jobs:
           git config --global submodule.recurse false
 
           # Copy script from main branch.
+          git fetch --depth=1 --no-recurse-submodules origin main:main
           git show main:.github/scripts/autoroll_chromium.py > "${RUNNER_TEMP}/autoroll_chromium.py"
           git show main:.github/scripts/autoroll_lib.py > "${RUNNER_TEMP}/autoroll_lib.py"
 
