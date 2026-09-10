@@ -521,6 +521,8 @@ Shell* Shell::CreateNewWindow(BrowserContext* browser_context,
   GURL link_url;
   if (!deep_link.empty()) {
     link_url = GURL(deep_link);
+  } else if (url.is_valid()) {
+    link_url = url;
   } else if (base::CommandLine::ForCurrentProcess()->HasSwitch(
                  cobalt::switches::kInitialURL)) {
     link_url = GURL(base::CommandLine::ForCurrentProcess()->GetSwitchValueASCII(
