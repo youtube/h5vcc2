@@ -346,7 +346,7 @@ jobs:
                     (.runs_on == "device" and $run_on_device_test == "true") or
                     (.runs_on == "host"  and $run_on_host_test == "true")
                   )
-                )
+                ) | .required = (.required != false)
               ]' "${test_targets_json_file}")
           fi
 
@@ -959,13 +959,14 @@ jobs:
           path: results/
       - name: Test Results
         if: steps.filter.outputs.skipped != 'true'
+        continue-on-error: ${{ !matrix.test_info.required }}
         uses: ./.github/actions/process_test_results
         with:
           target_name: ${{ matrix.test_info.target }}
           results_glob: results/**/${{ steps.extract-target-name.outputs.test_target }}*.xml
           log_glob: results/**/${{ steps.extract-target-name.outputs.test_target }}*log.txt
           datadog_api_key: ${{ secrets.datadog_api_key }}
-          num_gtest_shards: ${{ needs.initialize.outputs.num_gtest_shards }}
+          num_gtest_shards: ${{ matrix.test_info.runs_on == 'host' && matrix.test_info.test_type == 'gtest' && needs.initialize.outputs.num_gtest_shards || 1 }}
       - name: ${{ matrix.test_info.target }} Device Logs
         if: always() && steps.filter.outputs.skipped != 'true' && needs.initialize.outputs.test_on_device == 'true' && matrix.test_info.runs_on == 'device'
         continue-on-error: true
@@ -975,6 +976,7 @@ jobs:
           symbolize: 'false'
       - name: ${{ matrix.test_info.target }} Test Logs
         if: always() && steps.filter.outputs.skipped != 'true'
+        continue-on-error: ${{ !matrix.test_info.required }}
         uses: ./.github/actions/print_logs
         with:
           log_glob: results/**/${{ steps.extract-target-name.outputs.test_target }}*log.txt
@@ -1045,7 +1047,11 @@ jobs:
           symbolize: 'false'
 
   validate-result:
-    # List required jobs here.
+    # The needs block functions as the Single Source of Truth (SoT) of primary
+    # execution workloads that must pass (or legitimately skip) for this
+    # platform to achieve green CI status. It is serialized into
+    # shepherd_report.json to evaluate failing_jobs. Auxiliary post-processing
+    # matrix jobs (like test-results) are excluded to preserve telemetry.
     needs:
       - initialize
       - build
@@ -1082,15 +1088,45 @@ jobs:
         env:
           PLATFORM_INPUT: ${{ inputs.platform }}
           PLATFORM_NAME: ${{ matrix.name }}
+          PLATFORM: ${{ matrix.platform }}
           WORKFLOW_NAME: ${{ github.workflow }}
           RUN_ID: ${{ github.run_id }}
           RUN_ATTEMPT: ${{ github.run_attempt }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           NEEDS_JSON: ${{ toJSON(needs) }}
+          EXPECTED_TESTS: ${{ needs.initialize.outputs.expected_tests_json || '[]' }}
+          BROWSER_TESTS: ${{ needs.initialize.outputs.run_browser_tests == 'true' && needs.initialize.outputs.browser_test_targets || '[]' }}
+          NUM_GTEST_SHARDS: ${{ needs.initialize.outputs.num_gtest_shards || 1 }}
         run: |
           set -euo pipefail
           shopt -s globstar nullglob
-          xml_files=(results/**/*.xml)
+
+          xml_files=()
+          missing_required=0
+
+          while read -r target expected_shards; do
+            [[ -z "${target}" ]] && continue
+
+            filter="cobalt/testing/filters/${PLATFORM}/${target}_filter.json"
+            if [[ -f "${filter}" ]] && grep -F -q '"*"' "${filter}"; then
+              continue
+            fi
+
+            files=(results/**/"${target}"*.xml)
+            if [[ ${#files[@]} -lt "${expected_shards}" ]]; then
+              echo "::error::Missing required test results for target: ${target}. Found ${#files[@]}, expected ${expected_shards}."
+              (( missing_required += 1 ))
+            else
+              xml_files+=("${files[@]}")
+            fi
+          done < <(jq -nr \
+            --argjson expected "${EXPECTED_TESTS}" \
+            --argjson browser "${BROWSER_TESTS}" \
+            --argjson shards "${NUM_GTEST_SHARDS:-1}" \
+            '($expected + $browser)[]
+             | select(.target != null and .required != false)
+             | "\(.target | split(":")[-1]) \(if .runs_on == "host" and .test_type == "gtest" then $shards else 1 end)"')
+
           test_failures='{}'
           if [[ ${#xml_files[@]} -gt 0 && -f "${xml_files[0]}" ]]; then
             test_failures=$(python3 cobalt/tools/junit_mini_parser.py \
@@ -1125,8 +1161,8 @@ jobs:
 
           failing_jobs=$(jq -r '[.checks // {} | to_entries[] | select(.value == "failure" or .value == "cancelled") | .key] | join(", ")' shepherd_report.json)
           failed_tests_count=$(jq '[.failing_tests // {} | .[] | length] | add // 0' <<< "${test_failures}")
-          if [[ "${failed_tests_count}" -gt 0 || -n "${failing_jobs}" ]]; then
-            echo "::error title=Platform Validation Failed::Failing jobs: ${failing_jobs:-none}, Failed tests: ${failed_tests_count}"
+          if [[ "${failed_tests_count}" -gt 0 || -n "${failing_jobs}" || "${missing_required}" -gt 0 ]]; then
+            echo "::error title=Platform Validation Failed::Failing jobs: ${failing_jobs:-none}, Failed tests: ${failed_tests_count}, Missing required test targets: ${missing_required}"
             exit 1
           fi
           echo "Platform validation passed."
