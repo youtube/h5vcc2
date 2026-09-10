@@ -146,6 +146,63 @@ int musl_unlink_flag_to_platform_flag(int musl_flag) {
       return -1;
   }
 }
+
+#if defined(__ANDROID__)
+// Recognized musl names bionic can't resolve. POSIX reserves EINVAL for invalid
+// names, so return -1 (unsupported) without EINVAL translating bionic's correct
+// semantics to a still conformant implementation to match the tests
+// expectations. For the pathconf/fpathconf case, EINVAL can be optionally set
+// for an unsupported association, and that's what bionic does. It's conformant,
+// but returning -1 without setting EINVAL also conforms and matches the test
+// expectations.
+//   pathconf() docs sate that it *shall fail* with EINVAL when "The value of
+//   name is not valid." and that it *may fail* with it when "The implementation
+//   does not support an association of the variable name with the specified
+//   file."
+//   Ref:
+//     https://pubs.opengroup.org/onlinepubs/9799919799/functions/fpathconf.html
+bool IsUnsupportedAndroidSysconfName(int name) {
+  // Options: _SC_V6_* aren't defined in the NDK; legacy _SC_XBS5_* defined but
+  // rejected by bionic. <unistd.h> uses value -1 for "not supported"; POSIX
+  // leaves an unsupported option's result unspecified, so -1/no-EINVAL is
+  // conformant.
+  //
+  // sysconf() docs state, for the return value, that "If the variable
+  // corresponding to name is dependent on an unsupported option, the results
+  // are unspecified."
+  // Ref:
+  //   https://pubs.opengroup.org/onlinepubs/9799919799/functions/sysconf.html
+  // And on <unistd.h>, section "Constants for Options and Option Groups":
+  // "If a symbolic constant is not defined or is defined with the value -1,
+  // the option is not supported for compilation."
+  // Ref:
+  //   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/unistd.h.html
+  // Issue 8 renamed _SC_V6_* to _SC_V7_* and dropped the legacy _SC_XBS5_*, so
+  // those spellings are documented in Issue 7 and Issue 6.
+  return name == MUSL_SC_V6_ILP32_OFF32 || name == MUSL_SC_V6_ILP32_OFFBIG ||
+         name == MUSL_SC_V6_LP64_OFF64 || name == MUSL_SC_V6_LPBIG_OFFBIG ||
+         name == MUSL_SC_XBS5_ILP32_OFF32 ||
+         name == MUSL_SC_XBS5_ILP32_OFFBIG || name == MUSL_SC_XBS5_LP64_OFF64 ||
+         name == MUSL_SC_XBS5_LPBIG_OFFBIG;
+}
+
+bool IsUnsupportedAndroidPathconfName(int name) {
+  // _PC_REC_*_XFER_SIZE: <limits.h> vars with no limit for the file -> -1
+  // without errno. Translates bionic's EINVAL to conformant behavior that
+  // matches NPLB tests expectations.
+  // _PC_SOCK_MAXBUF: non-POSIX extension the NDK lacks, handled the same way.
+  //   pathconf() RETURN VALUE: "If the variable corresponding to name is
+  //   described in <limits.h> as a maximum or minimum value and the variable
+  //   has no limit for the path or file descriptor, both pathconf() and
+  //   fpathconf() shall return -1 without changing errno."
+  //   https://pubs.opengroup.org/onlinepubs/9799919799/functions/fpathconf.html
+  //   <limits.h>, "Pathname Variable Values", lists both
+  //   {POSIX_REC_INCR_XFER_SIZE} and {POSIX_REC_MAX_XFER_SIZE}.
+  //   https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/limits.h.html
+  return name == MUSL_PC_SOCK_MAXBUF || name == MUSL_PC_REC_INCR_XFER_SIZE ||
+         name == MUSL_PC_REC_MAX_XFER_SIZE;
+}
+#endif  // defined(__ANDROID__)
 }  // namespace
 
 int __abi_wrap_ftruncate(int fildes, musl_off_t length) {
@@ -157,6 +214,11 @@ musl_off_t __abi_wrap_lseek(int fildes, musl_off_t offset, int whence) {
 }
 
 long __abi_wrap_sysconf(int name) {
+#if defined(__ANDROID__)
+  if (IsUnsupportedAndroidSysconfName(name)) {
+    return -1;
+  }
+#endif
   switch (name) {
 #if defined(_SC_ARG_MAX)
     case MUSL_SC_ARG_MAX:
@@ -683,6 +745,11 @@ long __abi_wrap_sysconf(int name) {
 // If |musl_conf_to_platform_conf| returns -1,
 // just return -1 (errno is set to EINVAL by musl_conf_to_platform_conf()).
 long __abi_wrap_pathconf(const char* path, int name) {
+#if defined(__ANDROID__)
+  if (IsUnsupportedAndroidPathconfName(name)) {
+    return -1;
+  }
+#endif
   int converted_name = musl_conf_to_platform_conf(name);
   return (converted_name == -1) ? -1 : pathconf(path, converted_name);
 }
