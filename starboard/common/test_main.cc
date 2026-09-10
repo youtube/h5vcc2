@@ -13,6 +13,12 @@
 // limitations under the License.
 
 #include "build/build_config.h"
+
+#if BUILDFLAG(IS_IOS_TVOS)
+#include <string>
+#include <vector>
+#endif  // BUILDFLAG(IS_IOS_TVOS)
+
 #include "starboard/client_porting/wrap_main/wrap_main.h"
 #include "starboard/configuration.h"
 #include "starboard/event.h"
@@ -28,8 +34,38 @@ int RunTests(int argc, char** argv) {
 }
 
 int InitAndRunAllTests(int argc, char** argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return starboard::RunPlatformTestSuite(argc, argv, &RunTests);
+#if BUILDFLAG(IS_IOS_TVOS)
+  std::vector<std::string> arg_strings;
+  std::vector<char*> new_argv;
+  char cache_dir[kSbFileMaxPath] = {0};
+  bool has_cache_dir = SbSystemGetPath(kSbSystemPathCacheDirectory, cache_dir,
+                                       sizeof(cache_dir));
+
+  const char kGTestOutputPrefix[] = "--gtest_output=xml:";
+  const size_t kGTestOutputPrefixLen = sizeof(kGTestOutputPrefix) - 1;
+
+  for (int i = 0; i < argc; ++i) {
+    std::string arg(argv[i]);
+    if (has_cache_dir &&
+        arg.compare(0, kGTestOutputPrefixLen, kGTestOutputPrefix) == 0) {
+      std::string file_path = arg.substr(kGTestOutputPrefixLen);
+      if (!file_path.empty() && file_path[0] != '/') {
+        arg = kGTestOutputPrefix + std::string(cache_dir) + "/" + file_path;
+      }
+    }
+    arg_strings.push_back(arg);
+  }
+  for (size_t i = 0; i < arg_strings.size(); ++i) {
+    new_argv.push_back(const_cast<char*>(arg_strings[i].c_str()));
+  }
+  new_argv.push_back(nullptr);
+  char** final_argv = new_argv.data();
+#else
+  char** final_argv = argv;
+#endif
+
+  ::testing::InitGoogleTest(&argc, final_argv);
+  return starboard::RunPlatformTestSuite(argc, final_argv, &RunTests);
 }
 }  // namespace
 
