@@ -20,6 +20,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "base/allocator/partition_allocator/src/partition_alloc/memory_reclaimer.h"
@@ -37,6 +38,7 @@
 #include "base/threading/thread_restrictions.h"
 #include "build/build_config.h"
 #include "cobalt/app/app_event_delegate.h"
+#include "cobalt/shell/common/shell_switches.h"
 
 #if BUILDFLAG(USE_EVERGREEN)
 #include "cobalt/updater/updater_module.h"
@@ -378,14 +380,36 @@ class AppEventRunnerImpl : public AppEventRunner,
 #if BUILDFLAG(IS_STARBOARD)
     cobalt::CommandLinePreprocessor init_cmd_line(argc, argv);
     const auto& init_argv = init_cmd_line.argv();
-#if BUILDFLAG(COBALT_IS_RELEASE_BUILD)
-    logging::SetMinLogLevel(logging::LOGGING_FATAL);
-#endif
+
     std::vector<const char*> args;
     for (const auto& arg : init_argv) {
       args.push_back(arg.c_str());
     }
+
+#if BUILDFLAG(COBALT_IS_RELEASE_BUILD)
+    logging::SetMinLogLevel(logging::LOGGING_FATAL);
+
+    // In Gold builds, we enforce that this URL points strictly to YouTube TV.
+    if (!init_argv.empty()) {
+      // CommandLinePreprocessor makes the startup URL is the last argument.
+      const std::string& startup_url = init_argv.back();
+      if (startup_url.find(::switches::kDefaultURL) != 0) {
+        LOG(WARNING) << "Invalid Gold startup URL. Rerouting to deep link: "
+                     << startup_url;
+
+        // Override the deep link if the platform didn't provide one already.
+        if (!initial_deep_link) {
+          initial_deep_link = startup_url.c_str();
+        }
+
+        // Sanitize the startup URL that the Chromium sandbox will boot with.
+        args.back() = ::switches::kDefaultURL;
+      }
+    }
 #endif
+
+#endif
+
     if (initial_deep_link) {
       auto* manager = cobalt::browser::DeepLinkManager::GetInstance();
       manager->set_deep_link(initial_deep_link);
