@@ -232,6 +232,7 @@ MEDIA_EXPORT extern const base::FeatureParam<base::TimeDelta> kAudioWriteDuratio
 MEDIA_EXPORT BASE_DECLARE_FEATURE(kCobaltUsingAndroidOverlay);
 #endif  // BUILDFLAG(IS_ANDROID)
 MEDIA_EXPORT BASE_DECLARE_FEATURE(kCobaltBypassMojoForMedia);
+MEDIA_EXPORT BASE_DECLARE_FEATURE(kCobaltCapResolutionTo720p);
 MEDIA_EXPORT BASE_DECLARE_FEATURE(kCobaltUseExternalMediaMemoryPool);
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 #if BUILDFLAG(IS_CHROMEOS)

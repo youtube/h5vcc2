@@ -517,6 +517,11 @@ BASE_FEATURE(kCobaltUsingAndroidOverlay,
 BASE_FEATURE(kCobaltBypassMojoForMedia,
              "CobaltBypassMojoForMedia",
              base::FEATURE_DISABLED_BY_DEFAULT);
+// When enabled, Cobalt reports video resolutions above 720p (1280x720) as
+// unsupported in MediaSource.isTypeSupported().
+BASE_FEATURE(kCobaltCapResolutionTo720p,
+             "CobaltCapResolutionTo720p",
+             base::FEATURE_DISABLED_BY_DEFAULT);
 // When enabled, Cobalt routes media frame buffer allocations into Starboard's
 // media memory pool via Chromium M126+ ExternalMemoryAllocator interface.
 BASE_FEATURE(kCobaltUseExternalMediaMemoryPool,

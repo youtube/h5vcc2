@@ -17,6 +17,8 @@
 
 #include <stdint.h>
 
+#include <string_view>
+
 #include "media/base/media_export.h"
 #include "starboard/media.h"
 
@@ -98,6 +100,14 @@ MEDIA_EXPORT SbMediaInterface* GetSbMediaInterface();
 
 // Sets a custom SbMediaInterface for testing.
 MEDIA_EXPORT void SetSbMediaInterfaceForTesting(SbMediaInterface* interface);
+
+// Parses an integer parameter value from a MIME string (e.g. "width",
+// "height").
+MEDIA_EXPORT int ExtractMimeIntParam(std::string_view mime,
+                                     std::string_view key);
+
+// Returns true if the MIME string specifies width > 1280 or height > 720.
+MEDIA_EXPORT bool Exceeds720p(const char* mime);
 
 }  // namespace media
 

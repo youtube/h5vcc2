@@ -726,7 +726,8 @@ source_set("unit_tests") {
     sources += [
       "starboard/experimental_features_unittest.cc",
       "starboard/ipc_param_traits_unittest.cc",
-      "starboard/starboard_renderer_config_unittest.cc"
+      "starboard/sbmedia_interface_unittest.cc",
+      "starboard/starboard_renderer_config_unittest.cc",
     ]
   }
 }
