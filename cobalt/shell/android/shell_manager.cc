@@ -14,6 +14,7 @@
 
 #include "cobalt/shell/android/shell_manager.h"
 
+#include <cstdint>
 #include <memory>
 
 #include "base/android/jni_android.h"
@@ -40,6 +41,8 @@ namespace {
 struct GlobalState {
   GlobalState() {}
   base::android::ScopedJavaGlobalRef<jobject> j_shell_manager;
+  // Accessed on the UI thread, together with the Java manager lifecycle.
+  uint64_t generation = 0;
 };
 
 base::LazyInstance<GlobalState>::DestructorAtExit g_global_state =
@@ -51,25 +54,56 @@ namespace content {
 
 ScopedJavaLocalRef<jobject> CreateShellView(Shell* shell) {
   JNIEnv* env = base::android::AttachCurrentThread();
+  if (g_global_state.Get().j_shell_manager.is_null()) {
+    return ScopedJavaLocalRef<jobject>();
+  }
   return Java_ShellManager_createShell(env,
                                        g_global_state.Get().j_shell_manager,
                                        reinterpret_cast<intptr_t>(shell));
 }
 
-void RemoveShellView(const JavaRef<jobject>& shell_view) {
+void RemoveShellView(const JavaRef<jobject>& shell_view,
+                     uint64_t manager_generation) {
   JNIEnv* env = base::android::AttachCurrentThread();
-  Java_ShellManager_removeShell(env, g_global_state.Get().j_shell_manager,
-                                shell_view);
+  if (g_global_state.Get().generation != manager_generation) {
+    return;
+  }
+  ScopedJavaLocalRef<jobject> manager(g_global_state.Get().j_shell_manager);
+  if (!manager.is_null()) {
+    Java_ShellManager_removeShell(env, manager, shell_view);
+  }
+}
+
+uint64_t GetShellManagerGeneration() {
+  return g_global_state.Get().generation;
 }
 
 static void JNI_ShellManager_Init(JNIEnv* env,
                                   const JavaParamRef<jobject>& obj) {
-  g_global_state.Get().j_shell_manager.Reset(obj);
+  auto& state = g_global_state.Get();
+  ++state.generation;
+  state.j_shell_manager.Reset(obj);
+}
+
+static void JNI_ShellManager_Destroy(JNIEnv* env,
+                                     const JavaParamRef<jobject>& obj) {
+  auto& j_shell_manager = g_global_state.Get().j_shell_manager;
+  if (!j_shell_manager.is_null() &&
+      env->IsSameObject(j_shell_manager.obj(), obj.obj())) {
+    ++g_global_state.Get().generation;
+    j_shell_manager.Reset();
+  }
 }
 
 void JNI_ShellManager_LaunchShell(JNIEnv* env,
+                                  const JavaParamRef<jobject>& obj,
                                   const JavaParamRef<jstring>& jurl,
                                   const JavaParamRef<jstring>& jdeeplink_url) {
+  auto& state = g_global_state.Get();
+  if (state.j_shell_manager.is_null() ||
+      !env->IsSameObject(state.j_shell_manager.obj(), obj.obj())) {
+    return;
+  }
   GURL url(base::android::ConvertJavaStringToUTF8(env, jurl));
   std::string deeplink_url =
       base::android::ConvertJavaStringToUTF8(env, jdeeplink_url);
@@ -79,14 +113,20 @@ void JNI_ShellManager_LaunchShell(JNIEnv* env,
   // the browser accesses the default storage partition. If WebContents
   // is created too early, the JS environment will start with empty data.
   auto create_window_task = base::BindOnce(
-      [](GURL url, std::string deeplink_url) {
+      [](uint64_t generation, GURL url, std::string deeplink_url) {
+        const auto& state = g_global_state.Get();
+        // Storage migration may finish after the Activity was destroyed or
+        // replaced. Do not retain its Java owner or launch into a new owner.
+        if (state.generation != generation || state.j_shell_manager.is_null()) {
+          return;
+        }
         ShellBrowserContext* browserContext =
             ShellContentBrowserClient::Get()->browser_context();
         Shell::CreateNewWindow(browserContext, url, nullptr, gfx::Size(),
                                switches::ShouldCreateSplashScreen(),
                                deeplink_url);
       },
-      std::move(url), std::move(deeplink_url));
+      state.generation, std::move(url), std::move(deeplink_url));
 
   auto* parts = ShellContentBrowserClient::Get()->shell_browser_main_parts();
   if (parts) {
@@ -99,8 +139,14 @@ void JNI_ShellManager_LaunchShell(JNIEnv* env,
 }
 
 void DestroyShellManager() {
+  ScopedJavaLocalRef<jobject> j_shell_manager(
+      g_global_state.Get().j_shell_manager);
+  if (j_shell_manager.is_null()) {
+    return;
+  }
+
   JNIEnv* env = base::android::AttachCurrentThread();
-  Java_ShellManager_destroy(env, g_global_state.Get().j_shell_manager);
+  Java_ShellManager_destroy(env, j_shell_manager);
 }
 
 base::android::ScopedJavaLocalRef<jstring>

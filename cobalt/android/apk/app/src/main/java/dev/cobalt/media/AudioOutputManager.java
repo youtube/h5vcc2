@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jni_zero.CalledByNative;
 import org.jni_zero.JNINamespace;
 import org.jni_zero.NativeMethods;
@@ -577,16 +578,49 @@ public class AudioOutputManager {
         }
       };
 
-  private static boolean sAudioDeviceListenerAdded = false;
+  private static final AtomicInteger sAudioDeviceListenerRefCount = new AtomicInteger(0);
 
   public static void addAudioDeviceListener(Context context) {
-    if (sAudioDeviceListenerAdded) {
+    if (context == null) {
       return;
     }
 
-    AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
-    audioManager.registerAudioDeviceCallback(sAudioDeviceCallback, null);
-    sAudioDeviceListenerAdded = true;
+    Context appContext = context.getApplicationContext();
+    if (appContext == null) {
+      appContext = context;
+    }
+    AudioManager audioManager = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
+    if (audioManager == null) {
+      return;
+    }
+    if (sAudioDeviceListenerRefCount.getAndIncrement() == 0) {
+      audioManager.registerAudioDeviceCallback(sAudioDeviceCallback, null);
+    }
+  }
+
+  public static void removeAudioDeviceListener(Context context) {
+    if (context == null) {
+      return;
+    }
+
+    Context appContext = context.getApplicationContext();
+    if (appContext == null) {
+      appContext = context;
+    }
+    AudioManager audioManager = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
+    if (audioManager == null) {
+      return;
+    }
+    int previousCount;
+    do {
+      previousCount = sAudioDeviceListenerRefCount.get();
+      if (previousCount == 0) {
+        return;
+      }
+    } while (!sAudioDeviceListenerRefCount.compareAndSet(previousCount, previousCount - 1));
+    if (previousCount == 1) {
+      audioManager.unregisterAudioDeviceCallback(sAudioDeviceCallback);
+    }
   }
 
   @NativeMethods

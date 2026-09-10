@@ -77,6 +77,24 @@ TEST_F(LifecycleTest, StartupHidden) {
   EXPECT_EQ(shell_->web_contents()->GetVisibility(), Visibility::HIDDEN);
 }
 
+#if BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_STARBOARD)
+TEST_F(LifecycleTest, ClosingActivityWindowPreservesPlatformForRecreation) {
+  CreateTestShell(true);
+  ShellPlatformDelegate* platform = Shell::GetPlatform();
+  EXPECT_CALL(*platform_, DestroyShell(shell_));
+  EXPECT_CALL(*platform_, CleanUp(shell_));
+  EXPECT_CALL(*platform_, DidCloseLastWindow()).WillOnce([this]() {
+    platform_->ShellPlatformDelegate::DidCloseLastWindow();
+  });
+
+  shell_->Close();
+  shell_ = nullptr;
+
+  EXPECT_TRUE(Shell::windows().empty());
+  EXPECT_EQ(platform, Shell::GetPlatform());
+}
+#endif
+
 TEST_F(LifecycleTest, Reveal) {
   CreateTestShell(false /* is_visible */);
   EXPECT_FALSE(platform_->IsVisible());

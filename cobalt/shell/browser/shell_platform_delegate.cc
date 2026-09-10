@@ -233,7 +233,13 @@ void ShellPlatformDelegate::OnUnfreeze() {
 void ShellPlatformDelegate::OnStop() {}
 
 void ShellPlatformDelegate::DidCloseLastWindow() {
+#if BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_STARBOARD)
+  // Android's application lifecycle owns shutdown. An Activity can be destroyed
+  // and recreated while the browser process stays alive; release its Shell and
+  // WebContents without tearing down the platform needed by the next Activity.
+#else
   Shell::Shutdown();
+#endif
 }
 
 std::unique_ptr<JavaScriptDialogManager>

@@ -106,6 +106,8 @@ class Shell : public WebContentsDelegate, public WebContentsObserver {
 
   static ShellPlatformDelegate* GetPlatform();
 
+  base::WeakPtr<Shell> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
+
   static void OnBlur();
   static void OnFocus();
   static void OnConceal();

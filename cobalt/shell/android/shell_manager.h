@@ -17,6 +17,8 @@
 
 #include <jni.h>
 
+#include <cstdint>
+
 #include "base/android/jni_android.h"
 #include "base/android/scoped_java_ref.h"
 
@@ -35,7 +37,11 @@ namespace content {
 base::android::ScopedJavaLocalRef<jobject> CreateShellView(Shell* shell);
 
 // Removes a previously created shell view.
-void RemoveShellView(const base::android::JavaRef<jobject>& shell_view);
+void RemoveShellView(const base::android::JavaRef<jobject>& shell_view,
+                     uint64_t manager_generation);
+
+// Returns the generation of the current Java ShellManager owner.
+uint64_t GetShellManagerGeneration();
 
 void ShellAttachLayer(cc::Layer* layer);
 void ShellRemoveLayer(cc::Layer* layer);

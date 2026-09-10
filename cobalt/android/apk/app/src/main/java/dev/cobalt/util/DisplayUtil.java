@@ -26,6 +26,7 @@ import android.view.WindowManager;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jni_zero.CalledByNative;
 import org.jni_zero.JNINamespace;
 import org.jni_zero.NativeMethods;
@@ -238,19 +239,52 @@ public class DisplayUtil {
         }
       };
 
-  private static boolean sDisplayerListenerAdded = false;
+  private static final AtomicInteger sListenerRefCount = new AtomicInteger(0);
 
   public static void addDisplayListener(Context context) {
-    if (sDisplayerListenerAdded) {
+    if (context == null) {
       return;
     }
 
-    DisplayManager displayManager = context.getSystemService(DisplayManager.class);
-    displayManager.registerDisplayListener(sDisplayerListener, null);
-    sDisplayerListenerAdded = true;
+    Context appContext = context.getApplicationContext();
+    if (appContext == null) {
+      appContext = context;
+    }
+    DisplayManager displayManager = appContext.getSystemService(DisplayManager.class);
+    if (displayManager == null) {
+      return;
+    }
+    if (sListenerRefCount.getAndIncrement() == 0) {
+      displayManager.registerDisplayListener(sDisplayerListener, null);
 
-    // Call nativeOnDisplayChanged() to reload supported hdr types here after a default
-    // Display created.
-    DisplayUtilJni.get().onDisplayChanged();
+      // Call nativeOnDisplayChanged() to reload supported hdr types here after a default
+      // Display created.
+      DisplayUtilJni.get().onDisplayChanged();
+    }
+  }
+
+  public static void removeDisplayListener(Context context) {
+    if (context == null) {
+      return;
+    }
+
+    Context appContext = context.getApplicationContext();
+    if (appContext == null) {
+      appContext = context;
+    }
+    DisplayManager displayManager = appContext.getSystemService(DisplayManager.class);
+    if (displayManager == null) {
+      return;
+    }
+    int previousCount;
+    do {
+      previousCount = sListenerRefCount.get();
+      if (previousCount == 0) {
+        return;
+      }
+    } while (!sListenerRefCount.compareAndSet(previousCount, previousCount - 1));
+    if (previousCount == 1) {
+      displayManager.unregisterDisplayListener(sDisplayerListener);
+    }
   }
 }
