@@ -25,11 +25,14 @@ declare_args() {
 
   using_old_compiler = false
 
+  # Whether the build uses two separate toolchains for libcobalt.so and
+  # starboard, or a single shared toolchain.
   build_with_separate_cobalt_toolchain =
       # Avoid using `is_androidtv` which uses `current_os`, so that this is also
       # false for the host toolchain.
       (target_os != "android" || is_starboard) && target_os != "ios"
 
+  # Modular build with Cobalt Updater and automatic slot management.
   use_evergreen = false
 
   use_tsan = false

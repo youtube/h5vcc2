@@ -14,7 +14,9 @@
 
 # is_cobalt is just declared here and potentially overridden while running gn gen.
 declare_args() {
+  # Enable Cobalt customizations.
   is_cobalt = false
+
   cobalt_is_release_build = false
 }
 

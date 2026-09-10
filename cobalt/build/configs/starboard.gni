@@ -13,12 +13,16 @@
 # limitations under the License.
 
 declare_args() {
+  # Use the Starboard layer to interact with the OS.
   is_starboard = is_cobalt && target_os != "android" && target_os != "ios" &&
                  current_toolchain == default_toolchain
 }
 
 declare_args() {
   # TODO: b/371241293 - Remove this variable when the hermetic toolchain is setup
+  # Allow modular builds to build Cobalt against a custom libc (currently
+  # musl), so that some symbols are actually implemented in Starboard, and
+  # resolved by the loader_app.
   use_custom_libc = false
 }
 
@@ -28,4 +32,6 @@ if (is_cobalt) {
 }
 
 # TODO: b/371241293 - Remove this variable when the hermetic toolchain is setup
+# Build Cobalt hermetically, i.e. don't depend at all on the platform but only
+# the Starboard interface and a consistent clang toolchain.
 is_cobalt_hermetic_build = is_starboard && use_custom_libc

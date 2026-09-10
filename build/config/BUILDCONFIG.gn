@@ -300,6 +300,8 @@ if (target_os == "android") {
 }
 
 # Create a separation between cobalt and host toolchain if needed.
+# A number of default values for GN variables rely on current_toolchain ==
+# default_toolchain, so this avoids propagating those to the host_toolchain.
 if (is_cobalt && _default_toolchain == host_toolchain) {
   default_toolchain_path = string_split(_default_toolchain, "//")
   _default_toolchain = "//cobalt/" + default_toolchain_path[1]
