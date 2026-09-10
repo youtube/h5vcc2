@@ -153,14 +153,18 @@ runs:
             continue
           fi
 
+          log_paths=("${test_output}/${PLATFORM}"/**/"${test_target}"_log.txt)
+          xml_files=("${test_output}/${PLATFORM}"/**/"${test_target}"*.xml)
+          target_xml="${xml_files[0]:-${test_output}/${PLATFORM}/1/${test_target}_testoutput.xml}"
+
+          if [[ -f "${log_paths[0]:-}" ]]; then
+            python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${log_paths[0]}" "${target_xml}"
+          fi
+
           xml_files=("${test_output}/${PLATFORM}"/**/"${test_target}"*.xml)
           if [[ "${#xml_files[@]}" -eq 0 ]]; then
             # Target was NOT skipped, but XML is missing -> Crash.
             echo "Test result xml is missing for ${test_target}."
-            log_paths=("${test_output}/${PLATFORM}"/**/"${test_target}"_log.txt)
-            if [ -f "${log_paths[0]:-}" ]; then
-              python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${log_paths[0]}" "${test_output}/${PLATFORM}/1/${test_target}_testoutput.xml"
-            fi
             target_failed=1
           elif grep -q -e '<failure' -e '<error' "${xml_files[@]}"; then
             # Double-check the result XML for failures. ODT service has been known to report incorrect status.

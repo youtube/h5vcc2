@@ -60,10 +60,13 @@ runs:
 
         mkdir -p "${GITHUB_WORKSPACE}/results"
 
-        # Wrap the execution in xvfb-run for virtual display.
-        # We pass --gtest_output to the runner script, which we should ensure it handles.
-        # Note: Using a single line to avoid backslash continuation issues in GitHub Actions.
-        xvfb-run -a --server-args="${XVFB_SERVER_ARGS}" "${RUNNER_BINARY}" --no-xvfb --gtest_filter="${TEST_FILTER}" --gtest_output="xml:${GITHUB_WORKSPACE}/results/cobalt_browsertests_result.xml" 2>&1 | tee "${GITHUB_WORKSPACE}/results/cobalt_browsertests_log.txt"
+        result_log="${GITHUB_WORKSPACE}/results/cobalt_browsertests_log.txt"
+        result_xml="${GITHUB_WORKSPACE}/results/cobalt_browsertests_result.xml"
+        xvfb-run -a --server-args="${XVFB_SERVER_ARGS}" "${RUNNER_BINARY}" --no-xvfb --gtest_filter="${TEST_FILTER}" --gtest_output="xml:${result_xml}" 2>&1 | tee "${result_log}" || true
+
+        if [[ -f "${result_log}" ]]; then
+          python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${result_log}" "${result_xml}"
+        fi
 
     - name: Upload Browser Test Results to GCS
       if: always()

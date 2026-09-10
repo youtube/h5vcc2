@@ -154,11 +154,8 @@ runs:
               failed_suites="${failed_suites} ${test_executable}"
             }
 
-            if [[ ! -f "${xml_path}" ]]; then
-              # Test binary crashed. Generate a fake JUnit XML report with the last run test.
-              if [ -f "${log_path}" ]; then
-                python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${log_path}" "${xml_path}"
-              fi
+            if [[ -f "${log_path}" ]]; then
+              python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${log_path}" "${xml_path}"
             fi
           fi
         done

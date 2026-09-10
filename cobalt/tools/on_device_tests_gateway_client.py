@@ -259,6 +259,7 @@ def _process_test_requests(args: argparse.Namespace) -> List[Dict[str, Any]]:
           f'--gtest_output=xml:{dir_on_device}/{target_name}_testoutput.xml',
           f'--gtest_filter={gtest_filter}',
           '--single-process-tests',
+          '--num-retries=0',
       ]
       command_line_args = ' '.join(cmd_args)
       test_cmd_args = [f'command_line_args={command_line_args}']
