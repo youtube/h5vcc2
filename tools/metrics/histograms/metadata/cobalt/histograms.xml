@@ -417,6 +417,7 @@ Always run the pretty print utility on this file after editing:
 <histogram name="Cobalt.Startup.MilestoneReached" enum="CobaltStartupMilestone"
     expires_after="never">
   <owner>avvall@google.com</owner>
+  <owner>charleykim@google.com</owner>
   <summary>
     Records startup milestone markers reached during browser initialization and
     initial navigation.

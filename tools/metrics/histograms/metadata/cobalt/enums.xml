@@ -45,6 +45,10 @@ https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histogra
 </enum>
 
 <enum name="CobaltStartupMilestone">
+  <int value="1" label="JAVA_ACTIVITY_CREATED (createContent)"/>
+  <int value="2" label="Pre LibraryLoader init"/>
+  <int value="3" label="Post LibraryLoader init"/>
+  <int value="4" label="Pre StarboardBridge init"/>
   <int value="17" label="PreCreateThreads"/>
   <int value="22" label="DidStartNavigation"/>
   <int value="26" label="DidFinishNavigation"/>

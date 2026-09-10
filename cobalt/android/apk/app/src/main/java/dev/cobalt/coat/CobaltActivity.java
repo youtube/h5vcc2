@@ -458,6 +458,7 @@ public abstract class CobaltActivity extends BaseCobaltActivity {
 
   @VisibleForTesting
   void setupStartupGuard() {
+    StartupGuard.getInstance().initializePersistence(getApplicationContext());
     Map<String, String> switches = getJavaSwitches();
     if (switches.containsKey(JavaSwitches.DISABLE_STARTUP_GUARD)) {
       Log.i(TAG, "StartupGuard is disabled by Java switch.");

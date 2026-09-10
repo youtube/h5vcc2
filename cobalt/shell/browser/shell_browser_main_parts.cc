@@ -19,7 +19,9 @@
 #include "base/base_switches.h"
 #include "base/command_line.h"
 #include "base/files/file_util.h"
+#include "base/functional/bind.h"
 #include "base/memory/ref_counted_memory.h"
+#include "base/task/thread_pool.h"
 #include "build/build_config.h"
 #include "cc/base/switches.h"
 #include "cobalt/shell/android/shell_descriptors.h"
@@ -47,6 +49,11 @@
 #include "url/gurl.h"
 
 #if BUILDFLAG(IS_ANDROID)
+#include "base/base_paths_android.h"
+#include "base/files/file_path.h"
+#include "base/metrics/histogram_functions.h"
+#include "base/metrics/histogram_macros.h"
+#include "base/path_service.h"
 #include "components/crash/content/browser/child_exit_observer_android.h"
 #include "components/crash/content/browser/child_process_crash_observer_android.h"
 #include "net/android/network_change_notifier_factory_android.h"
@@ -202,14 +209,59 @@ int ShellBrowserMainParts::PreCreateThreads() {
     child_exit_observer_->RegisterClient(
         std::make_unique<crash_reporter::ChildProcessCrashObserver>());
   }
+
 #endif
   return 0;
 }
+
+#if BUILDFLAG(IS_ANDROID)
+void HarvestJavaStartupMetrics() {
+  // Because the JNI bridge is not available early in the Java Android Phase
+  // (e.g. Activity onCreate) `StartupGuard` persists Milestones 1-4 via a
+  // bare-metal MappedByteBuffer. On the subsequent boot, search for the
+  // previous session's `_previous` file, read the 64-bit integer, and feed
+  // every tripped bit natively into `Cobalt.Startup.MilestoneReached`. This
+  // intentionally fires *after* PMA mounts in `PreEarlyInitialization` to
+  // ensure these writes survive secondary crashes.
+  base::FilePath app_data_dir;
+  if (!base::PathService::Get(base::DIR_ANDROID_APP_DATA, &app_data_dir)) {
+    return;
+  }
+
+  base::FilePath state_file =
+      app_data_dir.AppendASCII("java_startup_state_previous.bin");
+  if (!base::PathExists(state_file)) {
+    return;
+  }
+
+  std::string content;
+  if (base::ReadFileToString(state_file, &content) && content.size() == 8) {
+    uint64_t startup_status = 0;
+    memcpy(&startup_status, content.data(), 8);
+    // We exclusively rescue Java Milestones 1-4 that spin up before JNI is
+    // available.
+    for (int i = 1; i <= 4; ++i) {
+      if (startup_status & (1ULL << i)) {
+        base::UmaHistogramSparse("Cobalt.Startup.MilestoneReached", i);
+      }
+    }
+  }
+
+  base::DeleteFile(state_file);
+}
+#endif
 
 void ShellBrowserMainParts::PostCreateThreads() {
   performance_manager_lifetime_ =
       std::make_unique<performance_manager::PerformanceManagerLifetime>(
           performance_manager::GraphFeatures::WithMinimal(), base::DoNothing());
+
+#if BUILDFLAG(IS_ANDROID)
+  base::ThreadPool::PostTask(FROM_HERE,
+                             {base::MayBlock(), base::TaskPriority::BEST_EFFORT,
+                              base::TaskShutdownBehavior::CONTINUE_ON_SHUTDOWN},
+                             base::BindOnce(&HarvestJavaStartupMetrics));
+#endif
 }
 
 int ShellBrowserMainParts::PreMainMessageLoopRun() {

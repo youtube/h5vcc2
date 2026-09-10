@@ -374,6 +374,7 @@ robolectric_binary("cobalt_coat_junit_tests") {
     "apk/app/src/test/java/dev/cobalt/coat/PlatformErrorTest.java",
     "apk/app/src/test/java/dev/cobalt/coat/ShellManagerTest.java",
     "apk/app/src/test/java/dev/cobalt/media/MediaCodecOutputTrackerTest.java",
+    "apk/app/src/test/java/dev/cobalt/shell/StartupGuardPersistenceTest.java",
     "apk/app/src/test/java/dev/cobalt/util/JavaSwitchesTest.java",
     "apk/app/src/test/java/dev/cobalt/util/StartupGuardTest.java",
   ]
@@ -390,6 +391,7 @@ robolectric_binary("cobalt_coat_junit_tests") {
     "//components/thin_webview:java",
     "//content/public/android:content_java",
     "//services/media_session/public/cpp/android:media_session_java",
+    "//third_party/androidx:androidx_test_core_java",
     "//third_party/androidx:androidx_test_runner_java",
     "//third_party/google-truth:google_truth_java",
     "//third_party/junit",
