@@ -46,6 +46,9 @@
 #include "partition_alloc/partition_alloc.h"
 #include "partition_alloc/partition_alloc_constants.h"
 #include "partition_alloc/partition_root.h"
+#if BUILDFLAG(IS_COBALT) && PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
+#include "partition_alloc/shim/allocator_shim_default_dispatch_to_partition_alloc.h"
+#endif
 #include "third_party/blink/renderer/platform/wtf/wtf.h"
 
 namespace WTF {
@@ -128,6 +131,18 @@ bool Partitions::InitializeOnce() {
 
   partition_alloc::PartitionAllocGlobalInit(&Partitions::HandleOutOfMemory);
 
+#if BUILDFLAG(IS_COBALT) && PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
+  // On Cobalt, Blink container buffers share identical partition settings with
+  // the main PartitionAlloc. Reusing the main allocator eliminates redundant
+  // root overhead and reduces fragmentation.
+  if (base::FeatureList::IsEnabled(
+          base::features::kPartitionAllocReuseMainPartitionForBuffers)) {
+    buffer_root_ = allocator_shim::internal::PartitionAllocMalloc::Allocator();
+    initialized_ = true;
+    return initialized_;
+  }
+#endif
+
   auto options = PartitionOptionsFromFeatures();
 
   const auto actual_brp_setting = options.backup_ref_ptr;
@@ -172,6 +187,21 @@ void Partitions::InitializeArrayBufferPartition() {
   CHECK(initialized_);
   CHECK(!ArrayBufferPartitionInitialized());
 
+#if BUILDFLAG(IS_COBALT) && PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
+  // Upstream Chromium isolates ArrayBuffers in a separate partition primarily
+  // to place them inside the 64-bit V8 virtual memory cage / sandbox and to
+  // prevent BackupRefPtr collision with 16-byte alignment. On Cobalt, the V8
+  // sandbox and BackupRefPtr are disabled, so ArrayBuffers have identical
+  // alignment and configuration requirements as the main heap. Reusing the main
+  // allocator eliminates redundant root overhead and reduces fragmentation.
+  if (base::FeatureList::IsEnabled(
+          base::features::kPartitionAllocReuseMainPartitionForBuffers)) {
+    array_buffer_root_ =
+        allocator_shim::internal::PartitionAllocMalloc::Allocator();
+    return;
+  }
+#endif
+
   // BackupRefPtr disallowed because it will prevent allocations from being 16B
   // aligned as required by ArrayBufferContents.
   static base::NoDestructor<partition_alloc::PartitionAllocator>
@@ -211,6 +241,16 @@ void Partitions::DumpMemoryStats(
   // Object model and rendering partitions are not thread safe and can be
   // accessed only on the main thread.
   DCHECK(IsMainThread());
+
+#if BUILDFLAG(IS_COBALT) && PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
+  // When reusing the main PartitionAlloc instance for buffers and array
+  // buffers, memory statistics for those allocations are already tracked and
+  // reported under the root allocator. Skipping here avoids duplicate dumps.
+  if (base::FeatureList::IsEnabled(
+          base::features::kPartitionAllocReuseMainPartitionForBuffers)) {
+    return;
+  }
+#endif
 
   if (auto* fast_malloc_partition = FastMallocPartition()) {
     fast_malloc_partition->DumpStats("fast_malloc", is_light_dump,
@@ -252,6 +292,19 @@ class LightPartitionStatsDumperImpl
 size_t Partitions::TotalSizeOfCommittedPages() {
   DCHECK(initialized_);
   size_t total_size = 0;
+#if BUILDFLAG(IS_COBALT) && PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
+  // When reusing the main allocator, buffer_root_ and array_buffer_root_ point
+  // to the same root as the main malloc partition. Read the committed pages
+  // once to prevent double-counting during OOM reporting.
+  if (base::FeatureList::IsEnabled(
+          base::features::kPartitionAllocReuseMainPartitionForBuffers)) {
+    if (buffer_root_) {
+      total_size +=
+          TS_UNCHECKED_READ(buffer_root_->total_size_of_committed_pages);
+    }
+    return total_size;
+  }
+#endif
   // Racy reads below: this is fine to collect statistics.
   if (auto* fast_malloc_partition = FastMallocPartition()) {
     total_size +=
@@ -444,6 +497,14 @@ void Partitions::HandleOutOfMemory(size_t size) {
 // static
 void Partitions::AdjustPartitionsForForeground() {
   DCHECK(initialized_);
+#if BUILDFLAG(IS_COBALT) && PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
+  // When reusing the main allocator, the root is already adjusted for
+  // foreground via allocator_shim::AdjustDefaultAllocatorForForeground().
+  if (base::FeatureList::IsEnabled(
+          base::features::kPartitionAllocReuseMainPartitionForBuffers)) {
+    return;
+  }
+#endif
   if (base::FeatureList::IsEnabled(
           base::features::kPartitionAllocAdjustSizeWhenInForeground)) {
     array_buffer_root_->AdjustForForeground();
@@ -457,6 +518,14 @@ void Partitions::AdjustPartitionsForForeground() {
 // static
 void Partitions::AdjustPartitionsForBackground() {
   DCHECK(initialized_);
+#if BUILDFLAG(IS_COBALT) && PA_BUILDFLAG(USE_PARTITION_ALLOC_AS_MALLOC)
+  // When reusing the main allocator, the root is already adjusted for
+  // background via allocator_shim::AdjustDefaultAllocatorForBackground().
+  if (base::FeatureList::IsEnabled(
+          base::features::kPartitionAllocReuseMainPartitionForBuffers)) {
+    return;
+  }
+#endif
   if (base::FeatureList::IsEnabled(
           base::features::kPartitionAllocAdjustSizeWhenInForeground)) {
     array_buffer_root_->AdjustForBackground();
