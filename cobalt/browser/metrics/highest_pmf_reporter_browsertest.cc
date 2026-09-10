@@ -104,9 +104,9 @@ class HighestPmfReporterBrowserTest : public content::ContentBrowserTest {
   }
 
   void TearDownOnMainThread() override {
+    reporter_.reset();
     blink::MemoryUsageMonitor::SetInstanceForTesting(nullptr);
     memory_usage_monitor_.reset();
-    reporter_.reset();
     content::ContentBrowserTest::TearDownOnMainThread();
   }
 

@@ -142,6 +142,15 @@ class HighestPmfReporterTest : public PageTestBase {
   HighestPmfReporterTest() = default;
 
   void SetUp() override {
+#if BUILDFLAG(IS_COBALT)
+    PageTestBase::SetUp();
+    test_task_runner_ = base::MakeRefCounted<base::TestMockTimeTaskRunner>();
+    memory_usage_monitor_ = std::make_unique<MockMemoryUsageMonitor>(
+        test_task_runner_, test_task_runner_->GetMockTickClock());
+    MemoryUsageMonitor::SetInstanceForTesting(memory_usage_monitor_.get());
+    reporter_ = std::make_unique<MockHighestPmfReporter>(
+        test_task_runner_, test_task_runner_->GetMockTickClock());
+#else
     test_task_runner_ = base::MakeRefCounted<base::TestMockTimeTaskRunner>();
     memory_usage_monitor_ = std::make_unique<MockMemoryUsageMonitor>(
         test_task_runner_, test_task_runner_->GetMockTickClock());
@@ -149,13 +158,21 @@ class HighestPmfReporterTest : public PageTestBase {
     reporter_ = std::make_unique<MockHighestPmfReporter>(
         test_task_runner_, test_task_runner_->GetMockTickClock());
     PageTestBase::SetUp();
+#endif
   }
 
   void TearDown() override {
+#if BUILDFLAG(IS_COBALT)
+    reporter_.reset();
+    MemoryUsageMonitor::SetInstanceForTesting(nullptr);
+    memory_usage_monitor_.reset();
+    PageTestBase::TearDown();
+#else
     PageTestBase::TearDown();
     MemoryUsageMonitor::SetInstanceForTesting(nullptr);
     memory_usage_monitor_.reset();
     reporter_.reset();
+#endif
   }
 
   void AdvanceClock(base::TimeDelta delta) {
@@ -246,10 +263,17 @@ TEST_F(HighestPmfReporterTest, MAYBE_ReportMetric) {
   EXPECT_NEAR(1000.0, reporter_->GetReportedPeakRss().at(3), 0.001);
 
   EXPECT_EQ(4U, reporter_->GetReportedWebpageCount().size());
+#if BUILDFLAG(IS_COBALT)
+  EXPECT_EQ(1U, reporter_->GetReportedWebpageCount().at(0));
+  EXPECT_EQ(1U, reporter_->GetReportedWebpageCount().at(1));
+  EXPECT_EQ(1U, reporter_->GetReportedWebpageCount().at(2));
+  EXPECT_EQ(1U, reporter_->GetReportedWebpageCount().at(3));
+#else
   EXPECT_EQ(2U, reporter_->GetReportedWebpageCount().at(0));
   EXPECT_EQ(1U, reporter_->GetReportedWebpageCount().at(1));
   EXPECT_EQ(3U, reporter_->GetReportedWebpageCount().at(2));
   EXPECT_EQ(1U, reporter_->GetReportedWebpageCount().at(3));
+#endif
 }
 
 TEST_F(HighestPmfReporterTest, TestReportTiming) {
@@ -289,6 +313,44 @@ TEST_F(HighestPmfReporterTest, TestReportTiming) {
   AdvanceClock(base::Seconds(1));
   EXPECT_EQ(4, reporter_->GetReportCount());
 }
+
+#if BUILDFLAG(IS_COBALT)
+TEST_F(HighestPmfReporterTest, TestReportForegroundWithLowerOrFlatMemory) {
+  EXPECT_TRUE(MemoryUsageMonitor::Instance().HasObserver(reporter_.get()));
+  Page::OrdinaryPages().insert(&GetPage());
+
+  // High startup peak
+  memory_usage_monitor_->SetPrivateFootprintBytes(2000.0);
+  memory_usage_monitor_->SetPeakResidentBytes(2500.0);
+
+  reporter_->NotifyNavigationStart();
+  AdvanceClock(base::Seconds(1));
+
+  // Background and foreground transitions
+  reporter_->OnProcessBackgrounded();
+  EXPECT_FALSE(MemoryUsageMonitor::Instance().HasObserver(reporter_.get()));
+
+  base::TimeTicks foreground_time = NowTicks();
+  reporter_->OnProcessForegrounded();
+  EXPECT_TRUE(MemoryUsageMonitor::Instance().HasObserver(reporter_.get()));
+
+  // Lower memory during the new foreground session
+  memory_usage_monitor_->SetPrivateFootprintBytes(500.0);
+  memory_usage_monitor_->SetPeakResidentBytes(800.0);
+  AdvanceClock(base::Seconds(1));
+
+  EXPECT_EQ(0, reporter_->GetReportCount());
+  AdvanceClockTo(foreground_time + base::Minutes(2) - base::Seconds(1));
+  EXPECT_EQ(0, reporter_->GetReportCount());
+
+  AdvanceClock(base::Seconds(1));
+  EXPECT_EQ(1, reporter_->GetReportCount());
+  EXPECT_EQ(1U, reporter_->GetReportedHighestPmf().size());
+  EXPECT_NEAR(500.0, reporter_->GetReportedHighestPmf().at(0), 0.001);
+  EXPECT_EQ(1U, reporter_->GetReportedPeakRss().size());
+  EXPECT_NEAR(800.0, reporter_->GetReportedPeakRss().at(0), 0.001);
+}
+#endif
 
 }  // namespace peak_memory_reporter_test
 }  // namespace blink

@@ -14,6 +14,7 @@
 #include "build/build_config.h"
 #include "build/buildflag.h"
 #if BUILDFLAG(IS_COBALT)
+#include "base/cancelable_callback.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
 #endif
@@ -35,6 +36,13 @@ class CONTROLLER_EXPORT HighestPmfReporter
   // Returns the shared instance.
   static void Initialize(
       scoped_refptr<base::SingleThreadTaskRunner> task_runner);
+#if BUILDFLAG(IS_COBALT)
+  static HighestPmfReporter* Instance();
+  ~HighestPmfReporter() override;
+
+  void OnProcessForegrounded();
+  void OnProcessBackgrounded();
+#endif
 
  private:
   explicit HighestPmfReporter(
@@ -64,8 +72,21 @@ class CONTROLLER_EXPORT HighestPmfReporter
   unsigned webpage_counts_at_current_highest_pmf_ = 0;
   unsigned report_count_ = 0;
 #if BUILDFLAG(IS_COBALT)
-  WTF::Vector<base::TimeDelta> time_to_report_;
-  WTF::Vector<WTF::String> metric_names_;
+  static HighestPmfReporter* instance_;
+
+  struct MetricInfo {
+    base::TimeDelta time_to_report;
+    WTF::String pmf_name;
+    WTF::String pmf_foregrounded_name;
+    WTF::String peak_rss_name;
+    WTF::String peak_rss_foregrounded_name;
+  };
+  WTF::Vector<MetricInfo> metrics_;
+
+  // True after the process has been backgrounded at least once. When false,
+  // metrics are reported for the initial startup navigation.
+  bool has_been_backgrounded_once_ = false;
+  base::CancelableOnceClosure cancelable_report_task_;
 #endif
 };
 

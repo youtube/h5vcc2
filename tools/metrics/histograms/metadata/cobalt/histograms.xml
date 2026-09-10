@@ -771,13 +771,54 @@ Always run the pretty print utility on this file after editing:
 </histogram>
 
 <histogram
-    name="Memory.Experimental.Renderer.PeakResidentSet.AtHighestPrivateMemoryFootprint"
-    units="MB" expires_after="2027-08-13">
+    name="Memory.Experimental.Renderer.HighestPrivateMemoryFootprintWhenForegrounded{Interval}"
+    units="MB" expires_after="never">
+  <owner>avvall@google.com</owner>
+  <owner>cobalt-dev@google.com</owner>
+  <summary>
+    The highest private memory footprint of a renderer process in the (X, Y]
+    mins after resuming from a background state interval. (X, Y] is (0, 2], (2,
+    4], (4, 8], and (8, 16]. The metric is recorded at the Y's timing.
+  </summary>
+  <token key="Interval">
+    <variant name=".0to2min" summary="0 to 2 minutes"/>
+    <variant name=".2to4min" summary="2 to 4 minutes"/>
+    <variant name=".4to8min" summary="4 to 8 minutes"/>
+    <variant name=".8to16min" summary="8 to 16 minutes"/>
+  </token>
+</histogram>
+
+<histogram
+    name="Memory.Experimental.Renderer.PeakResidentSet.AtHighestPrivateMemoryFootprintWhenForegrounded{Interval}"
+    units="MB" expires_after="never">
+  <owner>avvall@google.com</owner>
+  <owner>cobalt-dev@google.com</owner>
+  <summary>
+    The peak resident set at the time of the highest private memory footprint
+    when foregrounded.
+  </summary>
+  <token key="Interval">
+    <variant name=".0to2min" summary="0 to 2 minutes"/>
+    <variant name=".2to4min" summary="2 to 4 minutes"/>
+    <variant name=".4to8min" summary="4 to 8 minutes"/>
+    <variant name=".8to16min" summary="8 to 16 minutes"/>
+  </token>
+</histogram>
+
+<histogram
+    name="Memory.Experimental.Renderer.PeakResidentSet.AtHighestPrivateMemoryFootprint{Interval}"
+    units="MB" expires_after="never">
   <owner>avvall@google.com</owner>
   <owner>cobalt-dev@google.com</owner>
   <summary>
     The peak resident set at the time of the highest private memory footprint.
   </summary>
+  <token key="Interval">
+    <variant name=".0to2min" summary="0 to 2 minutes"/>
+    <variant name=".2to4min" summary="2 to 4 minutes"/>
+    <variant name=".4to8min" summary="4 to 8 minutes"/>
+    <variant name=".8to16min" summary="8 to 16 minutes"/>
+  </token>
 </histogram>
 
 <histogram name="Memory.Media.AllocatedEncodedBuffer" units="MB"
