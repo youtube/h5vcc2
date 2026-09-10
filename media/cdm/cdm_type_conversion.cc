@@ -8,6 +8,7 @@
 
 #include "base/logging.h"
 #include "base/not_fatal_until.h"
+#include "build/build_config.h"
 #include "base/numerics/safe_conversions.h"
 #include "ui/gfx/color_space.h"
 #include "ui/gfx/geometry/size.h"
@@ -131,6 +132,10 @@ cdm::InitDataType ToCdmInitDataType(EmeInitDataType init_data_type) {
       return cdm::kWebM;
     case EmeInitDataType::UNKNOWN:
       break;
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+    case EmeInitDataType::PLATFORM_DRM:
+      break;
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
   }
 
   NOTREACHED() << "Unexpected EmeInitDataType";

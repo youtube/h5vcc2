@@ -8,6 +8,7 @@
 
 #include "base/containers/contains.h"
 #include "base/notreached.h"
+#include "build/build_config.h"
 #include "media/base/eme_constants.h"
 #include "media/base/key_system_names.h"
 #include "media/cdm/clear_key_cdm_common.h"
@@ -70,6 +71,10 @@ bool ExternalClearKeyKeySystemInfo::IsSupportedInitDataType(
 
     case media::EmeInitDataType::UNKNOWN:
       return false;
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+    case media::EmeInitDataType::PLATFORM_DRM:
+      return false;
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
   }
   NOTREACHED();
 }

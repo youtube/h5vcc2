@@ -25,6 +25,10 @@
 #import "starboard/tvos/shared/media/player_manager.h"
 #import "starboard/tvos/shared/starboard_application.h"
 
+#ifdef COBALT_INTERNAL_BUILD
+#include "cobalt/internal/starboard/shared/tvos/drm_system_fairplay_constants.h"
+#endif  // COBALT_INTERNAL_BUILD
+
 /**
  *  @brief The context used to track the player item through KVO.
  */
@@ -721,7 +725,8 @@ static NSTimeInterval kAccessLogTimerInterval = 1;
             [NSMutableData dataWithBytes:&urlStringDataLength
                                   length:sizeof(urlStringDataLength)];
         [initData appendData:urlStringData];
-        _encryptedMediaFunc(starboardPlayer, _playerContext, "fairplay",
+        _encryptedMediaFunc(starboardPlayer, _playerContext,
+                            starboard::kPlatformDrmInitDataType,
                             static_cast<const unsigned char*>(initData.bytes),
                             initData.length);
       }
