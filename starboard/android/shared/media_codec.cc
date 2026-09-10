@@ -202,7 +202,9 @@ std::ostream& operator<<(std::ostream& os,
             << ", require_software_codec="
             << ToString(options.require_software_codec)
             << ", tunnel_mode_audio_session_id="
-            << ToString(options.tunnel_mode_audio_session_id) << "}";
+            << ToString(options.tunnel_mode_audio_session_id)
+            << ", enable_reuse_video_codec="
+            << ToString(options.enable_reuse_video_codec) << "}";
 }
 
 }  // namespace starboard

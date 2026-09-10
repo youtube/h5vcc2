@@ -88,6 +88,7 @@ class MediaCodec {
     bool require_software_codec = false;
     std::optional<int> tunnel_mode_audio_session_id;
     bool enable_ndk_video = false;
+    bool enable_reuse_video_codec = false;
   };
 
   static constexpr int32_t kBufferFlagCodecConfig = 2;

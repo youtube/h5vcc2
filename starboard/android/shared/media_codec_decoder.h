@@ -106,7 +106,8 @@ class MediaCodecDecoder final : private MediaCodec::Handler,
       bool skip_video_frames_over_60_fps,
       bool ignore_mediacodec_callbacks_during_flushing,
       bool enable_ndk_video,
-      bool enable_trivial_optimizations);
+      bool enable_trivial_optimizations,
+      bool enable_reuse_video_codec);
 
   MediaCodecDecoder(PassKey<MediaCodecDecoder>,
                     MediaCodec::Factory& media_codec_factory,
@@ -141,6 +142,7 @@ class MediaCodecDecoder final : private MediaCodec::Handler,
       bool ignore_mediacodec_callbacks_during_flushing,
       bool enable_ndk_video,
       bool enable_trivial_optimizations,
+      bool enable_reuse_video_codec,
       std::string* error_message);
   ~MediaCodecDecoder();
 

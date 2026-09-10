@@ -347,6 +347,8 @@ MediaCodecVideoDecoder::MediaCodecVideoDecoder(
               kMediaEnableTrivialOptimizations)),
       enable_ndk_video_(
           pipeline_config.experimental_features.GetBool(kMediaNdkVideo)),
+      enable_reuse_video_codec_(
+          pipeline_config.experimental_features.GetBool(kMediaReuseVideoCodec)),
       fix_need_more_input_backpressure_(
           pipeline_config.experimental_features.GetBool(
               kMediaFixNeedMoreInputBackpressure)),
@@ -362,6 +364,8 @@ MediaCodecVideoDecoder::MediaCodecVideoDecoder(
               .Get(kMediaVideoDecoderInitialPrerollCount)
               .value_or(kInitialPrerollFrameCount)),
       number_of_preroll_frames_(initial_number_of_preroll_frames_),
+      is_hdr_playback_(
+          !IsIdentity(stream_config.video_stream_info.color_metadata)),
       surface_texture_bridge_(
           output_mode_ == kSbPlayerOutputModeDecodeToTexture
               ? std::make_unique<VideoSurfaceTextureBridge>(this)
@@ -430,7 +434,8 @@ MediaCodecVideoDecoder::~MediaCodecVideoDecoder() {
   // video distortion on some platforms. For details, see http://b/182610842.
   if (tunnel_mode_audio_session_id_.has_value()) {
     ResetVideoSurface();
-  } else if (output_mode_ == kSbPlayerOutputModePunchOut) {
+  } else if (output_mode_ == kSbPlayerOutputModePunchOut &&
+             (!enable_reuse_video_codec_ || is_hdr_playback_)) {
     CleanUpVideoSurface(decode_target_graphics_context_provider_);
   }
 }
@@ -539,6 +544,7 @@ void MediaCodecVideoDecoder::WriteInputBuffers(
       SB_DCHECK(!color_metadata_) << "Unexpected residual color metadata.";
       SB_LOG(INFO) << "Reinitializing codec with HDR color metadata.";
       TeardownCodec();
+      is_hdr_playback_ = true;
       color_metadata_ = color_metadata;
     }
 
@@ -875,11 +881,12 @@ Result<void> MediaCodecVideoDecoder::InitializeCodec(
       color_metadata_ ? &*color_metadata_ : nullptr, require_software_codec_,
       std::bind(&MediaCodecVideoDecoder::OnFrameRendered, this, _1),
       std::bind(&MediaCodecVideoDecoder::OnFirstTunnelFrameReady, this),
-      tunnel_mode_audio_session_id_, is_video_frame_tracker_enabled_,
+      tunnel_mode_audio_session_id_,
+      is_video_frame_tracker_enabled_ || enable_reuse_video_codec_,
       max_video_input_size_, flush_delay_usec_, use_dual_threads_,
       skip_video_frames_over_60_fps_,
       ignore_mediacodec_callbacks_during_flushing_, enable_ndk_video_,
-      enable_trivial_optimizations_);
+      enable_trivial_optimizations_, enable_reuse_video_codec_);
   if (result) {
     media_decoder_ = std::move(result.value());
     if (error_cb_) {
