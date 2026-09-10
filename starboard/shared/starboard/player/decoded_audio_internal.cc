@@ -25,6 +25,7 @@
 #include "starboard/common/log.h"
 #include "starboard/common/media.h"
 #include "starboard/common/pointer_arithmetic.h"
+#include "starboard/common/time.h"
 #include "starboard/shared/starboard/media/media_util.h"
 
 #if (SB_IS(ARCH_ARM) || SB_IS(ARCH_ARM64)) && defined(USE_NEON)
@@ -43,6 +44,48 @@ static_assert(std::is_trivially_destructible<std::atomic<bool>>::value,
               "destructible.");
 std::atomic<bool> g_enable_simd_based_audio_format_switching{
     kIsSimdBasedAudioFormatSwitchingDefaultEnabled};
+
+std::atomic<int64_t> g_last_logged_us{0};
+std::atomic<int64_t> g_alloc_count{0};
+std::atomic<int64_t> g_alloc_bytes{0};
+std::atomic<int64_t> g_alloc_frames{0};
+
+void RecordDecodedAudioAllocation(int size_in_bytes, int frames) {
+  g_alloc_count.fetch_add(1, std::memory_order_relaxed);
+  g_alloc_bytes.fetch_add(size_in_bytes, std::memory_order_relaxed);
+  g_alloc_frames.fetch_add(frames, std::memory_order_relaxed);
+
+  int64_t last_time = g_last_logged_us.load(std::memory_order_relaxed);
+  int64_t now = CurrentMonotonicTime();
+  if (last_time == 0) {
+    g_last_logged_us.compare_exchange_strong(last_time, now,
+                                             std::memory_order_relaxed);
+    return;
+  }
+
+  constexpr int64_t kLogIntervalUs = 5 * 1'000'000LL;  // 5 seconds
+  if (now - last_time >= kLogIntervalUs) {
+    if (g_last_logged_us.compare_exchange_strong(last_time, now,
+                                                 std::memory_order_relaxed)) {
+      int64_t count = g_alloc_count.exchange(0, std::memory_order_relaxed);
+      int64_t bytes = g_alloc_bytes.exchange(0, std::memory_order_relaxed);
+      int64_t total_frames =
+          g_alloc_frames.exchange(0, std::memory_order_relaxed);
+      double elapsed_sec = (now - last_time) / 1'000'000.0;
+      if (elapsed_sec > 0.0) {
+        double alloc_per_sec = count / elapsed_sec;
+        double mb_per_sec = (bytes / (1024.0 * 1024.0)) / elapsed_sec;
+        int64_t avg_size = count > 0 ? bytes / count : 0;
+        int64_t avg_frames = count > 0 ? total_frames / count : 0;
+        SB_LOG(INFO) << "[DecodedAudio] Allocations: " << alloc_per_sec
+                     << " allocs/sec (" << count << " in " << elapsed_sec
+                     << "s), Throughput: " << mb_per_sec << " MB/sec, "
+                     << "Avg size: " << avg_size << " bytes, "
+                     << "Avg frames: " << avg_frames << " frames.";
+      }
+    }
+  }
+}
 
 #if defined(USE_NEON_FOR_AUDIO)
 bool GetSimdBasedAudioFormatSwitchingSetting() {
@@ -91,6 +134,9 @@ DecodedAudio::DecodedAudio(int channels,
   // SB_DCHECK_EQ(size_in_bytes_ % (GetBytesPerSample(sample_type_) *
   // channels_),
   //           0);
+  int bytes_per_frame = GetBytesPerSample(sample_type_) * channels_;
+  int num_frames = bytes_per_frame > 0 ? size_in_bytes_ / bytes_per_frame : 0;
+  RecordDecodedAudioAllocation(size_in_bytes_, num_frames);
 }
 
 DecodedAudio::DecodedAudio(int channels,
@@ -108,6 +154,9 @@ DecodedAudio::DecodedAudio(int channels,
   SB_DCHECK_GE(size_in_bytes_, 0);
   SB_DCHECK_EQ(size_in_bytes_ % (GetBytesPerSample(sample_type_) * channels_),
                0);
+  int bytes_per_frame = GetBytesPerSample(sample_type_) * channels_;
+  int num_frames = bytes_per_frame > 0 ? size_in_bytes_ / bytes_per_frame : 0;
+  RecordDecodedAudioAllocation(size_in_bytes_, num_frames);
 }
 
 DecodedAudio::DecodedAudio(DecodedAudio&& other) noexcept

@@ -15,12 +15,15 @@
 #ifndef STARBOARD_SHARED_STARBOARD_PLAYER_BUFFER_INTERNAL_H_
 #define STARBOARD_SHARED_STARBOARD_PLAYER_BUFFER_INTERNAL_H_
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <utility>
 
 #include "starboard/common/check_op.h"
+#include "starboard/common/log.h"
+#include "starboard/common/time.h"
 #include "starboard/shared/internal_only.h"
 
 namespace starboard {
@@ -36,9 +39,46 @@ class Buffer {
   static constexpr int kPaddingSize = 32;
 #endif  // defined(NDEBUG)
 
+  inline static std::atomic<int64_t> last_logged_us_{0};
+  inline static std::atomic<int64_t> alloc_count_{0};
+  inline static std::atomic<int64_t> alloc_bytes_{0};
+
+  static void RecordAllocation(int size) {
+    alloc_count_.fetch_add(1, std::memory_order_relaxed);
+    alloc_bytes_.fetch_add(size, std::memory_order_relaxed);
+
+    int64_t last_time = last_logged_us_.load(std::memory_order_relaxed);
+    int64_t now = CurrentMonotonicTime();
+    if (last_time == 0) {
+      last_logged_us_.compare_exchange_strong(last_time, now,
+                                              std::memory_order_relaxed);
+      return;
+    }
+
+    constexpr int64_t kLogIntervalUs = 5 * 1'000'000LL;  // 5 seconds
+    if (now - last_time >= kLogIntervalUs) {
+      if (last_logged_us_.compare_exchange_strong(last_time, now,
+                                                  std::memory_order_relaxed)) {
+        int64_t count = alloc_count_.exchange(0, std::memory_order_relaxed);
+        int64_t bytes = alloc_bytes_.exchange(0, std::memory_order_relaxed);
+        double elapsed_sec = (now - last_time) / 1'000'000.0;
+        if (elapsed_sec > 0.0) {
+          double alloc_per_sec = count / elapsed_sec;
+          double mb_per_sec = (bytes / (1024.0 * 1024.0)) / elapsed_sec;
+          int64_t avg_size = count > 0 ? bytes / count : 0;
+          SB_LOG(INFO) << "[AudioBuffer] Allocations: " << alloc_per_sec
+                       << " allocs/sec (" << count << " in " << elapsed_sec
+                       << "s), Throughput: " << mb_per_sec << " MB/sec, "
+                       << "Avg size: " << avg_size << " bytes.";
+        }
+      }
+    }
+  }
+
   Buffer() = default;
   explicit Buffer(int size)
       : size_(size), data_(new uint8_t[size + kPaddingSize * 2]) {
+    RecordAllocation(size_);
 #if !defined(NDEBUG)
     memset(data_, kPadding, kPaddingSize);
     memset(data_ + kPaddingSize + size_, kPadding, kPaddingSize);
@@ -52,6 +92,8 @@ class Buffer {
     if (!data_) {
       return;
     }
+    RecordAllocation(size_);
+
     memcpy(data_, that.data_, size_ + kPaddingSize * 2);
   }
   Buffer(Buffer&& that) : size_(that.size_), data_(that.data_) {
