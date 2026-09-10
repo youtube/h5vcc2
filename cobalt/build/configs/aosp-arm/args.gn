@@ -2,5 +2,11 @@ import("//cobalt/build/configs/evergreen-x64/args.gn")
 
 target_cpu = "arm"
 starboard_target_platform = "aosp-arm"
+
+# Set for every toolchain of this build, including the Evergreen library one
+# where is_android is false. See is_aosp in
+# cobalt/build/configs/initialize_variables.gni.
+is_aosp = true
+
 arm_float_abi = "softfp"
 use_errorprone_java_compiler = false

@@ -158,6 +158,13 @@ config("buildflag_defines") {
     defines += [ "ENABLE_BUILDFLAG_IS_ANDROIDTV" ]
   }
 
+  # Use is_aosp and BUILDFLAG(IS_AOSP) to guard code specific to the AOSP
+  # platform.
+  # This stays true in the Evergreen library target where IS_ANDROID is false
+  if (is_aosp) {
+    defines += [ "ENABLE_BUILDFLAG_IS_AOSP" ]
+  }
+
   # Use is_native_toolchain and BUILDFLAG(IS_NATIVE_TOOLCHAIN) for code that
   # should only be built using the platform's "native_target" toolchain. This is for
   # binaries that should run natively on the system, without Starboard.

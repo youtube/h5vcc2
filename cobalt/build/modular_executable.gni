@@ -21,9 +21,6 @@ if (is_android) {
   import("//cobalt/aosp/modular_apk.gni")
 }
 
-_is_aosp =
-    string_replace(starboard_path, "starboard/aosp/", "", 1) != starboard_path
-
 # Targets not working on Android.
 _failing_android_targets = [
   "app_shell_unittests",
@@ -134,8 +131,8 @@ template("evergreen_final_target") {
         "//starboard/loader_app($starboard_toolchain)",
       ]
 
-      if (_is_aosp && filter_include([ original_target_name ],
-                                     _failing_android_targets) == []) {
+      if (is_aosp && filter_include([ original_target_name ],
+                                    _failing_android_targets) == []) {
         data_deps += [ ":${original_target_name}_apk($starboard_toolchain)" ]
 
         if (defined(invoker.testonly) && invoker.testonly) {

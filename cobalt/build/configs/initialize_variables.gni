@@ -77,6 +77,16 @@ if (starboard_toolchain == "") {
 }
 
 declare_args() {
+  # True when building for an AOSP platform
+  #
+  # Unlike is_android, this has to stay true in the Evergreen library target,
+  # where target_os is "linux".
+  # This default value is true only for android toolchains, so, AOSP platforms
+  # set this to true in their args.gn (see cobalt/build/configs/aosp-arm/args.gn).
+  is_aosp = is_android && !is_androidtv
+}
+
+declare_args() {
   # TODO(b/428999732, b/437999182): Cobalt shell was started as a minimal test shell.
   # We use this param to separate all test logics from the Cobalt shell.
   run_browser_tests = !is_official_build
