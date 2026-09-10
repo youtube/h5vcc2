@@ -26,7 +26,7 @@
 #import "starboard/tvos/shared/starboard_application.h"
 
 #ifdef COBALT_INTERNAL_BUILD
-#include "cobalt/internal/starboard/shared/tvos/drm_system_fairplay_constants.h"
+#include "cobalt/internal/third_party/platform_drm/platform_drm_common.h"
 #endif  // COBALT_INTERNAL_BUILD
 
 /**
