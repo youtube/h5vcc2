@@ -34,6 +34,14 @@
 #include "util/net/http_body.h"
 #include "util/numeric/safe_assignment.h"
 
+#if BUILDFLAG(IS_NATIVE_TOOLCHAIN)
+// Breakpad's bundled curl.h predates libcurl 7.21.6, which introduced
+// CURLOPT_ACCEPT_ENCODING as an alias for CURLOPT_ENCODING.
+#ifndef CURLOPT_ACCEPT_ENCODING
+#define CURLOPT_ACCEPT_ENCODING CURLOPT_ENCODING
+#endif
+#endif
+
 namespace crashpad {
 
 namespace {
@@ -345,6 +353,10 @@ HTTPTransportLibcurl::HTTPTransportLibcurl() : HTTPTransport() {}
 HTTPTransportLibcurl::~HTTPTransportLibcurl() {}
 
 bool HTTPTransportLibcurl::ExecuteSynchronously(std::string* response_body) {
+#if BUILDFLAG(IS_NATIVE_TOOLCHAIN)
+  LOG(INFO) << "HTTPTransportLibcurl::ExecuteSynchronously executing crash report upload via libcurl";
+#endif
+
   DCHECK(body_stream());
 
   response_body->clear();
@@ -394,10 +406,19 @@ bool HTTPTransportLibcurl::ExecuteSynchronously(std::string* response_body) {
 
   TRY_CURL_EASY_SETOPT(curl.get(), CURLOPT_URL, url().c_str());
 
+#if BUILDFLAG(IS_NATIVE_TOOLCHAIN)
+  if (!root_ca_certificates_directory_path().empty()) {
+    TRY_CURL_EASY_SETOPT(
+        curl.get(),
+        CURLOPT_CAPATH,
+        root_ca_certificates_directory_path().value().c_str());
+  }
+#else   // BUILDFLAG(IS_NATIVE_TOOLCHAIN)
   if (!root_ca_certificate_path().empty()) {
     TRY_CURL_EASY_SETOPT(
         curl.get(), CURLOPT_CAINFO, root_ca_certificate_path().value().c_str());
   }
+#endif  // BUILDFLAG(IS_NATIVE_TOOLCHAIN)
 
   constexpr int kMillisecondsPerSecond = 1E3;
   TRY_CURL_EASY_SETOPT(curl.get(),

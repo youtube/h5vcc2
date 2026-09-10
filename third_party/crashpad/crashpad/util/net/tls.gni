@@ -19,14 +19,13 @@ if (is_cobalt) {
 }
 
 declare_args() {
-  # Cobalt comment: we're still exploring, in b/446904324, whether we can use
-  # libcurl. For now will keep the c25 status quo and use raw sockets with
-  # BoringSSL as the backend.
-  if (crashpad_is_fuchsia || crashpad_is_android ||
-      (is_cobalt && is_native_toolchain)) {
+  if (crashpad_is_fuchsia || crashpad_is_android) {
     crashpad_http_transport_impl = "socket"
-  } else if (crashpad_is_linux) {
+  } else if (use_system_libcurl_for_crashpad ||
+             (crashpad_is_linux && !is_cobalt)) {
     crashpad_http_transport_impl = "libcurl"
+  } else if (crashpad_is_linux || is_cobalt) {
+    crashpad_http_transport_impl = "socket"
   } else {
     crashpad_http_transport_impl = ""
   }

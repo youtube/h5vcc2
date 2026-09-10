@@ -702,6 +702,14 @@ crashpad_static_library("net") {
     }
   } else if (crashpad_http_transport_impl == "libcurl") {
     sources += [ "net/http_transport_libcurl.cc" ]
+    if (use_system_libcurl_for_crashpad) {
+      # TODO: b/446904324 - Cobalt: Consider an alternative rather than relying
+      # on these on old libcurl headers from the deprecated breakpad library.
+      include_dirs = [
+        "//third_party/breakpad/breakpad/src",
+        "//third_party/breakpad/breakpad/src/third_party",
+      ]
+    }
   }
 }
 

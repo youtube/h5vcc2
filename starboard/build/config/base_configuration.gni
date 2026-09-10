@@ -133,4 +133,8 @@ declare_args() {
   # TODO: b/406511608 - remove once crashpad builds and behaves as expected on
   # all Early Access Program platforms.
   use_crashpad = use_evergreen
+
+  # Platforms can set this to true to use system libcurl for Crashpad HTTP
+  # crash report uploads. Defaults to false.
+  use_system_libcurl_for_crashpad = false
 }

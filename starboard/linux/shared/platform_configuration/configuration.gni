@@ -33,3 +33,4 @@ platform_tests_path =
     "//starboard/linux/shared:starboard_platform_tests($starboard_toolchain)"
 
 sb_enable_cast_codec_tests = true
+use_system_libcurl_for_crashpad = true

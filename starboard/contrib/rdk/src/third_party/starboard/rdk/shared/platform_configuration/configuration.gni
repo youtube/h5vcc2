@@ -56,3 +56,5 @@ if (is_starboard) {
   sb_evergreen_compatible_use_libunwind = true
   starboard_level_final_executable_type = "shared_library"
 }
+
+use_system_libcurl_for_crashpad = true
