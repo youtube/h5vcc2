@@ -9,6 +9,12 @@
     "qa",
     "gold"
   ],
+  "test_on_device": true,
+  "test_device_family": "android",
+  "test_dimensions": {
+    "device_type": "arm_devices",
+    "device_pool": "maneki"
+  },
   "targets": [
     "cobalt:gn_all"
   ],
