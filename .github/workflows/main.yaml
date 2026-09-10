@@ -190,6 +190,13 @@ jobs:
           set -x
           test_yts_wpt=$(cat "${GITHUB_WORKSPACE}/.github/config/${PLATFORM}.json" | jq -rc '.test_yts_wpt')
           echo "test_yts_wpt=${test_yts_wpt}" >> "${GITHUB_OUTPUT}"
+      - name: Set YTS Finch tests
+        id: set-test-yts-finch
+        shell: bash
+        run: |
+          set -x
+          test_yts_finch=$(cat "${GITHUB_WORKSPACE}/.github/config/${PLATFORM}.json" | jq -rc '.test_yts_finch // "false"')
+          echo "test_yts_finch=${test_yts_finch}" >> "${GITHUB_OUTPUT}"
       - name: Set web tests
         id: set-web-tests
         shell: bash
@@ -257,6 +264,13 @@ jobs:
           set -x
           yts_wpt_test_targets=$(cat "${GITHUB_WORKSPACE}/.github/config/${PLATFORM}.json" | jq -cr '.yts_wpt_test_targets // []')
           echo "yts_wpt_test_targets=${yts_wpt_test_targets}" >> "${GITHUB_OUTPUT}"
+      - name: Set YTS Finch test targets
+        id: set-yts-finch-test-targets
+        shell: bash
+        run: |
+          set -x
+          yts_finch_test_targets=$(cat "${GITHUB_WORKSPACE}/.github/config/${PLATFORM}.json" | jq -cr '.yts_finch_test_targets // []')
+          echo "yts_finch_test_targets=${yts_finch_test_targets}" >> "${GITHUB_OUTPUT}"
       - name: Set E2E test targets
         id: set-e2e-test-targets
         shell: bash
@@ -372,6 +386,7 @@ jobs:
       test_yts_playback: ${{ steps.set-test-yts-playback.outputs.test_yts_playback }}
       test_browser: ${{ steps.set-test-browser.outputs.test_browser }}
       test_yts_wpt: ${{ steps.set-test-yts-wpt.outputs.test_yts_wpt }}
+      test_yts_finch: ${{ steps.set-test-yts-finch.outputs.test_yts_finch }}
       web_tests: ${{ steps.set-web-tests.outputs.web_tests }}
       test_root_target: ${{ steps.set-test-root-target.outputs.test_root_target }}
       test_device_family: ${{ steps.set-test-device-family.outputs.test_device_family }}
@@ -380,6 +395,7 @@ jobs:
       browser_test_targets: ${{ steps.set-browser-test-targets.outputs.browser_test_targets }}
       run_browser_tests: ${{ steps.set-browser-test-targets.outputs.run_browser_tests }}
       yts_wpt_test_targets: ${{ steps.set-yts-wpt-test-targets.outputs.yts_wpt_test_targets }}
+      yts_finch_test_targets: ${{ steps.set-yts-finch-test-targets.outputs.yts_finch_test_targets }}
       e2e_test_targets: ${{ steps.set-e2e-test-targets.outputs.e2e_test_targets }}
       browser_test_targets_json: ${{ steps.set-browser-test-targets.outputs.browser_test_targets_json }}
       test_dimensions: ${{ steps.set-test-dimensions.outputs.test_dimensions }}
@@ -772,6 +788,39 @@ jobs:
         with:
           test_type: 'yts_wpt_test'
           test_targets: '${{ needs.initialize.outputs.yts_wpt_test_targets }}'
+
+  yts-finch-test:
+    needs: [initialize, build]
+    if: |
+      needs.initialize.outputs.test_yts_finch == 'true' &&
+        (
+          (github.event_name == 'pull_request' && github.event.pull_request.draft == false ) ||
+          ((inputs.nightly == 'true' || github.event_name == 'schedule') && vars.RUN_ODT_TESTS_ON_NIGHTLY != 'False') ||
+          (github.event_name == 'push' && vars.RUN_ODT_TESTS_ON_POSTSUBMIT != 'False') ||
+          contains(fromJson(needs.initialize.outputs.labels), 'runtest')
+        )
+    runs-on: [self-hosted, odt-runner]
+    name: ${{ matrix.name }}_yts_finch_tests
+    continue-on-error: true # <-- Prevents this job from halting downstream jobs if it fails
+    permissions: {}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJson(needs.initialize.outputs.platforms) }}
+        include: ${{ fromJson(needs.initialize.outputs.includes) }}
+        config: [devel]
+    steps:
+      - name: Restore CI Essentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 1
+          filter: blob:none
+          sparse-checkout: ${{ env.CI_ESSENTIALS }}
+      - name: Run YTS Finch Tests
+        uses: ./.github/actions/internal_tests
+        with:
+          test_type: 'yts_test'
+          test_targets: '${{ needs.initialize.outputs.yts_finch_test_targets }}'
 
   on-host-test:
     needs: [initialize, docker-unittest-image, build]

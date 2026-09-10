@@ -13,6 +13,7 @@
   "comment_test_browser": "test_browser controls desktop browser tests on host. Set to false for Android because browser tests run on physical devices via test_on_device.",
   "test_browser": false,
   "test_yts_wpt": true,
+  "test_yts_finch": true,
   "test_root_target": "//cobalt/android:cobalt_apk",
   "e2e_test_targets": [
     {
@@ -98,6 +99,20 @@
     {
       "target": "testing/container/wpt:yts_wpt_test_android_arm_devices",
       "test_attempts": "2"
+    }
+  ],
+  "yts_finch_test_targets": [
+    {
+      "target": "testing/maneki/cobalt/kimono_tests:yts_finch_experiments_api_sabrina_custom_test",
+      "test_attempts": "3"
+    },
+    {
+      "target": "testing/maneki/cobalt/kimono_tests:yts_finch_experiments_api_kirkwood_custom_test",
+      "test_attempts": "3"
+    },
+    {
+      "target": "testing/maneki/cobalt/kimono_tests:yts_finch_experiments_api_boreal_custom_test",
+      "test_attempts": "3"
     }
   ],
   "test_dimensions": {
