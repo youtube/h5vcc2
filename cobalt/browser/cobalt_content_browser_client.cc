@@ -28,6 +28,7 @@
 #include "base/metrics/field_trial_params.h"
 #include "base/metrics/histogram_functions.h"
 #include "base/metrics/histogram_macros.h"
+#include "base/numerics/safe_conversions.h"
 #include "base/path_service.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_split.h"
@@ -83,6 +84,7 @@
 
 #if BUILDFLAG(IS_STARBOARD)
 #include "cobalt/browser/h5vcc_system/h5vcc_system_impl_base.h"
+#include "starboard/configuration_constants.h"
 #endif
 
 #if BUILDFLAG(USE_EVERGREEN)
@@ -413,6 +415,11 @@ void CobaltContentBrowserClient::ConfigureNetworkContextParams(
     CHECK(base::PathService::Get(base::DIR_CACHE, &cache_path));
     network_context_params->file_paths->http_cache_directory =
         cache_path.Append(kCacheDirname);
+
+#if BUILDFLAG(IS_STARBOARD)
+    network_context_params->http_cache_max_size =
+        base::saturated_cast<int32_t>(kSbMaxSystemPathCacheDirectorySize);
+#endif
 
     base::FilePath user_data_dir =
         context->GetPath().Append(relative_partition_path);
