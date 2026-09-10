@@ -60,12 +60,6 @@
 #include <stdio.h>
 #endif
 
-#if BUILDFLAG(USE_STARBOARD_MEDIA)
-#include "base/feature_list.h"
-#include "media/base/media_switches.h"
-#include "cobalt/media/audio/audio_input_constants.h"
-#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
-
 namespace blink {
 
 namespace {
@@ -207,24 +201,10 @@ AudioContext* AudioContext::Create(ExecutionContext* context,
     sample_rate = context_options->sampleRate();
   }
 
-#if BUILDFLAG(USE_STARBOARD_MEDIA)
-  // Force 16kHz default for Cobalt if no rate is specified.
-  // This aligns the JS engine with the native "Straight Pipe" 16kHz hardware capture,
-  // bypassing the heavy OfflineAudioContext downsampling in the YouTube application.
-  if (!sample_rate.has_value()) {
-    sample_rate = cobalt::media::kSampleRate;
-    LOG(INFO) << "Cobalt: Force-set sample rate to " << sample_rate.value();
-  }
-#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
-
   // The empty string means the default audio device.
   auto frame_token = window.GetLocalFrameToken();
-  WebAudioSinkDescriptor sink_descriptor =
-#if BUILDFLAG(USE_STARBOARD_MEDIA)
-      WebAudioSinkDescriptor(frame_token);
-#else
-      WebAudioSinkDescriptor(g_empty_string, frame_token);
-#endif // BUILDFLAG(USE_STARBOARD_MEDIA)
+  WebAudioSinkDescriptor sink_descriptor(g_empty_string, frame_token);
+
   // In order to not break echo cancellation of PeerConnection audio, we must
   // not update the echo cancellation reference unless the sink ID is explicitly
   // specified.
@@ -362,6 +342,19 @@ AudioContext::AudioContext(LocalDOMWindow& window,
   }
 
   Initialize();
+
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  LOG(INFO) << "Cobalt - AudioContext Initialized:"
+            << " [Sample Rate = " << sampleRate() << " Hz]"
+            << " [Sink Type = "
+            << (sink_descriptor_.Type() == WebAudioSinkDescriptor::kAudible
+                    ? "Audible"
+                    : "Silent")
+            << "]"
+            << " [Is Default Sink? = "
+            << (sink_descriptor_.IsDefaultSinkId() ? "Yes" : "No") << "]"
+            << " [Sink ID = '" << sink_descriptor_.SinkId().Utf8() << "']";
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
   // Compute the base latency now and cache the value since it doesn't change
   // once the context is constructed.  We need the destination to be initialized

@@ -2811,7 +2811,9 @@ BASE_FEATURE_PARAM(bool,
 // handle any necessary resampling, potentially reducing latency and overhead.
 BASE_FEATURE(kWebAudioRemoveAudioDestinationResampler,
              "WebAudioRemoveAudioDestinationResampler",
-#if BUILDFLAG(IS_ANDROID)
+#if BUILDFLAG(IS_COBALT)
+             base::FEATURE_ENABLED_BY_DEFAULT);
+#elif BUILDFLAG(IS_ANDROID)
              base::FEATURE_DISABLED_BY_DEFAULT);
 #else
              base::FEATURE_DISABLED_BY_DEFAULT);
