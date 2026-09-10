@@ -44,8 +44,8 @@ Available parameters for customizing container execution are:
  - **BASE_OS**: passed to `base` image at build time to select a Debian-based
     base os image and version. Defaults to Debian 9. `ubuntu:bionic` and
     `ubuntu:xenial` are other tested examples.
- - **PLATFORM**: Cobalt build platform, passed to GYP
- - **CONFIG**: Cobalt build config, passed to GYP. Defaults to `debug`
+ - **PLATFORM**: Cobalt build platform, passed to GN
+ - **CONFIG**: Cobalt build config, passed to GN. Defaults to `debug`
  - **TARGET**: Build target, passed to `ninja`
 
 The `docker-compose.yml` contains the currently defined experimental build
