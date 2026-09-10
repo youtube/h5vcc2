@@ -608,8 +608,72 @@ public abstract class CobaltActivity extends BaseCobaltActivity {
     StartupGuard.getInstance().setStartupMilestone(11);
   }
 
+  private List<android.view.SurfaceView> getAllSurfaceViews(View root) {
+    List<android.view.SurfaceView> result = new ArrayList<>();
+    if (root instanceof android.view.SurfaceView) {
+      result.add((android.view.SurfaceView) root);
+    }
+    if (root instanceof android.view.ViewGroup) {
+      android.view.ViewGroup group = (android.view.ViewGroup) root;
+      for (int i = 0; i < group.getChildCount(); i++) {
+        result.addAll(getAllSurfaceViews(group.getChildAt(i)));
+      }
+    }
+    return result;
+  }
+
+  @RequiresApi(Build.VERSION_CODES.Q)
+  private void makeUiSurfaceTransparent() {
+    if (getWindow() == null) {
+      return;
+    }
+    View decorView = getWindow().getDecorView();
+    if (decorView == null) {
+      return;
+    }
+
+    try {
+      List<android.view.SurfaceView> surfaceViews = getAllSurfaceViews(decorView);
+      if (surfaceViews.isEmpty()) {
+        Log.i(TAG, "[SurfaceControl-Fix] No SurfaceView handles found under DecorView");
+        return;
+      }
+
+      android.view.SurfaceControl.Transaction transaction =
+          new android.view.SurfaceControl.Transaction();
+      int clearedCount = 0;
+      for (android.view.SurfaceView sv : surfaceViews) {
+        if (sv == mVideoSurfaceView) {
+          continue;
+        }
+        android.view.SurfaceControl sc = sv.getSurfaceControl();
+        if (sc == null || !sc.isValid()) {
+          continue;
+        }
+
+        transaction.setAlpha(sc, 0.0f);
+        clearedCount++;
+      }
+
+      if (clearedCount == 0) {
+        Log.i(TAG, "[SurfaceControl-Fix] No valid SurfaceControl handles found under DecorView");
+        return;
+      }
+
+      transaction.apply();
+      Log.i(
+          TAG,
+          "[SurfaceControl-Fix] Applied synchronous alpha=0.0f on UI Surfaces: count="
+              + clearedCount);
+    } catch (Exception e) {
+      Log.w(TAG, "[SurfaceControl-Fix] Failed to set SurfaceControl alpha: " + e.getMessage());
+    }
+  }
+
   @Override
   protected void onPause() {
+    Log.i(TAG, "[SurfaceControl-Fix] onPause");
+
     mPhysicalBackKeyPressed = false;
     if (useStarboardLifeCycle()) {
       AppEventBridge.handleBlurEvent(System.nanoTime() / 1000L);
@@ -617,6 +681,16 @@ public abstract class CobaltActivity extends BaseCobaltActivity {
       CobaltContentBrowserClient.dispatchBlur();
     }
     super.onPause();
+
+    // Make the old SurfaceView's hardware surface transparent to ensure that,
+    // even if it becomes orphaned, it does not block the new video surface.
+    // We can use this workaround starting in Android 10, which introduced public SurfaceControl
+    // access.
+    // Android 12+ (API 31+) uses BLAST sync, making this manual transaction unnecessary.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+        && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+      makeUiSurfaceTransparent();
+    }
   }
 
   @Override
