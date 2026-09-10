@@ -1,0 +1,23 @@
+[
+  {
+    "TODO(b/382508397)": "Remove this when list is dynamically generated."
+  },
+  {
+    "target": "base:base_unittests",
+    "executable": "out/android-x86_devel/base_unittests_apk/base_unittests-debug.apk",
+    "runs_on": "device",
+    "test_type": "gtest"
+  },
+  {
+    "target": "cobalt:cobalt_unittests",
+    "executable": "out/android-x86_devel/cobalt_unittests_apk/cobalt_unittests-debug.apk",
+    "runs_on": "device",
+    "test_type": "gtest"
+  },
+  {
+    "target": "url:url_unittests",
+    "executable": "out/android-x86_devel/url_unittests_apk/url_unittests-debug.apk",
+    "runs_on": "device",
+    "test_type": "gtest"
+  }
+]
