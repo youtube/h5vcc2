@@ -11,14 +11,7 @@ Before following these instructions, make sure you have set up your workstation 
 
 1. Follow all steps in [Set up your environment - Linux](setup-linux.md) to install basic system dependencies, `depot_tools`, clone the Cobalt repository, and run `build/install-build-deps.sh`.
 
-2. Install host binutils packages for ARM cross-compilation symbol stripping:
-
-   ```bash
-   sudo apt install -y binutils-arm-linux-gnueabi    # For 32-bit aosp-arm
-   # sudo apt install -y binutils-aarch64-linux-gnu # For 64-bit aosp-arm64
-   ```
-
-3. Ensure your root `.gclient` file includes `android` in `target_os`:
+2. Ensure your root `.gclient` file includes `android` in `target_os`:
 
    ```python
    target_os = [ 'linux', 'android' ]
@@ -31,7 +24,7 @@ Before following these instructions, make sure you have set up your workstation 
    gclient sync
    ```
 
-4. Set up an Android debug keystore required for signing development APKs:
+3. Set up an Android debug keystore required for signing development APKs:
 
    ```bash
    keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000

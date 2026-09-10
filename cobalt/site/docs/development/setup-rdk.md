@@ -93,9 +93,6 @@ cd ~/chromium/src
 # Run installer
 ./build/install-build-deps.sh
 
-# Install host binutils for ARM
-sudo apt-get update && sudo apt-get install -y binutils-arm-linux-gnueabi
-
 # Install sysroot for ARM
 python3 build/linux/sysroot_scripts/install-sysroot.py --arch=arm
 ```

@@ -64,8 +64,6 @@ RUN apt update -qqy \
         g++-multilib \
         bzip2 \
         libxml2 \
-        binutils-aarch64-linux-gnu \
-        binutils-arm-linux-gnueabi \
         libglib2.0-dev \
         pkg-config \
         libtool \
