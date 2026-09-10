@@ -145,13 +145,20 @@ void ClearNativeWindow(void* raw_context) {
 
 }  // namespace
 
+// Flag tracking whether the current video surface went through an OS
+// sleep/background cycle
+static bool g_surface_was_destroyed_by_sleep = false;
+
 void JNI_VideoSurfaceView_OnVideoSurfaceChanged(
     JNIEnv* env,
     const JavaParamRef<jobject>& surface) {
   std::lock_guard lock(*GetViewSurfaceMutex());
-  if (g_video_surface_holder) {
-    g_video_surface_holder->OnSurfaceDestroyed();
-    g_video_surface_holder = NULL;
+  if (!surface) {
+    g_surface_was_destroyed_by_sleep = true;
+    if (g_video_surface_holder) {
+      g_video_surface_holder->OnSurfaceDestroyed();
+      g_video_surface_holder = NULL;
+    }
   }
   GetGlobalVideoSurface().Reset();
   if (g_native_video_window) {
@@ -200,15 +207,31 @@ void VideoSurfaceHolder::CleanUpVideoSurface(
   // during painting.
   std::lock_guard lock(*GetViewSurfaceMutex());
 
+  JNIEnv* env = AttachCurrentThread();
+
   if (!g_native_video_window) {
-    SB_LOG(INFO) << "Tried to clean up video window when it was null.";
     return;
   }
 
-  SB_CHECK(gpu_provider);
-  gpu_provider->gles_context_runner(gpu_provider, &ClearNativeWindow,
-                                    g_native_video_window);
-  SB_LOG(INFO) << "Video surface has been cleared.";
+  if (g_surface_was_destroyed_by_sleep) {
+    if (env) {
+      StarboardBridge::GetInstance()->ResetVideoSurface(env);
+      SB_LOG(INFO) << "Video surface reset after sleep cycle.";
+    }
+    g_surface_was_destroyed_by_sleep = false;
+    return;
+  }
+
+  if (gpu_provider) {
+    gpu_provider->gles_context_runner(gpu_provider, &ClearNativeWindow,
+                                      g_native_video_window);
+    SB_LOG(INFO) << "Video surface clear posted via gpu_provider.";
+  } else {
+    if (env) {
+      StarboardBridge::GetInstance()->ResetVideoSurface(env);
+      SB_LOG(INFO) << "Video surface reset via fallback.";
+    }
+  }
 }
 
 void VideoSurfaceHolder::ResetVideoSurface() {
