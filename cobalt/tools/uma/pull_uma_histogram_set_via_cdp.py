@@ -374,6 +374,21 @@ def _run_main(args, output_file):
       stop_package(args.package_name, args.quiet)
   _print_q('\nDONE!!!\n', args.quiet)
 
+  if args.output_file:
+    html_file = args.output_file.rsplit('.', 1)[0] + '.html'
+    _print_q(f'Generating visualization: {html_file}', args.quiet)
+    try:
+      # Use sys.executable to ensure we use the same Python binary
+      plot_script = os.path.join(
+          os.path.dirname(os.path.abspath(__file__)), 'plot_uma_metrics.py')
+      subprocess.run([
+          sys.executable, plot_script, '--input', args.output_file, '--output',
+          html_file
+      ],
+                     check=False)
+    except (subprocess.CalledProcessError, OSError) as e:
+      _print_q(f'Failed to run plot_uma_metrics.py: {e}', args.quiet)
+
 
 def main():
   parser = argparse.ArgumentParser()
