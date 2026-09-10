@@ -349,6 +349,9 @@ def launch_on_device(
             "sleep 2",
             f"curl http://127.0.0.1:9998/jsonrpc -d '{rpc_deactivate}'",
             "sleep 2",
+            "mkdir -p /opt/persistent/rdkservices/Cobalt/Cobalt",
+            "chown -R cobalt:dobbyapp /opt/persistent/rdkservices/Cobalt/Cobalt",
+            "chmod -R 777 /opt/persistent/rdkservices/Cobalt/Cobalt",
             f"curl -s http://127.0.0.1:9998/jsonrpc -d '{rpc_activate}'",
         ]
 
