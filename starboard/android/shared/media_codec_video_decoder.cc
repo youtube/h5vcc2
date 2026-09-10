@@ -356,6 +356,7 @@ MediaCodecVideoDecoder::MediaCodecVideoDecoder(
       is_video_frame_tracker_enabled_(android_get_device_api_level() >= 34 ||
                                       tunnel_mode_audio_session_id_),
       media_codec_factory_(std::move(media_codec_factory)),
+      video_mime_(stream_config.video_stream_info.mime),
       has_new_texture_available_(false),
       initial_number_of_preroll_frames_(
           pipeline_config.experimental_features
@@ -527,6 +528,22 @@ void MediaCodecVideoDecoder::WriteInputBuffers(
     }
   }
 
+  SbMediaVideoCodec new_codec =
+      input_buffers.front()->video_stream_info().codec;
+  const std::string& new_mime = input_buffers.front()->video_stream_info().mime;
+  bool stream_info_changed = (!new_mime.empty() && new_mime != video_mime_);
+  const auto& stream_info = input_buffers.front()->video_stream_info();
+  if (!stream_info.mime.empty() && stream_info.mime != video_mime_) {
+    video_mime_ = stream_info.mime;
+  }
+
+  if (codec_transition_state_ != CodecTransitionState::kNone) {
+    pending_codec_transition_buffers_.insert(
+        pending_codec_transition_buffers_.end(), input_buffers.begin(),
+        input_buffers.end());
+    return;
+  }
+
   if (input_buffer_written_ == 0) {
     SB_DCHECK_EQ(video_fps_, 0);
     first_buffer_timestamp_ = input_buffers.front()->timestamp();
@@ -555,6 +572,22 @@ void MediaCodecVideoDecoder::WriteInputBuffers(
         return;
       }
     }
+  }
+
+  bool new_is_hdr = !IsIdentity(stream_info.color_metadata);
+  bool current_is_hdr =
+      color_metadata_.has_value() && !IsIdentity(*color_metadata_);
+
+  if (input_buffer_written_ > 0 && new_is_hdr != current_is_hdr) {
+    SB_LOG(INFO) << "Color space change detected (HDR <-> SDR). "
+                    "Initiating EOS draining for codec transition...";
+    codec_transition_state_ = CodecTransitionState::kDraining;
+    pending_codec_transition_stream_info_ = stream_info;
+    pending_codec_transition_buffers_.insert(
+        pending_codec_transition_buffers_.end(), input_buffers.begin(),
+        input_buffers.end());
+    media_decoder_->WriteEndOfStream();
+    return;
   }
 
   input_buffer_written_ += input_buffers.size();
@@ -999,6 +1032,20 @@ void MediaCodecVideoDecoder::ProcessOutputBuffer(
 
   bool is_end_of_stream =
       dequeue_output_result.flags & MediaCodec::kBufferFlagEndOfStream;
+
+  if (is_end_of_stream &&
+      codec_transition_state_ == CodecTransitionState::kDraining) {
+    SB_LOG(INFO) << "EOS received during codec transition draining. Scheduling "
+                    "codec transition.";
+    codec_transition_state_ = CodecTransitionState::kTransitionScheduled;
+    media_codec_bridge->ReleaseOutputBuffer(dequeue_output_result.index, false);
+    Schedule(std::bind(&MediaCodecVideoDecoder::PerformCodecTransition, this));
+    if (decoder_status_cb_) {
+      decoder_status_cb_(kNeedMoreInput, NULL);
+    }
+    return;
+  }
+
   if (!is_end_of_stream) {
     ++decoded_output_frames_;
     if (output_format_) {
@@ -1247,11 +1294,50 @@ void MediaCodecVideoDecoder::ResetInternal(bool skip_flush) {
   tunnel_mode_prerolled_frames_.store(0);
   end_of_stream_written_ = false;
   pending_input_buffers_.clear();
+  pending_codec_transition_buffers_.clear();
+  codec_transition_state_ = CodecTransitionState::kNone;
+  pending_codec_transition_stream_info_ = VideoStreamInfo();
 
   // TODO: We rely on VideoRenderAlgorithmTunneled::Seek() to be called inside
   //       VideoRenderer::Seek() after calling MediaCodecVideoDecoder::Reset()
   //       to update the seek status of |video_frame_tracker_|.  This is
   //       slightly flaky as it depends on the behavior of the video renderer.
+}
+
+void MediaCodecVideoDecoder::PerformCodecTransition() {
+  SB_CHECK(BelongsToCurrentThread());
+  if (codec_transition_state_ != CodecTransitionState::kTransitionScheduled) {
+    return;
+  }
+
+  SB_LOG(INFO) << "Reinitializing MediaCodec for mid-stream codec transition.";
+
+  TeardownCodec();
+
+  const auto& color_metadata =
+      pending_codec_transition_stream_info_.color_metadata;
+  color_metadata_ = !IsIdentity(color_metadata)
+                        ? std::make_optional(color_metadata)
+                        : std::nullopt;
+
+  first_buffer_timestamp_ = 0;
+  input_buffer_written_ = 0;
+  video_fps_ = 0;
+  end_of_stream_written_ = false;
+
+  codec_transition_state_ = CodecTransitionState::kNone;
+  VideoStreamInfo stream_info = pending_codec_transition_stream_info_;
+  pending_codec_transition_stream_info_ = VideoStreamInfo();
+
+  if (decoder_status_cb_) {
+    decoder_status_cb_(kReleaseAllFrames, NULL);
+  }
+
+  if (!pending_codec_transition_buffers_.empty()) {
+    InputBuffers buffers_to_write;
+    buffers_to_write.swap(pending_codec_transition_buffers_);
+    WriteInputBuffers(buffers_to_write);
+  }
 }
 
 }  // namespace starboard
