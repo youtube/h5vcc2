@@ -29,8 +29,14 @@ BASE_FEATURE(kTestFinchFeature,
              "TestFinchFeature",
              base::FEATURE_DISABLED_BY_DEFAULT);
 
+<<<<<<< HEAD
 const base::FeatureParam<std::string> kTestFinchFeatureParam{
     &kTestFinchFeature, "TestFinchFeatureParam", ""};
+=======
+// Test conflict marker for AI Rebase Agent verification.
+const base::FeatureParam<std::string> kTestFinchFeatureParam{
+    &kTestFinchFeature, "TestFinchFeatureParam", ""};
+>>>>>>> upstream/main
 
 BASE_FEATURE(kEnableUserAgentFinchToken,
              "EnableUserAgentFinchToken",
