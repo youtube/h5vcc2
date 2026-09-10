@@ -46,6 +46,7 @@ log "Verifying initial preloaded state (Hidden & Not Focused)..."
 # In preload mode, the app should be hidden and not have focus.
 bash cobalt/tools/wait_for_state.sh "document.visibilityState" "hidden" $PORT 120 || exit 1
 bash cobalt/tools/wait_for_state.sh "document.hasFocus()" "False" $PORT 120 || exit 1
+bash cobalt/tools/wait_for_state.sh "window.location.search.includes('launch=preload')" "True" $PORT 120 || exit 1
 
 log "Sending SIGCONT to reveal application..."
 kill -SIGCONT $COBALT_PID
