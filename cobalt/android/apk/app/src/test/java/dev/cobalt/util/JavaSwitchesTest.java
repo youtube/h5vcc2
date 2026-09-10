@@ -40,12 +40,14 @@ public class JavaSwitchesTest {
     ContextUtils.initApplicationContextForTests(RuntimeEnvironment.getApplication());
     clearConfigFiles();
     JavaSwitches.setOverrideForTesting(null);
+    DeviceUtil.resetForTesting();
   }
 
   @After
   public void tearDown() {
     JavaSwitches.setOverrideForTesting(null);
     clearConfigFiles();
+    DeviceUtil.resetForTesting();
   }
 
   private void clearConfigFiles() {
@@ -378,6 +380,15 @@ public class JavaSwitchesTest {
 
     // Default JS flags should still be present
     assertThat(args).contains("--js-flags=--initial-old-space-size=64;--max-old-space-size=512");
+    assertThat(args).contains("--force-device-scale-factor=1");
+  }
+
+  @Test
+  public void testGetDefaultCommandLineArgs() {
+    List<String> args = JavaSwitches.getDefaultCommandLineArgs();
+    assertThat(args).contains("--disable-quic");
+    assertThat(args).contains("--js-flags=--initial-old-space-size=64;--max-old-space-size=512");
+    assertThat(args).contains("--force-device-scale-factor=1");
   }
 
   @Test
@@ -419,5 +430,63 @@ public class JavaSwitchesTest {
     assertThat(args).doesNotContain("--force-gpu-mem-available-mb=");
     assertThat(args).doesNotContain("--cc-image-cache-limit-items=");
     assertThat(args).doesNotContain("--max-http-cache-size=");
+  }
+
+  @Test
+  public void testGetExtraCommandLineArgs_DefaultScaleFactor() {
+    List<String> args = JavaSwitches.getExtraCommandLineArgs(null);
+    assertThat(args).contains("--force-device-scale-factor=1");
+    assertThat(args).doesNotContain("--force-device-scale-factor=1.5");
+  }
+
+  @Test
+  public void testGetExtraCommandLineArgs_Force720pUiOn1GbDevices_1GbAnd1080p() {
+    Map<String, String> switches = new HashMap<>();
+    switches.put(JavaSwitches.FORCE_720P_UI_ON_1GB_DEVICES, "1");
+
+    DeviceUtil.setIs1GbDeviceForTesting(true);
+    DeviceUtil.setIsDisplayAtLeast1080pForTesting(true);
+
+    List<String> args = JavaSwitches.getExtraCommandLineArgs(switches);
+    assertThat(args).contains("--force-device-scale-factor=1.5");
+    assertThat(args).doesNotContain("--force-device-scale-factor=1");
+  }
+
+  @Test
+  public void testGetExtraCommandLineArgs_Force720pUiOn1GbDevices_1GbAnd720p() {
+    Map<String, String> switches = new HashMap<>();
+    switches.put(JavaSwitches.FORCE_720P_UI_ON_1GB_DEVICES, "1");
+
+    DeviceUtil.setIs1GbDeviceForTesting(true);
+    DeviceUtil.setIsDisplayAtLeast1080pForTesting(false);
+
+    List<String> args = JavaSwitches.getExtraCommandLineArgs(switches);
+    assertThat(args).contains("--force-device-scale-factor=1");
+    assertThat(args).doesNotContain("--force-device-scale-factor=1.5");
+  }
+
+  @Test
+  public void testGetExtraCommandLineArgs_Force720pUiOn1GbDevices_2GbAnd1080p() {
+    Map<String, String> switches = new HashMap<>();
+    switches.put(JavaSwitches.FORCE_720P_UI_ON_1GB_DEVICES, "1");
+
+    DeviceUtil.setIs1GbDeviceForTesting(false);
+    DeviceUtil.setIsDisplayAtLeast1080pForTesting(true);
+
+    List<String> args = JavaSwitches.getExtraCommandLineArgs(switches);
+    assertThat(args).contains("--force-device-scale-factor=1");
+    assertThat(args).doesNotContain("--force-device-scale-factor=1.5");
+  }
+
+  @Test
+  public void testGetExtraCommandLineArgs_Force720pUiOn1GbDevices_SwitchAbsent() {
+    Map<String, String> switches = new HashMap<>();
+
+    DeviceUtil.setIs1GbDeviceForTesting(true);
+    DeviceUtil.setIsDisplayAtLeast1080pForTesting(true);
+
+    List<String> args = JavaSwitches.getExtraCommandLineArgs(switches);
+    assertThat(args).contains("--force-device-scale-factor=1");
+    assertThat(args).doesNotContain("--force-device-scale-factor=1.5");
   }
 }

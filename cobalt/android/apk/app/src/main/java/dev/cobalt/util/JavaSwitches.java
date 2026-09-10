@@ -42,6 +42,7 @@ public class JavaSwitches {
   public static final String DEFAULT_INITIAL_OLD_SPACE_SIZE = "64";
   public static final String DEFAULT_MAX_OLD_SPACE_SIZE = "512";
   public static final String DEFAULT_FORCE_GPU_MEM_AVAILABLE_MB = "64";
+  public static final String DEFAULT_FORCE_DEVICE_SCALE_FACTOR = "1";
 
   public static final String ENABLE_QUIC = "EnableQUIC";
 
@@ -188,6 +189,9 @@ public class JavaSwitches {
   public static final String ENABLE_ACTIVITY_LIFECYCLE_COORDINATION =
       "EnableActivityLifecycleCoordination";
 
+  /** Flag to force 720p UI for 1GB RAM devices on 1080p+ displays for A/B testing. */
+  public static final String FORCE_720P_UI_ON_1GB_DEVICES = "Force720pUiOn1GbDevices";
+
   private static Boolean sOverrideForTesting;
 
   public static void setOverrideForTesting(Boolean override) {
@@ -311,6 +315,7 @@ public class JavaSwitches {
             + DEFAULT_INITIAL_OLD_SPACE_SIZE
             + ";--max-old-space-size="
             + DEFAULT_MAX_OLD_SPACE_SIZE);
+    defaultArgs.add("--force-device-scale-factor=" + DEFAULT_FORCE_DEVICE_SCALE_FACTOR);
     return defaultArgs;
   }
 
@@ -547,6 +552,14 @@ public class JavaSwitches {
 
     if (javaSwitches.containsKey(JavaSwitches.ENABLE_ACTIVITY_LIFECYCLE_COORDINATION)) {
       extraCommandLineArgs.add("--enable-activity-lifecycle-coordination");
+    }
+
+    if (javaSwitches.containsKey(JavaSwitches.FORCE_720P_UI_ON_1GB_DEVICES)
+        && DeviceUtil.is1GbDevice()
+        && DeviceUtil.isDisplayAtLeast1080p()) {
+      extraCommandLineArgs.add("--force-device-scale-factor=1.5");
+    } else {
+      extraCommandLineArgs.add("--force-device-scale-factor=" + DEFAULT_FORCE_DEVICE_SCALE_FACTOR);
     }
 
     return extraCommandLineArgs;

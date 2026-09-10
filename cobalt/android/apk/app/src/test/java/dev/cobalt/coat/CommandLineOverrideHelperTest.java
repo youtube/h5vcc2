@@ -86,9 +86,7 @@ public class CommandLineOverrideHelperTest {
     String actual = CommandLine.getInstance().getSwitchValue("autoplay-policy");
     Assert.assertEquals(expected, actual);
 
-    expected = "1";
-    actual = CommandLine.getInstance().getSwitchValue("force-device-scale-factor");
-    Assert.assertEquals(expected, actual);
+    Assert.assertFalse(CommandLine.getInstance().hasSwitch("force-device-scale-factor"));
 
     actual = CommandLine.getInstance().getSwitchValue("enable-features");
     expected = CommandLineOverrideHelper.getDefaultEnableFeatureOverridesList().toString();
@@ -169,6 +167,16 @@ public class CommandLineOverrideHelperTest {
     CommandLineOverrideHelper.getFlagOverrides(commandLineArgs);
 
     Assert.assertEquals("*", CommandLine.getInstance().getSwitchValue("remote-allow-origins"));
+  }
+
+  @Test
+  public void testFlagOverrides_ForceDeviceScaleFactorFromParams() {
+    List<String> commandLineArgs = Arrays.asList("--force-device-scale-factor=1.5");
+    CommandLineOverrideHelper.getFlagOverrides(commandLineArgs);
+
+    Assert.assertTrue(CommandLine.getInstance().hasSwitch("force-device-scale-factor"));
+    String actual = CommandLine.getInstance().getSwitchValue("force-device-scale-factor");
+    Assert.assertEquals("1.5", actual);
   }
 
   @Test

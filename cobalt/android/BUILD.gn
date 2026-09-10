@@ -190,6 +190,7 @@ android_library("cobalt_main_java") {
     "apk/app/src/main/java/dev/cobalt/media/VideoSurfaceView.java",
     "apk/app/src/main/java/dev/cobalt/util/AssetLoader.java",
     "apk/app/src/main/java/dev/cobalt/util/CobaltPrefNamesTestHelper.java",
+    "apk/app/src/main/java/dev/cobalt/util/DeviceUtil.java",
     "apk/app/src/main/java/dev/cobalt/util/DisplayUtil.java",
     "apk/app/src/main/java/dev/cobalt/util/Holder.java",
     "apk/app/src/main/java/dev/cobalt/util/IsEmulator.java",
@@ -374,6 +375,7 @@ robolectric_binary("cobalt_coat_junit_tests") {
     "apk/app/src/test/java/dev/cobalt/coat/PlatformErrorTest.java",
     "apk/app/src/test/java/dev/cobalt/coat/ShellManagerTest.java",
     "apk/app/src/test/java/dev/cobalt/media/MediaCodecOutputTrackerTest.java",
+    "apk/app/src/test/java/dev/cobalt/util/DeviceUtilTest.java",
     "apk/app/src/test/java/dev/cobalt/util/JavaSwitchesTest.java",
     "apk/app/src/test/java/dev/cobalt/util/StartupGuardTest.java",
   ]
