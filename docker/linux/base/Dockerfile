@@ -20,9 +20,12 @@ COPY base/clean-after-apt.sh /opt/clean-after-apt.sh
 
 ENV PYTHONUNBUFFERED 1
 
+# === Ignore expired InRelease repository metadata (e.g. Debian Bullseye security archive)
+RUN echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until
+
 # === Install common dependencies
-RUN apt update -qqy \
-    && apt -qqy upgrade \
+RUN apt update -qqy -o Acquire::Check-Valid-Until=false \
+    && apt -qqy upgrade -o Acquire::Check-Valid-Until=false \
     && apt install -qqy --no-install-recommends \
         python3-dev \
         python3-pip \
