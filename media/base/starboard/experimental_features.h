@@ -182,6 +182,9 @@ inline constexpr ExperimentalFeatureKey<bool> kMediaForceDecodeToTexture(
 inline constexpr ExperimentalFeatureKey<int> kMediaMaxSamplesPerWrite(
     "Media.MaxSamplesPerWrite");
 
+inline constexpr ExperimentalFeatureKey<bool> kMediaShutterForPunchOut(
+    "Media.ShutterForPunchOut");
+
 inline constexpr ExperimentalFeatureKey<bool> kMediaUseExternalMediaMemoryPool(
     "Media.UseExternalMediaMemoryPool");
 // keep-sorted end

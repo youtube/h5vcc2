@@ -153,6 +153,8 @@ StarboardRenderer::StarboardRenderer(
       experimental_features_(experimental_features),
       max_samples_per_write_(experimental_features.Get(kMediaMaxSamplesPerWrite)
                                  .value_or(kDefaultMaxSamplePerWrite)),
+      shutter_for_punch_out_(
+          experimental_features.GetBool(kMediaShutterForPunchOut)),
       viewport_size_(viewport_size)
 #if BUILDFLAG(IS_ANDROID)
       ,
@@ -169,6 +171,7 @@ StarboardRenderer::StarboardRenderer(
             << base::GetQuotedJSONString(max_video_capabilities_)
             << ", max_samples_per_write=" << max_samples_per_write_
             << ", view_port_size=" << viewport_size_.ToString()
+            << ", shutter_for_punch_out=" << shutter_for_punch_out_
             << ", experimental_features=" << experimental_features_;
 }
 
@@ -619,7 +622,11 @@ void StarboardRenderer::UpdateUrlPlayerVideoResolution() {
   url_player_video_size_ = size;
   client_->OnVideoNaturalSizeChange(size);
   if (player_bridge_->GetSbPlayerOutputMode() == kSbPlayerOutputModePunchOut) {
-    paint_video_hole_frame_cb_.Run(size);
+    if (shutter_for_punch_out_) {
+      pending_video_hole_size_ = size;
+    } else {
+      paint_video_hole_frame_cb_.Run(size);
+    }
   }
 }
 
@@ -890,8 +897,13 @@ void StarboardRenderer::UpdateDecoderConfig(DemuxerStream* stream) {
     color_space_ = decoder_config.color_space_info().ToGfxColorSpace();
     if (player_bridge_->GetSbPlayerOutputMode() ==
         kSbPlayerOutputModePunchOut) {
-      paint_video_hole_frame_cb_.Run(
-          stream->video_decoder_config().visible_rect().size());
+      if (shutter_for_punch_out_) {
+        pending_video_hole_size_ =
+            stream->video_decoder_config().visible_rect().size();
+      } else {
+        paint_video_hole_frame_cb_.Run(
+            stream->video_decoder_config().visible_rect().size());
+      }
     }
   }
 }
@@ -975,8 +987,13 @@ void StarboardRenderer::OnDemuxerStreamRead(
           stream->video_decoder_config().visible_rect().size());
       if (player_bridge_->GetSbPlayerOutputMode() ==
           kSbPlayerOutputModePunchOut) {
-        paint_video_hole_frame_cb_.Run(
-            stream->video_decoder_config().visible_rect().size());
+        if (shutter_for_punch_out_) {
+          pending_video_hole_size_ =
+              stream->video_decoder_config().visible_rect().size();
+        } else {
+          paint_video_hole_frame_cb_.Run(
+              stream->video_decoder_config().visible_rect().size());
+        }
       }
     }
     UpdateDecoderConfig(stream);
@@ -1140,6 +1157,13 @@ void StarboardRenderer::OnPlayerStatus(SbPlayerState state) {
           base::BindOnce(&StarboardRenderer::OnBufferingStateChange,
                          weak_factory_.GetWeakPtr(), buffering_state_));
       UpdateAudioWriteDuration();
+      if (shutter_for_punch_out_ && pending_video_hole_size_.has_value()) {
+        if (player_bridge_->GetSbPlayerOutputMode() ==
+            kSbPlayerOutputModePunchOut) {
+          paint_video_hole_frame_cb_.Run(*pending_video_hole_size_);
+        }
+        pending_video_hole_size_.reset();
+      }
 #if BUILDFLAG(IS_IOS_TVOS)
       if (IsUrlPlayer()) {
         OnUrlPlayerPresenting();

@@ -216,6 +216,7 @@ class MediaCodecVideoDecoder : public VideoDecoder,
   const bool ignore_stale_rendered_frames_after_seek_;
   const bool enable_trivial_optimizations_;
   const bool enable_ndk_video_;
+  const bool shutter_for_punch_out_;
   const bool fix_need_more_input_backpressure_;
   const int max_pending_inputs_size_;
 

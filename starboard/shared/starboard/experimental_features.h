@@ -224,6 +224,9 @@ inline constexpr ExperimentalFeatureKey<bool> kMediaPauseUsingAudioTrackState(
 inline constexpr ExperimentalFeatureKey<bool> kMediaSeamlessAudioSwitching(
     "Media.SeamlessAudioSwitching");
 
+inline constexpr ExperimentalFeatureKey<bool> kMediaShutterForPunchOut(
+    "Media.ShutterForPunchOut");
+
 inline constexpr ExperimentalFeatureKey<bool> kMediaSkipFlushOnDecoderTeardown(
     "Media.SkipFlushOnDecoderTeardown");
 

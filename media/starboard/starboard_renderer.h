@@ -237,6 +237,7 @@ class MEDIA_EXPORT StarboardRenderer : public Renderer,
   const StarboardRendererConfig::ExperimentalFeatures experimental_features_;
   // TODO: b/375674101 - Connect this to h5vcc setting.
   const int max_samples_per_write_;
+  const bool shutter_for_punch_out_;
   const gfx::Size viewport_size_;
 #if BUILDFLAG(IS_ANDROID)
   const AndroidOverlayMojoFactoryCB android_overlay_factory_cb_;
@@ -336,6 +337,8 @@ class MEDIA_EXPORT StarboardRenderer : public Renderer,
   // understood as a capability changed error. Do not change this message.
   static inline constexpr const char* kSbPlayerCapabilityChangedErrorMessage =
       "MEDIA_ERR_CAPABILITY_CHANGED";
+
+  std::optional<gfx::Size> pending_video_hole_size_;
 
   // NOTE: Do not add member variables after weak_factory_
   // It should be the first one destroyed among all members.
