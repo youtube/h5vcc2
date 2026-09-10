@@ -312,6 +312,13 @@ void StarboardRenderer::SetCdm(CdmContext* cdm_context,
   std::move(cdm_attached_cb).Run(true);
   LOG(INFO) << "CDM set successfully.";
 
+#if BUILDFLAG(IS_IOS_TVOS)
+  // Wire DRM to URL player bridge if it was created before CDM arrived.
+  if (IsUrlPlayer() && player_bridge_ && SbDrmSystemIsValid(drm_system_)) {
+    player_bridge_->SetDrmSystem(drm_system_);
+  }
+#endif  // BUILDFLAG(IS_IOS_TVOS)
+
   if (state_ != STATE_INIT_PENDING_CDM) {
     return;
   }
@@ -772,6 +779,10 @@ void StarboardRenderer::CreatePlayerBridge() {
         /*pipeline_identifier=*/""
 #endif  // BUILDFLAG(COBALT_MEDIA_ENABLE_CVAL)
         ));
+    // Wire DRM if CDM arrived before bridge creation.
+    if (SbDrmSystemIsValid(drm_system_)) {
+      player_bridge_->SetDrmSystem(drm_system_);
+    }
   } else {
 #endif  // BUILDFLAG(IS_IOS_TVOS)
     player_bridge_.reset(new SbPlayerBridge(
