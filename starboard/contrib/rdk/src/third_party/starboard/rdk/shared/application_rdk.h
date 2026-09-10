@@ -99,8 +99,6 @@ class ApplicationRdk : public QueueApplication {
   void OnDisplaySize(int width, int height);
 
  private:
-  void MaterializeNativeWindow();
-  void DestroyNativeWindow();
   void BuildEssosContext();
   void FatalError();
 
@@ -119,7 +117,6 @@ class ApplicationRdk : public QueueApplication {
   int window_width_ { 0 };
   int window_height_ { 0 };
   bool resize_pending_ { false };
-  bool essos_context_destroy_ { false };
 
   std::chrono::time_point<std::chrono::steady_clock> ess_loop_last_ts_;
   int ess_timer_fd_ { -1 };
