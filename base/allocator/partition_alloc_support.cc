@@ -26,6 +26,7 @@
 #include "base/functional/callback.h"
 #include "base/immediate_crash.h"
 #include "base/location.h"
+#include "base/logging.h"
 #include "base/memory/post_delayed_memory_reduction_task.h"
 #include "base/memory/raw_ptr_asan_service.h"
 #include "base/metrics/histogram_functions.h"
@@ -1206,6 +1207,14 @@ void PartitionAllocSupport::ReconfigureAfterFeatureListInit(
       allocator_shim::EventuallyZeroFreedMemory(eventually_zero_freed_memory),
       allocator_shim::FewerMemoryRegions(fewer_memory_regions),
       use_small_single_slot_spans);
+
+#if BUILDFLAG(IS_COBALT)
+  LOG(INFO) << "PartitionAlloc: main root re-creation "
+            << (allocator_shim::internal::PartitionAllocMalloc::
+                        OriginalAllocator() == nullptr
+                    ? "skipped (reused initial root)"
+                    : "executed (new root created)");
+#endif  // BUILDFLAG(IS_COBALT)
 
   const uint32_t extras_size = allocator_shim::GetMainPartitionRootExtrasSize();
   // As per description, extras are optional and are expected not to

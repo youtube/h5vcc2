@@ -272,9 +272,16 @@ struct alignas(64) PA_COMPONENT_EXPORT(PARTITION_ALLOC) PartitionRoot {
 #endif  // PA_BUILDFLAG(HAS_64_BIT_POINTERS)
 
     bool eventually_zero_freed_memory = false;
+#if BUILDFLAG(IS_COBALT)
+    internal::SchedulerLoopQuarantineConfig
+        scheduler_loop_quarantine_global_config;
+#endif  // BUILDFLAG(IS_COBALT)
     internal::SchedulerLoopQuarantineConfig
         scheduler_loop_quarantine_thread_local_config;
     bool fewer_memory_regions = false;
+#if BUILDFLAG(IS_COBALT)
+    bool use_small_single_slot_spans = false;
+#endif  // BUILDFLAG(IS_COBALT)
 #if PA_BUILDFLAG(HAS_MEMORY_TAGGING)
     bool memory_tagging_enabled_ = false;
     bool use_random_memory_tagging_ = false;
