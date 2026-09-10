@@ -112,6 +112,12 @@ STARBOARD_FEATURE(kEnableAv1StartupOptimization,
                   "EnableAv1StartupOptimization",
                   false)
 
+// Set the following variable to true to enable asynchronous surface destruction
+// via SurfaceDestroyNotifier to avoid deadlocks.
+STARBOARD_FEATURE(kEnableSurfaceDestroyNotifier,
+                  "EnableSurfaceDestroyNotifier",
+                  false)
+
 // By default, Cobalt destroys and recreates AudioTrack during Seek().
 // Set the following variable to true to force it to Flush() AudioTrack
 // during Seek().

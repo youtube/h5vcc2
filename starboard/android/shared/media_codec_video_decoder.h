@@ -271,6 +271,7 @@ class MediaCodecVideoDecoder : public VideoDecoder,
   // invocation of ReleaseVideoSurface(), though ReleaseVideoSurface() would
   // do nothing if not own the surface.
   bool owns_video_surface_ = false;
+  scoped_refptr<SurfaceDestroyNotifier> surface_destroy_notifier_;
   std::mutex surface_destroy_mutex_;
   std::condition_variable surface_condition_variable_;
   bool surface_destroyed_ = false;  // Guarded by |surface_destroy_mutex_|.

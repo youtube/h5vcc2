@@ -18,6 +18,7 @@ import android.graphics.SurfaceTexture;
 import android.view.Surface;
 import androidx.annotation.GuardedBy;
 import org.jni_zero.CalledByNative;
+import org.jni_zero.CalledByNativeForTesting;
 import org.jni_zero.JNINamespace;
 import org.jni_zero.JniType;
 import org.jni_zero.NativeMethods;
@@ -72,6 +73,11 @@ public class VideoSurfaceTexture extends SurfaceTexture {
   @CalledByNative
   static Surface createSurface(VideoSurfaceTexture surfaceTexture) {
     return new Surface(surfaceTexture);
+  }
+
+  @CalledByNativeForTesting
+  static Surface createSurfaceForTesting() {
+    return new Surface(new SurfaceTexture(1));
   }
 
   @CalledByNative

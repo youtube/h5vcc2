@@ -455,6 +455,7 @@ test("starboard_platform_tests") {
               "video_frame_tracker_test.cc",
               "video_max_video_input_size_test.cc",
               "video_surface_view_test.cc",
+              "video_window_test.cc",
             ]
 
   configs += [ "//starboard/build/config:starboard_implementation" ]
@@ -464,6 +465,7 @@ test("starboard_platform_tests") {
     ":starboard_platform",
     ":test_support",
     "//base",
+    "//cobalt/android:cobalt_main_java",
     "//starboard:starboard_group",
     "//starboard/shared/starboard:starboard_test",
     "//starboard/shared/starboard/drm:drm_test_helpers",
@@ -471,6 +473,7 @@ test("starboard_platform_tests") {
     "//starboard/testing:scoped_feature_list",
     "//testing/gmock",
     "//testing/gtest",
+    "//third_party/jni_zero:jni_zero",
   ]
 }
 
