@@ -17,6 +17,7 @@
 
 #include <time.h>
 
+#include "starboard/nplb/posix_compliance/posix_compliance_icu.h"
 #include "starboard/nplb/posix_compliance/scoped_tz_environment.h"
 
 namespace nplb {
@@ -28,6 +29,7 @@ class ScopedTzSet : public ScopedTzEnvironment {
  public:
   explicit ScopedTzSet(const char* new_tz_value)
       : ScopedTzEnvironment(new_tz_value) {
+    starboard::nplb::InitializePosixIcuOnce();
     tzset();
   }
 

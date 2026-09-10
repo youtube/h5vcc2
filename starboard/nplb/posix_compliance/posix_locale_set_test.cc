@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "build/build_config.h"
+#include "starboard/nplb/posix_compliance/posix_compliance_icu.h"
 #include "starboard/nplb/posix_compliance/posix_locale_helpers.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -39,6 +40,7 @@ namespace nplb {
 class ScopedLocale {
  public:
   ScopedLocale() {
+    starboard::nplb::InitializePosixIcuOnce();
     original_locale_ = setlocale(LC_ALL, NULL);
     // It's possible for setlocale to return NULL if the locale is invalid,
     // but we assume the initial state is valid. We duplicate the string

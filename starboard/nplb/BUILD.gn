@@ -347,6 +347,7 @@ test("nplb") {
   }
 
   deps = [
+    "//cobalt/common/icu_init",
     "//starboard:starboard_group",
     "//starboard:starboard_test_main",
     "//starboard/common",
@@ -373,7 +374,10 @@ test("nplb") {
     deps += [ "//starboard/nplb/compiler_compliance:cpp20_supported" ]
   }
 
-  data_deps = [ "//starboard/nplb/testdata/file_tests:nplb_file_tests_data" ]
+  data_deps = [
+    "//starboard/nplb/testdata/file_tests:nplb_file_tests_data",
+    "//third_party/icu:icudata",
+  ]
 
   if (is_starboard) {
     sources += [

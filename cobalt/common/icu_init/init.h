@@ -15,6 +15,19 @@
 #ifndef COBALT_COMMON_ICU_INIT_INIT_H_
 #define COBALT_COMMON_ICU_INIT_INIT_H_
 
+// These macro definitions are cloned natively from Chromium's
+// base/i18n/icu_util.h. They are strictly required because the C-preprocessor
+// silently evaluates any undefined macros as 0. Without these explicitly
+// defined, the architectural compiler directives inside init.cc evaluating
+// ICU_UTIL_DATA_IMPL will silently collapse into `#if (0 == 0)` and physically
+// strip the file loader from decoupled binaries.
+#ifndef ICU_UTIL_DATA_FILE
+#define ICU_UTIL_DATA_FILE 0
+#endif
+#ifndef ICU_UTIL_DATA_STATIC
+#define ICU_UTIL_DATA_STATIC 1
+#endif
+
 namespace cobalt {
 namespace common {
 namespace icu_init {
