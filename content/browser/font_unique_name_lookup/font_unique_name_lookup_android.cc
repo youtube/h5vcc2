@@ -252,11 +252,12 @@ std::vector<base::FilePath> FontUniqueNameLookup::GetFontFilePaths() const {
   if (font_file_paths_for_testing_.size())
     return font_file_paths_for_testing_;
   std::vector<base::FilePath> font_files;
-#if BUILDFLAG(IS_ANDROID)
-  if (base::CommandLine::ForCurrentProcess()->HasSwitch("enable-optimized-font-loading")) {
-    // When Cobalt optimized font loading is enabled, custom fonts are configured
-    // hermetically in Skia. Scanning 200+ Android OS ROM font files is unnecessary
-    // and adds ~950 ms of cold-start indexing overhead.
+#if BUILDFLAG(IS_ANDROID) && BUILDFLAG(IS_COBALT)
+  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
+          "use-custom-android-fonts-xml")) {
+    // When Cobalt custom Android fonts XML is enabled, custom fonts are
+    // configured hermetically in Skia. Scanning 200+ Android OS ROM font files
+    // is unnecessary and adds ~950 ms of cold-start indexing overhead.
     return font_files;
   }
 #endif

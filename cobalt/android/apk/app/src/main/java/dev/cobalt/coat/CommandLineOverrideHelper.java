@@ -66,6 +66,8 @@ public final class CommandLineOverrideHelper {
     }
     // Hide scrollbars to avoid memory allocation.
     paramOverrides.add("--hide-scrollbars");
+    // Use hermetic custom fonts.xml for Skia to avoid scanning OS fonts on startup.
+    paramOverrides.add("--use-custom-android-fonts-xml");
 
     return paramOverrides;
   }

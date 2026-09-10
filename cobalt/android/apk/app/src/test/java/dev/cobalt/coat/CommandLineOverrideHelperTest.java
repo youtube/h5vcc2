@@ -39,6 +39,7 @@ public class CommandLineOverrideHelperTest {
   public void testDefaultCommandLineOverridesList() {
     List<String> overrides = CommandLineOverrideHelper.getDefaultCommandLineOverridesList();
     assertThat(overrides.contains("--enable-low-end-device-mode")).isTrue();
+    assertThat(overrides.contains("--use-custom-android-fonts-xml")).isTrue();
   }
 
   @Test
@@ -81,6 +82,7 @@ public class CommandLineOverrideHelperTest {
     Assert.assertTrue(CommandLine.getInstance().hasSwitch("disable-accelerated-video-encode"));
     Assert.assertTrue(CommandLine.getInstance().hasSwitch("enable-zero-copy"));
     Assert.assertTrue(CommandLine.getInstance().hasSwitch("hide-scrollbars"));
+    Assert.assertTrue(CommandLine.getInstance().hasSwitch("use-custom-android-fonts-xml"));
 
     String expected = "no-user-gesture-required";
     String actual = CommandLine.getInstance().getSwitchValue("autoplay-policy");

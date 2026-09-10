@@ -72,9 +72,11 @@ static sk_sp<SkFontMgr> fontmgr_factory() {
 #else
 #if BUILDFLAG(IS_ANDROID)
 #if BUILDFLAG(IS_COBALT)
-  // When Cobalt optimized font loading is enabled, configure Skia to use hermetic custom
-  // XML font fallbacks (`cobalt_android_fonts.xml`) extracted into the app data directory.
-  if (base::CommandLine::ForCurrentProcess()->HasSwitch("enable-optimized-font-loading")) {
+  // When Cobalt custom Android fonts XML is enabled, configure Skia to use
+  // hermetic custom XML font fallbacks (`cobalt_android_fonts.xml`) extracted
+  // into the app data directory.
+  if (base::CommandLine::ForCurrentProcess()->HasSwitch(
+          "use-custom-android-fonts-xml")) {
     base::FilePath app_data_dir;
     if (base::PathService::Get(base::DIR_ANDROID_APP_DATA, &app_data_dir)) {
       std::string xml_path = app_data_dir.Append("storage").Append("cobalt_android_fonts.xml").value();

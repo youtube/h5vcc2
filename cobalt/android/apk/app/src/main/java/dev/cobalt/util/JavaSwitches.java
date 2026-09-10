@@ -64,8 +64,6 @@ public class JavaSwitches {
   public static final String ENABLE_AUTO_RETRY_ON_NETWORK_RECOVERY =
       "EnableAutoRetryOnNetworkRecovery";
 
-  public static final String ENABLE_OPTIMIZED_FONT_LOADING = "EnableOptimizedFontLoading";
-
   /** flag to enable deferred V8 bytecode serialization in background/idle */
   public static final String DEFER_V8_CODE_CACHE_WRITE = "DeferV8CodeCacheWrite";
 
@@ -442,10 +440,6 @@ public class JavaSwitches {
 
     if (featureParams.length() > 0) {
       extraCommandLineArgs.add("--enable-features=SmallerInterestArea:" + featureParams.toString());
-    }
-
-    if (javaSwitches.containsKey(JavaSwitches.ENABLE_OPTIMIZED_FONT_LOADING)) {
-      extraCommandLineArgs.add("--enable-optimized-font-loading");
     }
 
     if (javaSwitches.containsKey(JavaSwitches.DEFER_V8_CODE_CACHE_WRITE)) {

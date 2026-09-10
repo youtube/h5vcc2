@@ -160,12 +160,12 @@ FontDataForRangeSet* FontFallbackIterator::Next(const HintCharList& hint_list) {
 
   if (fallback_stage_ == kFirstCandidateForNotdefGlyph) {
     fallback_stage_ = kOutOfLuck;
-#if BUILDFLAG(IS_ANDROID)
-    // Don't crash the application if first_candidate is null.
+#if BUILDFLAG(IS_ANDROID) && BUILDFLAG(IS_COBALT)
+    // Don't crash the application if first_candidate is null when custom fonts are enabled.
     if (base::CommandLine::ForCurrentProcess()->HasSwitch(
-            "enable-optimized-font-loading")) {
-      if (first_candidate_)                                                                                                                  
-        return first_candidate_; 
+            "use-custom-android-fonts-xml")) {
+      if (first_candidate_)
+        return first_candidate_;
       return MakeGarbageCollected<FontDataForRangeSet>();
     }
 #endif
