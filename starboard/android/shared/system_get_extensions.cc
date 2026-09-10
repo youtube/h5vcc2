@@ -40,6 +40,11 @@
 #include "starboard/extension/system_info.h"
 #include "starboard/shared/starboard/experimental_features.h"
 
+#if BUILDFLAG(IS_STARBOARD)
+#include "starboard/extension/loader_app_metrics.h"
+#include "starboard/shared/starboard/loader_app_metrics.h"
+#endif  // BUILDFLAG(IS_STARBOARD)
+
 const void* SbSystemGetExtension(const char* name) {
   if (strcmp(name, kCobaltExtensionPlatformServiceName) == 0) {
     return starboard::GetPlatformServiceApiAndroid();
@@ -85,5 +90,10 @@ const void* SbSystemGetExtension(const char* name) {
   if (strcmp(name, kStarboardExtensionSystemInfoName) == 0) {
     return starboard::GetSystemInfoApi();
   }
+#if BUILDFLAG(IS_STARBOARD)
+  if (strcmp(name, kStarboardExtensionLoaderAppMetricsName) == 0) {
+    return starboard::GetLoaderAppMetricsApi();
+  }
+#endif  // BUILDFLAG(IS_STARBOARD)
   return NULL;
 }
