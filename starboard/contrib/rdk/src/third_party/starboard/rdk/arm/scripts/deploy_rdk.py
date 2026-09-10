@@ -299,20 +299,51 @@ def launch_on_device(
             "sleep 2",
         ]
     else:
+        callsign = "YouTube"  # Default fallback
+        try:
+            plugins_json = run_remote_command("curl -s http://127.0.0.1:9998/Service/Controller/Plugins", device_id, device_ip)
+            plugins_data = json.loads(plugins_json)
+            plugin_list = []
+            if isinstance(plugins_data, dict):
+                plugin_list = plugins_data.get("plugins", [])
+            elif isinstance(plugins_data, list):
+                plugin_list = plugins_data
+
+            if isinstance(plugin_list, list):
+                for cand in ["YouTube", "Cobalt", "Cobalt_custom"]:
+                    if any(isinstance(p, dict) and p.get("callsign") == cand for p in plugin_list):
+                        callsign = cand
+                        break
+        except Exception as e:
+            print(f"[WARNING] Failed to fetch plugins list: {e}")
+
         if devtools:
             print("[INFO] Enabling DevTools support...")
 
         # Deactivate first to change config
-        deactivate_json = '{"jsonrpc":"2.0","id":1,"method":"Controller.1.deactivate","params":{"callsign":"YouTube"}}'
+        deactivate_json = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "Controller.1.deactivate",
+            "params": {"callsign": callsign}
+        })
         run_remote_command(f"curl -s http://127.0.0.1:9998/jsonrpc -d '{deactivate_json}'", device_id, device_ip)
 
         # Get configuration
-        get_config_json = '{"jsonrpc":"2.0","id":1,"method":"Controller.1.configuration@YouTube"}'
+        get_config_json = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": f"Controller.1.configuration@{callsign}"
+        })
         res_str = run_remote_command(f"curl -s http://127.0.0.1:9998/jsonrpc -d '{get_config_json}'", device_id, device_ip)
 
-        rpc_deactivate = (
-            r'{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"Controller.1.deactivate\",'
-            r'\"params\":{\"callsign\":\"YouTube\"}}')
+        rpc_deactivate = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "Controller.1.deactivate",
+            "params": {"callsign": callsign}
+        }).replace('"', r'\"')
+
         try:
             res = json.loads(res_str.strip())
             if "result" in res:
@@ -333,7 +364,7 @@ def launch_on_device(
                 rpc_set_config = json.dumps({
                     "jsonrpc": "2.0",
                     "id": 1,
-                    "method": "Controller.1.configuration@YouTube",
+                    "method": f"Controller.1.configuration@{callsign}",
                     "params": config
                 })
                 run_remote_command(f"curl -s http://127.0.0.1:9998/jsonrpc -d '{rpc_set_config}'", device_id, device_ip)
@@ -341,9 +372,13 @@ def launch_on_device(
         except Exception as e:
             print(f"[WARNING] Failed to update DevTools configuration: {e}")
 
-        rpc_activate = (
-            r'{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"Controller.1.activate\",'
-            r'\"params\":{\"callsign\":\"YouTube\"}}')
+        rpc_activate = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "Controller.1.activate",
+            "params": {"callsign": callsign}
+        }).replace('"', r'\"')
+        
         remote_cmds += [
             "rdkDisplay remove || true",
             "sleep 2",
@@ -356,7 +391,7 @@ def launch_on_device(
             rpc_deeplink_json = json.dumps({
                 "jsonrpc": "2.0",
                 "id": 3,
-                "method": "YouTube.deeplink",
+                "method": f"{callsign}.deeplink",
                 "params": deeplink
             }).replace('"', r'\"')
             remote_cmds.append(f"curl -X POST http://127.0.0.1:9998/jsonrpc -d '{rpc_deeplink_json}'")
@@ -790,22 +825,7 @@ def main() -> None:
         print("=== Skipping build step ===")
         is_up_to_date = False
 
-    # Check if the remote directory exists on the device.
-    # If it doesn't, we must deploy even if the build is up-to-date.
-    remote_dir_exists = False
-    try:
-        out = run_remote_command(
-            f"[ -d {remote_dir} ] && echo yes || echo no",
-            device_id,
-            device_ip,
-            check=False,
-            verbose=False,
-        ).strip()
-        remote_dir_exists = (out == "yes")
-    except Exception as e:
-        print(f"[WARNING] Failed to check if remote directory exists: {e}")
-
-    skip_deployment = args.skip_deploy or (is_up_to_date and not args.force_deploy and remote_dir_exists)
+    skip_deployment = args.skip_deploy
 
     if skip_deployment:
         print("=== Skipping deployment ===")
