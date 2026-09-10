@@ -43,3 +43,6 @@ RUN cd /tmp \
 
 # This locale satisfies SbSystemGetLocaleIdTest.
 ENV LANG=en_US.UTF-8
+
+# Satisfies SbGlesTest.SupportsOpenGles32OrHigher when running ANGLE on software GL in Linux containers.
+ENV ANGLE_GL_VERSION="OpenGL ES 3.2.0 (ANGLE 2.1 git hash: unknown hash)"

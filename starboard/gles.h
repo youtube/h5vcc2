@@ -24,9 +24,7 @@
 //
 // # GLES Version
 //
-// While this API can support GLES 3.0, platforms are only required to support
-// GLES 2.0. Callers are responsible for ensuring that any GLES 3.0 functions
-// they call through the interface are valid.
+// This API requires support for OpenGLES 3.2.
 
 #ifndef STARBOARD_GLES_H_
 #define STARBOARD_GLES_H_

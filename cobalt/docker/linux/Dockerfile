@@ -46,3 +46,6 @@ RUN apt update -qqy \
         binutils-aarch64-linux-gnu \
         binutils-arm-linux-gnueabi \
     && rm -rf /var/lib/apt/lists/*
+
+# Satisfies SbGlesTest.SupportsOpenGles32OrHigher when running ANGLE on software GL in Linux containers.
+ENV ANGLE_GL_VERSION="OpenGL ES 3.2.0 (ANGLE 2.1 git hash: unknown hash)"
