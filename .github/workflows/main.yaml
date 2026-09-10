@@ -958,6 +958,7 @@ jobs:
           pattern: ${{ env.TEST_RESULTS_KEY }}*
           path: results/
       - name: Test Results
+        id: test-results
         if: steps.filter.outputs.skipped != 'true'
         uses: ./.github/actions/process_test_results
         with:
@@ -986,6 +987,7 @@ jobs:
         with:
           target_name: ${{ steps.extract-target-name.outputs.test_target }}
           test_results_key: ${{ env.TEST_RESULTS_KEY }}
+          passed: ${{ steps.test-results.outcome == 'success' }}
 
   browser-test-results:
     needs: [initialize, build, browser-test-on-host]

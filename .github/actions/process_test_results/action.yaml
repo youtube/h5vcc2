@@ -103,6 +103,14 @@ runs:
           exit_code=1
         fi
 
+        # Check logs for test runner failures, aborts, or crashed tests that did not get recorded in XML.
+        if [ "${exit_code}" -eq 0 ] && [ "${#result_logs[@]}" -gt 0 ]; then
+          if grep -q -E "Test\(s\) failed\.|failed tests remain" "${result_logs[@]}"; then
+            echo "::error::${TARGET_NAME} log indicates unrecorded test failure(s) or runner crash."
+            exit_code=1
+          fi
+        fi
+
         echo "${TESTS_PASSED} of ${TESTS_TOTAL} tests passed (${TESTS_SKIPPED} skipped)."
         exit ${exit_code}
       shell: bash

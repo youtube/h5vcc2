@@ -7,6 +7,10 @@ inputs:
   test_results_key:
     description: "Artifact key used to upload the retry filter."
     required: true
+  passed:
+    description: "Whether the test target run succeeded."
+    required: false
+    default: "true"
   results_dir:
     description: "Directory where test results are located."
     required: false
@@ -18,6 +22,7 @@ runs:
     - name: Generate Retry Filter
       env:
         TEST_TARGET: ${{ inputs.target_name }}
+        PASSED: ${{ inputs.passed }}
         RESULTS_DIR: ${{ inputs.results_dir }}
       run: |
         set -ex
@@ -27,34 +32,46 @@ runs:
         mkdir -p "${FILTER_DIR}"
 
         generate_filter_json() {
+          local output_file="$1"
+          shift
           local xml_files=("$@")
           local failed_tests_json
 
-          # Extract failing test names from parser output. Prepend gtest fail prefix.
+          # Extract failing test names from parser output.
           raw_json=$(python3 cobalt/tools/junit_mini_parser.py "${xml_files[@]}" || true)
           failed_tests_json=$(echo "${raw_json}" | jq -c '[.failing_tests // {} | .[]? | .[]? | .name] | unique' 2>/dev/null || echo "[]")
 
-          # Build filter JSON. If no failures, skip all (*).
-          jq -n --argjson tests "${failed_tests_json:-"[]"}" '
+          # Build filter JSON.
+          # - If there are failing tests, run only those tests.
+          # - If target passed with no failures, skip all (*).
+          # - If target failed but no failing tests were identified (e.g. runner crash or timeout),
+          #   do not write a filter so the original test set is retried.
+          filter_json=$(jq -n --argjson tests "${failed_tests_json:-"[]"}" --arg passed "${PASSED}" '
             if ($tests | length) > 0 then
               { failing_tests: [], tests_to_run: $tests }
-            else
+            elif $passed == "true" then
               { failing_tests: ["*"], tests_to_run: [] }
+            else
+              empty
             end
-          '
+          ')
+
+          if [ -n "${filter_json}" ]; then
+            echo "${filter_json}" > "${output_file}"
+          fi
         }
 
         shopt -s globstar nullglob
         xml_files=("${RESULTS_DIR}"/**/"${TEST_TARGET}"*.xml)
         if [ ${#xml_files[@]} -gt 0 ]; then
           # Generate global filter
-          generate_filter_json "${xml_files[@]}" > "${FILTER_DIR}/${TEST_TARGET}_filter.json"
+          generate_filter_json "${FILTER_DIR}/${TEST_TARGET}_filter.json" "${xml_files[@]}"
 
           # Also generate shard-specific filter files if shards exist
           for xml_file in "${xml_files[@]}"; do
             if [[ "${xml_file}" =~ /shard_([0-9]+)/ ]]; then
               shard_id="${BASH_REMATCH[1]}"
-              generate_filter_json "${xml_file}" > "${FILTER_DIR}/${TEST_TARGET}_${shard_id}_filter.json"
+              generate_filter_json "${FILTER_DIR}/${TEST_TARGET}_${shard_id}_filter.json" "${xml_file}"
             fi
           done
         fi
