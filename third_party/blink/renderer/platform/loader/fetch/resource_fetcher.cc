@@ -33,6 +33,11 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+#include <atomic>
+#include <deque>
+#include <vector>
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
 #include "base/auto_reset.h"
 #include "base/containers/contains.h"
@@ -109,11 +114,48 @@
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 #include "third_party/blink/renderer/platform/wtf/wtf.h"
 
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+#include "base/no_destructor.h"
+#include "base/synchronization/lock.h"
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
+
 namespace blink {
 
 constexpr uint32_t ResourceFetcher::kKeepaliveInflightBytesQuota;
 
 namespace {
+
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+constexpr size_t kMaxThroughputSamples = 20;
+
+std::atomic<bool> g_record_video_download_throughput{false};
+std::atomic<double> g_median_video_download_throughput_kbps{-1.0};
+
+void RecordVideoDownloadThroughputKbps(double throughput_kbps) {
+  static base::NoDestructor<base::Lock> lock;
+  static base::NoDestructor<std::deque<double>> samples;
+  base::AutoLock auto_lock(*lock);
+
+  samples->push_back(throughput_kbps);
+  if (samples->size() > kMaxThroughputSamples) {
+    samples->pop_front();
+  }
+
+  std::vector<double> sorted(samples->begin(), samples->end());
+  const size_t n = sorted.size();
+  const size_t mid = n / 2;
+  std::nth_element(sorted.begin(), sorted.begin() + mid, sorted.end());
+  double median = sorted[mid];
+  if (n % 2 == 0) {
+    const double upper_mid = sorted[mid];
+    std::nth_element(sorted.begin(), sorted.begin() + (mid - 1),
+                     sorted.begin() + mid);
+    median = (sorted[mid - 1] + upper_mid) / 2.0;
+  }
+  g_median_video_download_throughput_kbps.store(median,
+                                                std::memory_order_relaxed);
+}
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
 constexpr base::TimeDelta kKeepaliveLoadersTimeout = base::Seconds(30);
 
@@ -493,6 +535,23 @@ mojom::blink::RequestContextType ResourceFetcher::DetermineRequestContext(
   }
   NOTREACHED();
 }
+
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+// static
+void ResourceFetcher::SetRecordVideoDownloadThroughput(bool enable) {
+  g_record_video_download_throughput.store(enable, std::memory_order_relaxed);
+}
+
+// static
+std::optional<double> ResourceFetcher::GetMedianVideoDownloadThroughputKbps() {
+  if (!g_record_video_download_throughput.load(std::memory_order_relaxed)) {
+    return std::nullopt;
+  }
+  double median = g_median_video_download_throughput_kbps.load(
+      std::memory_order_relaxed);
+  return median >= 0.0 ? std::make_optional(median) : std::nullopt;
+}
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
 network::mojom::RequestDestination ResourceFetcher::DetermineRequestDestination(
     ResourceType type) {
@@ -2527,6 +2586,22 @@ void ResourceFetcher::HandleLoaderFinish(Resource* resource,
 
   const int64_t encoded_data_length =
       resource->GetResponse().EncodedDataLength();
+
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  if (g_record_video_download_throughput.load(std::memory_order_relaxed) &&
+      encoded_data_length >= 65536 &&
+      resource->Url().Host().ToString().EndsWith("googlevideo.com") &&
+      resource->GetResponse().GetResourceLoadTiming()) {
+    base::TimeTicks headers_end =
+        resource->GetResponse().GetResourceLoadTiming()->ReceiveHeadersEnd();
+    base::TimeDelta body_duration = response_end - headers_end;
+    if (body_duration.is_positive()) {
+      double throughput_kbps =
+          (encoded_data_length * 8.0) / body_duration.InSecondsF() / 1000.0;
+      RecordVideoDownloadThroughputKbps(throughput_kbps);
+    }
+  }
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
   PendingResourceTimingInfo info = resource_timing_info_map_.Take(resource);
   if (!info.is_null()) {

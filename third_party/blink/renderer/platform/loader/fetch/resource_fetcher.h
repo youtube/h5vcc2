@@ -34,6 +34,7 @@
 
 #include "base/task/single_thread_task_runner.h"
 #include "base/unguessable_token.h"
+#include "build/build_config.h"
 #include "services/metrics/public/cpp/mojo_ukm_recorder.h"
 #include "third_party/blink/public/common/features.h"
 #include "third_party/blink/public/common/subresource_load_metrics.h"
@@ -197,6 +198,14 @@ class PLATFORM_EXPORT ResourceFetcher
 
   Resource* CachedResource(const KURL&) const;
   bool ResourceHasBeenEmulatedLoadStartedForInspector(const KURL&) const;
+
+#if BUILDFLAG(USE_STARBOARD_MEDIA)
+  static void SetRecordVideoDownloadThroughput(bool enable);
+  // Returns the median throughput (in kbps) of the last 20 completed
+  // googlevideo.com downloads (>= 64 KB) in O(1) time, or std::nullopt if no
+  // samples have been recorded yet or tracking is disabled.
+  static std::optional<double> GetMedianVideoDownloadThroughputKbps();
+#endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
   // Registers an callback to be called with the resource priority of the fetch
   // made to the specified URL. When `new_load_only` is set to false,

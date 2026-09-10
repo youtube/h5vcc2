@@ -63,6 +63,7 @@
 #include "build/build_config.h"
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
 #include "media/base/starboard/sbmedia_interface.h"
+#include "third_party/blink/renderer/platform/loader/fetch/resource_fetcher.h"
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
 using blink::WebMediaSource;
@@ -601,6 +602,13 @@ bool MediaSource::IsTypeSupportedInternal(ExecutionContext* context,
 
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
   // Interupt Chromium's IsTypeSupported() from here for better performance.
+  std::optional<double> median_throughput_kbps =
+      ResourceFetcher::GetMedianVideoDownloadThroughputKbps();
+  if (median_throughput_kbps.has_value()) {
+    LOG(INFO) << "MediaSource::isTypeSupported: median_throughput_kbps="
+              << *median_throughput_kbps << " ("
+              << (*median_throughput_kbps / 1000.0) << " Mbps)";
+  }
   auto ascii = type.Ascii();
   SbMediaSupportType support_type =
       ::media::GetSbMediaInterface()->CanPlayMimeAndKeySystem(ascii.c_str(),

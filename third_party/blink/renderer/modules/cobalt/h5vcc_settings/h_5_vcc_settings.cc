@@ -35,6 +35,7 @@
 
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
 #include "media/starboard/decoder_buffer_allocator.h"
+#include "third_party/blink/renderer/platform/loader/fetch/resource_fetcher.h"
 #endif  // BUILDFLAG(USE_STARBOARD_MEDIA)
 
 namespace blink {
@@ -188,6 +189,14 @@ ScriptPromise<IDLUndefined> H5vccSettings::set(
         script_state, exception_context, name, *value, [](int int_value) {
           ::media::SetVideoBufferSizeReductionPercent(int_value);
           return true;
+        });
+  }
+  if (name == "Media.RecordVideoDownloadThroughput") {
+    return ProcessSettingAs<bool>(
+        script_state, exception_context, name, *value,
+        [](bool enable) -> Result {
+          ResourceFetcher::SetRecordVideoDownloadThroughput(enable);
+          return base::ok();
         });
   }
 #else   // BUILDFLAG(USE_STARBOARD_MEDIA)
