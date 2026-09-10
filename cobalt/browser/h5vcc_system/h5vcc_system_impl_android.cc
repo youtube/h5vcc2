@@ -16,6 +16,7 @@
 #include "base/functional/callback.h"
 #include "base/notimplemented.h"
 #include "cobalt/browser/h5vcc_system/h5vcc_system_impl_base.h"
+#include "cobalt/browser/metrics/cobalt_stability_metrics_helper.h"
 #include "starboard/android/shared/starboard_bridge.h"
 
 using ::starboard::StarboardBridge;
@@ -45,7 +46,6 @@ std::string GetTrackingAuthorizationStatusShared() {
   NOTIMPLEMENTED();
   return "NOT_SUPPORTED";
 }
-
 }  // namespace
 
 void H5vccSystemImpl::GetAdvertisingId(GetAdvertisingIdCallback callback) {
@@ -123,8 +123,7 @@ void H5vccSystemImpl::HideSplashScreen() {
 void H5vccSystemImpl::GetWasLowMemoryKilled(
     GetWasLowMemoryKilledCallback callback) {
   CHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-  // Stubbed.
-  std::move(callback).Run(false);
+  std::move(callback).Run(cobalt::WasPriorSessionLowMemoryKilled());
 }
 
 }  // namespace h5vcc_system

@@ -71,7 +71,6 @@
 
 #if BUILDFLAG(IS_ANDROID)
 #include "base/android/build_info.h"
-#include "components/crash/content/browser/process_exit_reason_from_system_android.h"
 #endif
 
 #if BUILDFLAG(IS_ANDROIDTV)
@@ -210,7 +209,6 @@ void InitializeCobaltHeapProfiler() {
 }
 #endif  // !BUILDFLAG(COBALT_IS_RELEASE_BUILD)
 
-constexpr char kBrowserStabilityMetricsName[] = "BrowserStabilityMetrics";
 constexpr size_t kStabilityMetricsAllocSize = 512 * 1024;  // 512 KiB limit
 constexpr uint32_t kStabilityMetricsAllocId = 0x53544142;  // "STAB"
 
@@ -243,23 +241,6 @@ void LogStabilityMetricsCapacity(const char* stage_label) {
                  << (total / 1024) << "KB (" << percent_full << "% full)";
   }
 }
-
-#if BUILDFLAG(IS_ANDROID)
-void RecordPriorSessionExitReasons() {
-  base::FilePath base_dir;
-  if (!base::PathService::Get(base::DIR_ANDROID_APP_DATA, &base_dir)) {
-    return;
-  }
-  base::FilePath metrics_dir =
-      base_dir.AppendASCII(kBrowserStabilityMetricsName);
-  for (base::ProcessId pid :
-       ExtractPriorSessionPids(metrics_dir, kBrowserStabilityMetricsName,
-                               base::GetCurrentProcId())) {
-    crash_reporter::ProcessExitReasonFromSystem::RecordExitReasonToUma(
-        pid, "Cobalt.Stability.Android.SystemExitReason");
-  }
-}
-#endif
 
 }  // namespace
 
@@ -373,7 +354,7 @@ int CobaltBrowserMainParts::PreMainMessageLoopRun() {
         FROM_HERE,
         {base::MayBlock(), base::TaskPriority::BEST_EFFORT,
          base::TaskShutdownBehavior::SKIP_ON_SHUTDOWN},
-        base::BindOnce(&RecordPriorSessionExitReasons));
+        base::BindOnce(&cobalt::RecordPriorSessionExitReasons));
   }
 #endif
 

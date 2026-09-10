@@ -20,11 +20,57 @@
 
 #include "base/files/file_enumerator.h"
 #include "base/files/file_path.h"
+#include "base/metrics/histogram_base.h"
+#include "base/metrics/histogram_samples.h"
 #include "base/metrics/persistent_histogram_allocator.h"
+#include "base/metrics/statistics_recorder.h"
 #include "base/process/process_handle.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
+#include "build/buildflag.h"
+
+#if BUILDFLAG(IS_ANDROID)
+#include "base/android/build_info.h"
+#include "base/base_paths.h"
+#include "base/path_service.h"
+#include "components/crash/content/browser/process_exit_reason_from_system_android.h"
+#endif
 
 namespace cobalt {
+
+#if BUILDFLAG(IS_ANDROID)
+void RecordPriorSessionExitReasons() {
+  if (base::android::BuildInfo::GetInstance()->sdk_int() <
+      base::android::SDK_VERSION_R) {
+    return;
+  }
+  base::FilePath base_dir;
+  if (!base::PathService::Get(base::DIR_ANDROID_APP_DATA, &base_dir)) {
+    return;
+  }
+  base::FilePath metrics_dir =
+      base_dir.AppendASCII(kBrowserStabilityMetricsName);
+  for (base::ProcessId pid :
+       ExtractPriorSessionPids(metrics_dir, kBrowserStabilityMetricsName,
+                               base::GetCurrentProcId())) {
+    crash_reporter::ProcessExitReasonFromSystem::RecordExitReasonToUma(
+        pid, kSystemExitReasonHistogram);
+  }
+}
+#endif  // BUILDFLAG(IS_ANDROID)
+
+bool WasPriorSessionLowMemoryKilled() {
+  base::HistogramBase* histogram =
+      base::StatisticsRecorder::FindHistogram(kSystemExitReasonHistogram);
+  if (!histogram) {
+    return false;
+  }
+  auto samples = histogram->SnapshotSamples();
+  if (!samples) {
+    return false;
+  }
+  return samples->GetCount(kAndroidExitReasonLowMemory) > 0;
+}
 
 std::vector<base::ProcessId> ExtractPriorSessionPids(
     const base::FilePath& metrics_dir,

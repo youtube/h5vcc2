@@ -40,6 +40,10 @@ source_set("h5vcc_system") {
     "//starboard/common",
   ]
 
+  if (is_android) {
+    deps += [ "//cobalt/browser:stability_metrics_helper" ]
+  }
+
   if (is_starboard) {
     deps += [ "//cobalt/configuration" ]
   }

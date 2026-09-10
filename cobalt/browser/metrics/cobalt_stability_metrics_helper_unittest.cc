@@ -20,9 +20,12 @@
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/files/scoped_temp_dir.h"
+#include "base/metrics/histogram_functions.h"
 #include "base/metrics/persistent_histogram_allocator.h"
+#include "base/metrics/statistics_recorder.h"
 #include "base/process/process_handle.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "testing/gmock/include/gmock/gmock.h"
 #include "testing/gtest/include/gtest/gtest.h"
 
@@ -33,7 +36,16 @@ constexpr char kExpectedAllocatorName[] = "BrowserStabilityMetrics";
 
 class CobaltStabilityMetricsHelperTest : public ::testing::Test {
  protected:
-  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
+  void SetUp() override {
+    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
+    base::StatisticsRecorder::ForgetHistogramForTesting(
+        kSystemExitReasonHistogram);
+  }
+
+  void TearDown() override {
+    base::StatisticsRecorder::ForgetHistogramForTesting(
+        kSystemExitReasonHistogram);
+  }
 
   const base::FilePath& metrics_dir() const { return temp_dir_.GetPath(); }
 
@@ -176,6 +188,54 @@ TEST_F(CobaltStabilityMetricsHelperTest, RejectsZeroAndNegativePids) {
   std::vector<base::ProcessId> pids = ExtractPriorSessionPids(
       metrics_dir(), kExpectedAllocatorName, /*current_pid=*/9999);
   EXPECT_THAT(pids, ::testing::ElementsAre(8888));
+}
+
+TEST_F(CobaltStabilityMetricsHelperTest, WasPriorSessionLowMemoryKilled) {
+  // Before any sample is recorded to the histogram, returns false.
+  EXPECT_FALSE(WasPriorSessionLowMemoryKilled());
+
+  // Record an unrelated histogram: WasPriorSessionLowMemoryKilled remains
+  // false.
+  base::UmaHistogramExactLinear("Unrelated.Histogram.Name",
+                                kAndroidExitReasonLowMemory,
+                                kAndroidExitReasonNumEntries);
+  EXPECT_FALSE(WasPriorSessionLowMemoryKilled());
+
+  // Record a non-LMK exit reason (Exit self).
+  base::UmaHistogramExactLinear(kSystemExitReasonHistogram,
+                                kAndroidExitReasonExitSelf,
+                                kAndroidExitReasonNumEntries);
+  EXPECT_FALSE(WasPriorSessionLowMemoryKilled());
+
+  // Record an LMK exit reason (Low memory).
+  base::UmaHistogramExactLinear(kSystemExitReasonHistogram,
+                                kAndroidExitReasonLowMemory,
+                                kAndroidExitReasonNumEntries);
+  EXPECT_TRUE(WasPriorSessionLowMemoryKilled());
+
+  // Additional samples (including subsequent non-LMK exit reasons) preserve
+  // the positive LMK detection because at least one prior session was LMK'd.
+  base::UmaHistogramExactLinear(kSystemExitReasonHistogram,
+                                kAndroidExitReasonExitSelf,
+                                kAndroidExitReasonNumEntries);
+  base::UmaHistogramExactLinear(kSystemExitReasonHistogram,
+                                kAndroidExitReasonLowMemory,
+                                kAndroidExitReasonNumEntries);
+  EXPECT_TRUE(WasPriorSessionLowMemoryKilled());
+}
+
+TEST_F(CobaltStabilityMetricsHelperTest,
+       WasPriorSessionLowMemoryKilled_HistogramIsolation) {
+  // Verifies that ForgetHistogramForTesting cleans up the histogram,
+  // preventing inter-test state leakage.
+  EXPECT_FALSE(WasPriorSessionLowMemoryKilled());
+  base::UmaHistogramExactLinear(kSystemExitReasonHistogram,
+                                kAndroidExitReasonLowMemory,
+                                kAndroidExitReasonNumEntries);
+  EXPECT_TRUE(WasPriorSessionLowMemoryKilled());
+  base::StatisticsRecorder::ForgetHistogramForTesting(
+      kSystemExitReasonHistogram);
+  EXPECT_FALSE(WasPriorSessionLowMemoryKilled());
 }
 
 }  // namespace
