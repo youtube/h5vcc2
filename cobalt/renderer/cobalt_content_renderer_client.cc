@@ -41,7 +41,6 @@
 #include "media/mojo/clients/starboard/starboard_renderer_client_factory.h"
 #include "media/starboard/starboard_media_external_memory_allocator.h"
 #include "mojo/public/cpp/bindings/generic_pending_receiver.h"
-#include "starboard/player.h"
 #include "third_party/blink/public/common/thread_safe_browser_interface_broker_proxy.h"
 #include "third_party/blink/public/platform/browser_interface_broker_proxy.h"
 #include "third_party/blink/public/platform/platform.h"
@@ -335,11 +334,6 @@ void CobaltContentRendererClient::GetStarboardRendererFactoryTraits(
     ::media::RendererFactoryTraits* renderer_factory_traits) {
   CHECK(content::RenderThread::IsMainThread());
 
-  // TODO(b/383327725) - Cobalt: Inject these values from the web app.
-  renderer_factory_traits->audio_write_duration_local =
-      base::Microseconds(kSbPlayerWriteDurationLocal);
-  renderer_factory_traits->audio_write_duration_remote =
-      base::Microseconds(kSbPlayerWriteDurationRemote);
   renderer_factory_traits->viewport_size = viewport_size_;
 #if BUILDFLAG(IS_STARBOARD)
   // Using base::Unretained(this) is safe here because

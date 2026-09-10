@@ -55,8 +55,6 @@ class StarboardRendererTest : public testing::Test {
         task_environment_.GetMainThreadTaskRunner(),
         std::make_unique<NullMediaLog>(),
         /*overlay_plane_id=*/base::UnguessableToken::Create(),
-        /*audio_write_duration_local=*/base::Seconds(1),
-        /*audio_write_duration_remote=*/base::Seconds(1),
         /*max_video_capabilities=*/"",
         StarboardRendererConfig::ExperimentalFeatures{},
         /*viewport_size=*/gfx::Size()

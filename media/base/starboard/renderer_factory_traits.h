@@ -23,7 +23,6 @@
 #include "base/time/time.h"
 #include "media/base/media_export.h"
 #include "media/base/starboard/starboard_renderer_config.h"
-#include "media/base/timestamp_constants.h"
 #include "media/starboard/starboard_callbacks.h"
 #include "ui/gfx/geometry/size.h"
 
@@ -35,8 +34,6 @@ struct MEDIA_EXPORT RendererFactoryTraits {
   RendererFactoryTraits() = default;
   ~RendererFactoryTraits() = default;
 
-  base::TimeDelta audio_write_duration_local = kNoTimestamp;
-  base::TimeDelta audio_write_duration_remote = kNoTimestamp;
   std::string max_video_capabilities;
   StarboardRendererConfig::ExperimentalFeatures experimental_features;
   gfx::Size viewport_size;

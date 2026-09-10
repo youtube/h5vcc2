@@ -80,8 +80,6 @@ struct StarboardRendererTraits {
   mojo::PendingRemote<mojom::MediaLog> media_log_remote;
   cobalt::media::VideoGeometrySetterService* video_geometry_setter_service;
   const base::UnguessableToken& overlay_plane_id;
-  base::TimeDelta audio_write_duration_local;
-  base::TimeDelta audio_write_duration_remote;
   const std::string& max_video_capabilities;
   const StarboardRendererConfig::ExperimentalFeatures experimental_features;
   const gfx::Size& viewport_size;
@@ -102,8 +100,6 @@ struct StarboardRendererTraits {
       mojo::PendingRemote<mojom::MediaLog> media_log_remote,
       cobalt::media::VideoGeometrySetterService* video_geometry_setter_service,
       const base::UnguessableToken& overlay_plane_id,
-      base::TimeDelta audio_write_duration_local,
-      base::TimeDelta audio_write_duration_remote,
       const std::string& max_video_capabilities,
       const StarboardRendererConfig::ExperimentalFeatures& experimental_features,
       const gfx::Size& viewport_size,

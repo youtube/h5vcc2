@@ -24,10 +24,6 @@
 #include "media/base/starboard/starboard_renderer_config.h"
 #include "media/starboard/starboard_callbacks.h"
 
-namespace base {
-class TimeDelta;
-}  // namespace base
-
 namespace media {
 class GpuVideoAcceleratorFactories;
 class MediaLog;
@@ -70,8 +66,6 @@ class MEDIA_EXPORT StarboardRendererClientFactory final
   // Creates gpu factories for supporting decode-to-texture mode.
   // It could be null.
   GetGpuFactoriesCB get_gpu_factories_cb_;
-  const base::TimeDelta audio_write_duration_local_;
-  const base::TimeDelta audio_write_duration_remote_;
   const std::string max_video_capabilities_;
   const StarboardRendererConfig::ExperimentalFeatures experimental_features_;
   const gfx::Size viewport_size_;

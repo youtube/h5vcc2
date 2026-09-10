@@ -34,6 +34,7 @@
 #include "starboard/common/media.h"
 #include "starboard/common/player.h"
 #include "starboard/common/string.h"
+#include "starboard/player.h"
 
 #if BUILDFLAG(IS_ANDROID)
 #include "media/base/android/android_overlay.h"
@@ -132,8 +133,6 @@ StarboardRenderer::StarboardRenderer(
     const scoped_refptr<base::SequencedTaskRunner>& task_runner,
     std::unique_ptr<MediaLog> media_log,
     const base::UnguessableToken& overlay_plane_id,
-    TimeDelta audio_write_duration_local,
-    TimeDelta audio_write_duration_remote,
     const std::string& max_video_capabilities,
     const StarboardRendererConfig::ExperimentalFeatures& experimental_features,
     const gfx::Size& viewport_size
@@ -147,8 +146,18 @@ StarboardRenderer::StarboardRenderer(
       media_log_(std::move(media_log)),
       cdm_context_(nullptr),
       buffering_state_(BUFFERING_HAVE_NOTHING),
-      audio_write_duration_local_(audio_write_duration_local),
-      audio_write_duration_remote_(audio_write_duration_remote),
+      audio_write_duration_local_(
+          experimental_features.Get(kMediaAudioWriteDurationLocal).has_value()
+              ? base::Milliseconds(
+                    experimental_features.Get(kMediaAudioWriteDurationLocal)
+                        .value())
+              : base::Microseconds(kSbPlayerWriteDurationLocal)),
+      audio_write_duration_remote_(
+          experimental_features.Get(kMediaAudioWriteDurationRemote).has_value()
+              ? base::Milliseconds(
+                    experimental_features.Get(kMediaAudioWriteDurationRemote)
+                        .value())
+              : base::Microseconds(kSbPlayerWriteDurationRemote)),
       max_video_capabilities_(max_video_capabilities),
       experimental_features_(experimental_features),
       max_samples_per_write_(experimental_features.Get(kMediaMaxSamplesPerWrite)

@@ -225,9 +225,6 @@ MEDIA_EXPORT extern const base::FeatureParam<bool>
     kEnforceSystemEchoCancellationAllowNsInTandem;
 #endif
 #if BUILDFLAG(USE_STARBOARD_MEDIA)
-MEDIA_EXPORT BASE_DECLARE_FEATURE(kCobaltAudioWriteDuration);
-MEDIA_EXPORT extern const base::FeatureParam<base::TimeDelta> kAudioWriteDurationLocal;
-MEDIA_EXPORT extern const base::FeatureParam<base::TimeDelta> kAudioWriteDurationRemote;
 #if BUILDFLAG(IS_ANDROID)
 MEDIA_EXPORT BASE_DECLARE_FEATURE(kCobaltUsingAndroidOverlay);
 #endif  // BUILDFLAG(IS_ANDROID)

@@ -170,6 +170,12 @@ inline std::optional<std::string> ExperimentalFeatures::GetValue<std::string>(
 // Chromium media layer. For platform-level Starboard features, see
 // starboard/shared/starboard/experimental_features.h.
 // keep-sorted start by_regex=k\w+ newline_separated=yes
+inline constexpr ExperimentalFeatureKey<int> kMediaAudioWriteDurationLocal(
+    "Media.AudioWriteDurationLocal");
+
+inline constexpr ExperimentalFeatureKey<int> kMediaAudioWriteDurationRemote(
+    "Media.AudioWriteDurationRemote");
+
 inline constexpr ExperimentalFeatureKey<bool> kMediaBypassMojoForMedia(
     "Media.BypassMojoForMedia");
 

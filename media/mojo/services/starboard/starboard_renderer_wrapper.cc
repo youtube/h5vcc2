@@ -184,8 +184,6 @@ StarboardRendererWrapper::StarboardRendererWrapper(
           std::make_unique<MojoMediaLog>(std::move(traits.media_log_remote),
                                          traits.task_runner),
           traits.overlay_plane_id,
-          traits.audio_write_duration_local,
-          traits.audio_write_duration_remote,
           traits.max_video_capabilities,
           traits.experimental_features,
           traits.viewport_size

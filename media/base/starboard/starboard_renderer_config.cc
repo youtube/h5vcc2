@@ -27,14 +27,10 @@ StarboardRendererConfig& StarboardRendererConfig::operator=(
 
 StarboardRendererConfig::StarboardRendererConfig(
     const base::UnguessableToken& overlay_plane_id,
-    base::TimeDelta audio_write_duration_local,
-    base::TimeDelta audio_write_duration_remote,
     const std::string& max_video_capabilities,
     const ExperimentalFeatures& experimental_features,
     const gfx::Size& viewport_size)
     : overlay_plane_id(overlay_plane_id),
-      audio_write_duration_local(audio_write_duration_local),
-      audio_write_duration_remote(audio_write_duration_remote),
       max_video_capabilities(max_video_capabilities),
       experimental_features(experimental_features),
       viewport_size(viewport_size) {}
