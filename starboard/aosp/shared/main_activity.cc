@@ -20,6 +20,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -32,6 +33,7 @@
 #include "starboard/aosp/shared/application_aosp.h"
 #include "starboard/aosp/shared/window_surface.h"
 #include "starboard/common/log.h"
+#include "starboard/common/time.h"
 #include "starboard/system.h"
 #include "third_party/jni_zero/jni_zero.h"
 
@@ -45,6 +47,12 @@ namespace {
 // store file into a 1MB stack buffer. Use 2MB, the same size Cobalt 25 and RDK
 // use.
 constexpr size_t kStarboardMainStackSize = 2 * 1024 * 1024;
+
+// How long SurfaceHolder.surfaceDestroyed() may block waiting to drop the
+// surface. AppEventRunner gives each lifecycle transition 2s to complete, and a
+// conceal from the started state also goes through the blur transition, so
+// allow for two.
+constexpr int64_t kSurfaceReleaseTimeoutUsec = 4'000'000;
 
 void* StarboardMain(void* /*context*/) {
   pthread_setname_np(pthread_self(), "StarboardMain");
@@ -96,8 +104,23 @@ void* StarboardMain(void* /*context*/) {
   }
   argv.push_back(nullptr);
 
-  main(static_cast<int>(args.size()), argv.data());
-  return nullptr;
+  int error_level = main(static_cast<int>(args.size()), argv.data());
+
+  // End the process once SbRunStarboardMain() returns (when the activity is
+  // destroyed) so the next launch starts clean. Android keeps the process
+  // running and may reuse it to re-create the Activity, and MainActivity would
+  // see leftover state such as a non-null BaseStarboardBridge, treat it as a
+  // warm start and never start the loader again. Forcing it to start again
+  // wouldn't work, SbEventHandle() deletes Cobalt's AppEventDelegate on
+  // kSbEventTypeStop and never re-creates it, so the next start event is
+  // dropped.
+  //
+  // _exit() instead exit(): DoStop() already flushed stdio, so the extra
+  // teardown exit() runs isn't needed.
+  SB_LOG(INFO) << "cobalt_loader: Starboard exited with " << error_level
+               << "; ending the process.";
+
+  _exit(error_level);
 }
 
 }  // namespace
@@ -138,7 +161,43 @@ void JNI_MainActivity_NativeOnSurfaceCreated(
 
 void JNI_MainActivity_NativeOnSurfaceDestroyed(JNIEnv*) {
   SB_LOG(INFO) << "cobalt_loader: Starboard surface destroyed.";
-  starboard::android::shared::SetWindowSurface(nullptr);
+  ApplicationAOSP* application = ApplicationAOSP::GetIfExists();
+  if (application == nullptr) {
+    // Nothing is running yet, or it is already gone; just drop the surface.
+    starboard::android::shared::SetWindowSurface(nullptr);
+    return;
+  }
+  int64_t start_usec = starboard::CurrentMonotonicTime();
+  bool released =
+      application->ReleaseWindowSurfaceAndWait(kSurfaceReleaseTimeoutUsec);
+
+  SB_LOG(INFO) << "cobalt_loader: Starboard surface released after "
+               << (starboard::CurrentMonotonicTime() - start_usec) / 1000
+               << " ms, released=" << released;
+}
+
+void JNI_MainActivity_NativeSendBlurEvent(JNIEnv* /*env*/) {
+  if (ApplicationAOSP* application = ApplicationAOSP::GetIfExists()) {
+    application->Blur(nullptr, nullptr);
+  }
+}
+
+void JNI_MainActivity_NativeSendFocusEvent(JNIEnv* /*env*/) {
+  if (ApplicationAOSP* application = ApplicationAOSP::GetIfExists()) {
+    application->Focus(nullptr, nullptr);
+  }
+}
+
+void JNI_MainActivity_NativeSendConcealEvent(JNIEnv* /*env*/) {
+  if (ApplicationAOSP* application = ApplicationAOSP::GetIfExists()) {
+    application->Conceal(nullptr, nullptr);
+  }
+}
+
+void JNI_MainActivity_NativeSendStopEvent(JNIEnv* /*env*/) {
+  if (ApplicationAOSP* application = ApplicationAOSP::GetIfExists()) {
+    application->Stop(0);
+  }
 }
 
 jboolean JNI_MainActivity_NativeSendKeyEvent(JNIEnv* /*env*/,

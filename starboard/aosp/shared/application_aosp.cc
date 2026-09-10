@@ -17,6 +17,8 @@
 #include <android/input.h>
 #include <android/native_window.h>
 
+#include <chrono>
+
 #include "starboard/aosp/shared/key_map.h"
 #include "starboard/aosp/shared/window_internal.h"
 #include "starboard/aosp/shared/window_surface.h"
@@ -30,6 +32,12 @@
 namespace starboard {
 
 namespace {
+
+// If Conceal left no window behind there is nothing for DestroyWindow() to
+// release and the caller would wait for the whole timeout.
+void OnConcealDispatched(void* context) {
+  static_cast<ApplicationAOSP*>(context)->NotifySurfaceReleaseIfNoWindow();
+}
 
 unsigned int MetaStateToSbKeyModifiers(int meta_state) {
   unsigned int modifiers = kSbKeyModifiersNone;
@@ -73,8 +81,15 @@ bool ApplicationAOSP::DestroyWindow(SbWindow window) {
   if (window_ == window) {
     window_ = kSbWindowInvalid;
   }
-  ANativeWindow_release(window->native_window);
+  // Null when RefreshWindowSurface() last ran while Android had no surface.
+  if (window->native_window != nullptr) {
+    ANativeWindow_release(window->native_window);
+  }
   delete window;
+
+  // The engine has let go of the surface, so a surfaceDestroyed() blocked in
+  // ReleaseWindowSurfaceAndWait() can continue.
+  NotifySurfaceReleased();
   return true;
 }
 
@@ -102,6 +117,46 @@ bool ApplicationAOSP::InjectKeyEvent(int key_code,
   // The volume keys are reported to the app but not consumed, so Android
   // still changes the volume and shows its own indicator.
   return !SystemHandlesKeyCode(key_code);
+}
+
+void ApplicationAOSP::NotifySurfaceReleased() {
+  {
+    std::lock_guard<std::mutex> lock(surface_release_mutex_);
+    surface_released_ = true;
+  }
+  surface_release_cv_.notify_all();
+}
+
+void ApplicationAOSP::NotifySurfaceReleaseIfNoWindow() {
+  if (SbWindowIsValid(window_)) {
+    return;
+  }
+  NotifySurfaceReleased();
+}
+
+bool ApplicationAOSP::ReleaseWindowSurfaceAndWait(int64_t timeout_usec) {
+  {
+    std::lock_guard<std::mutex> lock(surface_release_mutex_);
+    surface_released_ = false;
+  }
+
+  Conceal(this, &OnConcealDispatched);
+
+  bool released;
+  {
+    std::unique_lock<std::mutex> lock(surface_release_mutex_);
+    released = surface_release_cv_.wait_for(
+        lock, std::chrono::microseconds(timeout_usec),
+        [this] { return surface_released_; });
+  }
+  if (!released) {
+    SB_LOG(WARNING) << "Timed out waiting to release the Android surface.";
+  }
+
+  // Even if the release timed out, null the surface reference so a stale ref
+  // won't be used.
+  android::shared::SetWindowSurface(nullptr);
+  return released;
 }
 
 }  // namespace starboard

@@ -73,9 +73,18 @@ public class MainActivity extends BaseCobaltActivity {
 
         void nativeOnSurfaceCreated(Surface surface);
 
+        // Blocks until the engine has let go of the surface
         void nativeOnSurfaceDestroyed();
 
         boolean nativeSendKeyEvent(int keyCode, int action, int unicodeChar, int metaState);
+
+        void nativeSendBlurEvent();
+
+        void nativeSendFocusEvent();
+
+        void nativeSendConcealEvent();
+
+        void nativeSendStopEvent();
     }
 
     private boolean mStarboardStarted;
@@ -126,6 +135,10 @@ public class MainActivity extends BaseCobaltActivity {
                             mStarboardStarted = true;
                             // Spawn the loader thread.
                             MainActivityJni.get().startLoader();
+                        } else {
+                            // Coming back from background. Reveal and focus only after the new
+                            // surface is in place
+                            MainActivityJni.get().nativeSendFocusEvent();
                         }
                     }
 
@@ -145,6 +158,15 @@ public class MainActivity extends BaseCobaltActivity {
 
                     @Override
                     public void surfaceDestroyed(SurfaceHolder holder) {
+                        // From the SurfaceHolder surfaceDestroyed() callback:
+                        // "This is called immediately before a surface is being destroyed.
+                        // After returning from this call, you should no longer try to access
+                        // this surface.  If you have a rendering thread that directly accesses
+                        // the surface, you must ensure that thread is no longer touching the
+                        // Surface before returning from this function."
+                        //
+                        // The native side blocks until the engine has released the surface,
+                        // so nothing touches it after this returns.
                         MainActivityJni.get().nativeOnSurfaceDestroyed();
                     }
 
@@ -155,6 +177,32 @@ public class MainActivity extends BaseCobaltActivity {
                 });
 
         setContentView(new VideoSurfaceView(this));
+    }
+
+    @Override
+    protected void onPause() {
+        // Blurred, not concealed, the surface is still alive.
+        MainActivityJni.get().nativeSendBlurEvent();
+        super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        // Covers stopping without dropping the surface, which is the only case
+        // where surfaceDestroyed() doesn't run first.
+        MainActivityJni.get().nativeSendConcealEvent();
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        // The Activity may be destroyed and re-created, for instance on
+        // configuration change events. Only tear down the starboard process if
+        // the activity is really being closed.
+        if (isFinishing()) {
+            MainActivityJni.get().nativeSendStopEvent();
+        }
+        super.onDestroy();
     }
 
     @Override
