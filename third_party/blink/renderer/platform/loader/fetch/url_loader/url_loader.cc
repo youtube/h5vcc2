@@ -120,6 +120,10 @@ class URLLoader::Context : public ResourceRequestClient {
       mojo::ScopedDataPipeConsumerHandle body,
       std::optional<mojo_base::BigBuffer> cached_metadata) override;
   void OnTransferSizeUpdated(int transfer_size_diff) override;
+#if BUILDFLAG(IS_COBALT)
+  bool OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                               int bytes_read) override;
+#endif  // BUILDFLAG(IS_COBALT)
   void OnCompletedRequest(
       const network::URLLoaderCompletionStatus& status) override;
 
@@ -371,6 +375,17 @@ void URLLoader::Context::OnReceivedResponse(
 void URLLoader::Context::OnTransferSizeUpdated(int transfer_size_diff) {
   client_->DidReceiveTransferSizeUpdate(transfer_size_diff);
 }
+
+#if BUILDFLAG(IS_COBALT)
+bool URLLoader::Context::OnDirectBufferAvailable(
+    scoped_refptr<net::IOBuffer> buffer,
+    int bytes_read) {
+  if (!client_) {
+    return false;
+  }
+  return client_->OnDirectBufferAvailable(std::move(buffer), bytes_read);
+}
+#endif  // BUILDFLAG(IS_COBALT)
 
 void URLLoader::Context::OnCompletedRequest(
     const network::URLLoaderCompletionStatus& status) {

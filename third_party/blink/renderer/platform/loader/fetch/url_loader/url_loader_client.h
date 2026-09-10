@@ -46,6 +46,10 @@
 #include "third_party/blink/public/platform/web_url_request.h"
 #include "third_party/blink/renderer/platform/wtf/shared_buffer.h"
 
+#if BUILDFLAG(IS_COBALT)
+#include "net/base/io_buffer.h"
+#endif  // BUILDFLAG(IS_COBALT)
+
 namespace net {
 class SiteForCookies;
 }
@@ -101,6 +105,13 @@ class BLINK_PLATFORM_EXPORT URLLoaderClient {
   // Called when the number of bytes actually received from network including
   // HTTP headers is updated. |transfer_size_diff| is positive.
   virtual void DidReceiveTransferSizeUpdate(int transfer_size_diff) {}
+
+#if BUILDFLAG(IS_COBALT)
+  virtual bool OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                                       int bytes_read) {
+    return false;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
 
   // Called when the load completes successfully.
   // |total_encoded_data_length| may be equal to kUnknownEncodedDataLength.

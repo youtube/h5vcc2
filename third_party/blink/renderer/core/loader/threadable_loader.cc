@@ -351,6 +351,26 @@ void ThreadableLoader::DataReceived(Resource* resource,
   client_->DidReceiveData(data);
 }
 
+#if BUILDFLAG(IS_COBALT)
+bool ThreadableLoader::OnDirectBufferAvailable(
+    Resource* resource,
+    scoped_refptr<net::IOBuffer> buffer,
+    int bytes_read) {
+  DCHECK(client_);
+  DCHECK_EQ(resource, GetResource());
+  if (!buffer || bytes_read <= 0) {
+    client_->OnDirectBufferAvailable(buffer, bytes_read);
+    return true;
+  }
+  if (client_->OnDirectBufferAvailable(buffer, bytes_read)) {
+    return true;
+  }
+  client_->DidReceiveData(
+      base::span<const char>(buffer->data(), static_cast<size_t>(bytes_read)));
+  return true;
+}
+#endif  // BUILDFLAG(IS_COBALT)
+
 void ThreadableLoader::NotifyFinished(Resource* resource) {
   DCHECK(client_);
   DCHECK_EQ(resource, GetResource());

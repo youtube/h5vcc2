@@ -34,6 +34,7 @@
 
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "services/network/public/mojom/fetch_api.mojom-blink.h"
 #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink-forward.h"
 #include "third_party/blink/renderer/core/core_export.h"
@@ -145,6 +146,11 @@ class CORE_EXPORT ThreadableLoader final
   void ResponseBodyReceived(Resource*, BytesConsumer& body) override;
   void CachedMetadataReceived(Resource*, mojo_base::BigBuffer) override;
   void DataReceived(Resource*, base::span<const char> data) override;
+#if BUILDFLAG(IS_COBALT)
+  bool OnDirectBufferAvailable(Resource*,
+                               scoped_refptr<net::IOBuffer> buffer,
+                               int bytes_read) override;
+#endif  // BUILDFLAG(IS_COBALT)
   bool RedirectReceived(Resource*,
                         const ResourceRequest&,
                         const ResourceResponse&) override;

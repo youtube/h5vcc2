@@ -389,9 +389,19 @@ CorsURLLoader::CorsURLLoader(
             },
             weak_factory_.GetWeakPtr()));
   }
+#if BUILDFLAG(IS_COBALT)
+  direct_proxy_ = base::MakeRefCounted<DirectURLLoaderClientProxy>(this);
+  DirectURLLoaderClientProxy::RegisterCorsLoader(request_id_, direct_proxy_);
+#endif  // BUILDFLAG(IS_COBALT)
 }
 
 CorsURLLoader::~CorsURLLoader() {
+#if BUILDFLAG(IS_COBALT)
+  if (direct_proxy_) {
+    direct_proxy_->Detach();
+    DirectURLLoaderClientProxy::UnregisterCorsLoader(request_id_);
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   TRACE_EVENT("loading", "CorsURLLoader::~CorsURLLoader",
               net::NetLogWithSourceToFlow(net_log_));
   // Reset pipes first to ignore possible subsequent callback invocations
@@ -686,6 +696,16 @@ void CorsURLLoader::OnReceiveResponse(
 
   forwarding_client_->OnReceiveResponse(
       std::move(response_head), std::move(body), std::move(cached_metadata));
+#if BUILDFLAG(IS_COBALT)
+  while (!pending_direct_buffers_.empty()) {
+    auto [buf, bytes] = pending_direct_buffers_.front();
+    pending_direct_buffers_.pop();
+    if (scoped_refptr<network::DirectURLLoaderClientProxy> client =
+            network::DirectURLLoaderClientProxy::Get(request_id_)) {
+      client->OnDirectBufferAvailable(std::move(buf), bytes);
+    }
+  }
+#endif  // BUILDFLAG(IS_COBALT)
 }
 
 void CorsURLLoader::CheckTainted(const net::RedirectInfo& redirect_info) {
@@ -856,6 +876,20 @@ void CorsURLLoader::OnComplete(const URLLoaderCompletionStatus& status) {
     HandleComplete(status);
   }
 }
+
+#if BUILDFLAG(IS_COBALT)
+void CorsURLLoader::OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                                            int bytes_read) {
+  if (!has_forwarded_response_) {
+    pending_direct_buffers_.emplace(std::move(buffer), bytes_read);
+    return;
+  }
+  if (scoped_refptr<network::DirectURLLoaderClientProxy> client =
+          network::DirectURLLoaderClientProxy::Get(request_id_)) {
+    client->OnDirectBufferAvailable(std::move(buffer), bytes_read);
+  }
+}
+#endif  // BUILDFLAG(IS_COBALT)
 
 void CorsURLLoader::CancelRequestIfNonceMatchesAndUrlNotExempted(
     const base::UnguessableToken& nonce,
@@ -1280,6 +1314,18 @@ void CorsURLLoader::HandleComplete(URLLoaderCompletionStatus status) {
       TakePrivateNetworkAccessPreflightResult();
 
   net_log_.EndEvent(net::NetLogEventType::CORS_REQUEST);
+#if BUILDFLAG(IS_COBALT)
+  while (!pending_direct_buffers_.empty()) {
+    auto [buf, bytes] = pending_direct_buffers_.front();
+    pending_direct_buffers_.pop();
+    if (has_forwarded_response_) {
+      if (scoped_refptr<network::DirectURLLoaderClientProxy> client =
+              network::DirectURLLoaderClientProxy::Get(request_id_)) {
+        client->OnDirectBufferAvailable(std::move(buf), bytes);
+      }
+    }
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   forwarding_client_->OnComplete(std::move(status));
   std::move(delete_callback_).Run(this);
   // |this| is deleted here.

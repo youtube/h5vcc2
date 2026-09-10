@@ -618,6 +618,10 @@ BASE_FEATURE_PARAM(size_t,
                    1'000'000);
 
 #if BUILDFLAG(IS_COBALT)
+BASE_FEATURE(kCobaltDirectBufferLoad,
+             "CobaltDirectBufferLoad",
+             base::FEATURE_DISABLED_BY_DEFAULT);
+
 BASE_FEATURE(kCobaltDynamicMojoPipeSizing,
              "CobaltDynamicMojoPipeSizing",
              base::FEATURE_DISABLED_BY_DEFAULT);

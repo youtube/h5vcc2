@@ -37,6 +37,11 @@
 #include "third_party/blink/renderer/platform/blob/blob_data.h"
 #include "third_party/blink/renderer/platform/heap/garbage_collected.h"
 
+#if BUILDFLAG(IS_COBALT)
+#include "base/memory/scoped_refptr.h"
+#include "net/base/io_buffer.h"
+#endif  // BUILDFLAG(IS_COBALT)
+
 namespace blink {
 
 class BytesConsumer;
@@ -59,6 +64,12 @@ class CORE_EXPORT ThreadableLoaderClient : public GarbageCollectedMixin {
                                   const ResourceResponse&) {}
   virtual void DidStartLoadingResponseBody(BytesConsumer&) {}
   virtual void DidReceiveData(base::span<const char>) {}
+#if BUILDFLAG(IS_COBALT)
+  virtual bool OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                                       int bytes_read) {
+    return false;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   virtual void DidReceiveCachedMetadata(mojo_base::BigBuffer) {}
   virtual void DidFinishLoading(uint64_t /*identifier*/) {}
   virtual void DidFail(uint64_t /*identifier*/, const ResourceError&) {}

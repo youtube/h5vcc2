@@ -27,12 +27,17 @@
 #include <variant>
 
 #include "base/task/single_thread_task_runner.h"
+#include "build/build_config.h"
 #include "third_party/blink/renderer/platform/blob/blob_data.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_client.h"
 #include "third_party/blink/renderer/platform/loader/fetch/resource_loader_options.h"
 #include "third_party/blink/renderer/platform/platform_export.h"
 #include "third_party/blink/renderer/platform/wtf/allocator/allocator.h"
+
+#if BUILDFLAG(IS_COBALT)
+#include "net/base/io_buffer.h"
+#endif  // BUILDFLAG(IS_COBALT)
 
 namespace blink {
 
@@ -110,6 +115,10 @@ class PLATFORM_EXPORT RawResource final : public Resource {
 
   void WillNotFollowRedirect() override;
   void ResponseReceived(const ResourceResponse&) override;
+#if BUILDFLAG(IS_COBALT)
+  bool OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                               int bytes_read) override;
+#endif  // BUILDFLAG(IS_COBALT)
   void ResponseBodyReceived(
       ResponseBodyLoaderDrainableInterface&,
       scoped_refptr<base::SingleThreadTaskRunner> loader_task_runner) override;
@@ -172,6 +181,13 @@ class PLATFORM_EXPORT RawResourceClient : public ResourceClient {
                         uint64_t /* totalBytesToBeSent */) {}
   virtual void ResponseBodyReceived(Resource*, BytesConsumer&) {}
   virtual void ResponseReceived(Resource*, const ResourceResponse&) {}
+#if BUILDFLAG(IS_COBALT)
+  virtual bool OnDirectBufferAvailable(Resource*,
+                                       scoped_refptr<net::IOBuffer> buffer,
+                                       int bytes_read) {
+    return false;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   virtual void CachedMetadataReceived(Resource*, mojo_base::BigBuffer) {}
   virtual bool RedirectReceived(Resource*,
                                 const ResourceRequest&,

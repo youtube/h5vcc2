@@ -20,6 +20,7 @@
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
 #include "base/unguessable_token.h"
+#include "build/build_config.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "net/traffic_annotation/network_traffic_annotation.h"
 #include "services/network/public/cpp/features.h"
@@ -115,6 +116,11 @@
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
 #include "v8/include/v8.h"
+
+#if BUILDFLAG(IS_COBALT)
+#include "services/network/public/cpp/cobalt/direct_url_loader_client.h"
+#include "third_party/blink/renderer/platform/wtf/deque.h"
+#endif  // BUILDFLAG(IS_COBALT)
 
 using network::mojom::CredentialsMode;
 using network::mojom::FetchResponseType;
@@ -447,6 +453,156 @@ class FetchLoaderBase : public GarbageCollectedMixin {
   Member<AbortSignal::AlgorithmHandle> abort_handle_;
 };
 
+#if BUILDFLAG(IS_COBALT)
+class DirectBufferBytesConsumer final : public BytesConsumer {
+ public:
+  explicit DirectBufferBytesConsumer(
+      scoped_refptr<base::SingleThreadTaskRunner> task_runner)
+      : task_runner_(std::move(task_runner)) {}
+
+  Result BeginRead(base::span<const char>& buffer) override {
+    buffer = {};
+    if (state_ == PublicState::kClosed) {
+      return Result::kDone;
+    }
+    if (state_ == PublicState::kErrored) {
+      return Result::kError;
+    }
+    if (chunks_.empty()) {
+      if (is_eof_) {
+        state_ = PublicState::kClosed;
+        return Result::kDone;
+      }
+      return Result::kShouldWait;
+    }
+    auto& front = chunks_.front();
+    buffer = base::span<const char>(
+        front.buffer->data() + front.offset,
+        static_cast<size_t>(front.bytes - front.offset));
+    return Result::kOk;
+  }
+
+  Result EndRead(size_t read_size) override {
+    if (chunks_.empty()) {
+      if (is_eof_) {
+        state_ = PublicState::kClosed;
+        return Result::kDone;
+      }
+      return Result::kOk;
+    }
+    auto& front = chunks_.front();
+    DCHECK_LE(read_size + front.offset, static_cast<size_t>(front.bytes));
+    front.offset += read_size;
+    if (front.offset == static_cast<size_t>(front.bytes)) {
+      chunks_.pop_front();
+    }
+    if (chunks_.empty() && is_eof_) {
+      state_ = PublicState::kClosed;
+      return Result::kDone;
+    }
+    return Result::kOk;
+  }
+
+  void SetClient(Client* client) override {
+    DCHECK(!client_);
+    client_ = client;
+    if (is_eof_ || !chunks_.empty()) {
+      task_runner_->PostTask(
+          FROM_HERE, WTF::BindOnce(&DirectBufferBytesConsumer::NotifyClient,
+                                   WrapWeakPersistent(this)));
+    }
+  }
+
+  void ClearClient() override { client_ = nullptr; }
+
+  void Cancel() override {
+    if (state_ != PublicState::kReadableOrWaiting) {
+      return;
+    }
+    state_ = PublicState::kClosed;
+    chunks_.clear();
+    ClearClient();
+  }
+
+  PublicState GetPublicState() const override { return state_; }
+
+  Error GetError() const override {
+    return Error("DirectBufferBytesConsumer error");
+  }
+
+  String DebugName() const override { return "DirectBufferBytesConsumer"; }
+
+  void Trace(Visitor* visitor) const override {
+    visitor->Trace(client_);
+    BytesConsumer::Trace(visitor);
+  }
+
+  void OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                               int bytes_read) {
+    if (state_ != PublicState::kReadableOrWaiting) {
+      return;
+    }
+    if (bytes_read < 0) {
+      state_ = PublicState::kErrored;
+      chunks_.clear();
+    } else if (!buffer || bytes_read == 0) {
+      is_eof_ = true;
+      if (chunks_.empty()) {
+        state_ = PublicState::kClosed;
+      }
+    } else {
+      constexpr size_t kMaxCoalescedSize = 524288;  // 512 KB
+      if (!chunks_.empty() && chunks_.back().offset == 0 &&
+          static_cast<size_t>(chunks_.back().bytes + bytes_read) <=
+              kMaxCoalescedSize) {
+        auto& back = chunks_.back();
+        size_t new_size = back.bytes + bytes_read;
+        auto combined = base::MakeRefCounted<net::IOBufferWithSize>(new_size);
+        memcpy(combined->data(), back.buffer->data(), back.bytes);
+        memcpy(combined->data() + back.bytes, buffer->data(), bytes_read);
+        back.buffer = std::move(combined);
+        back.bytes = static_cast<int>(new_size);
+      } else {
+        chunks_.push_back(Chunk{std::move(buffer), bytes_read, 0});
+      }
+    }
+    if (client_) {
+      client_->OnStateChange();
+    }
+  }
+
+  void SetError(int error_code) {
+    if (state_ != PublicState::kReadableOrWaiting) {
+      return;
+    }
+    state_ = PublicState::kErrored;
+    chunks_.clear();
+    if (client_) {
+      client_->OnStateChange();
+    }
+  }
+
+ private:
+  struct Chunk {
+    scoped_refptr<net::IOBuffer> buffer;
+    int bytes;
+    size_t offset;
+  };
+
+  void NotifyClient() {
+    if (client_) {
+      client_->OnStateChange();
+    }
+  }
+
+  scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
+  WTF::Deque<Chunk> chunks_;
+  Member<Client> client_;
+  PublicState state_ = PublicState::kReadableOrWaiting;
+  bool is_eof_ = false;
+};
+#endif  // BUILDFLAG(IS_COBALT)
+
 class FetchManager::Loader final
     : public GarbageCollected<FetchManager::Loader>,
       public FetchLoaderBase,
@@ -475,6 +631,13 @@ class FetchManager::Loader final
   void DidFinishLoading(uint64_t) override;
   void DidFail(uint64_t, const ResourceError&) override;
   void DidFailRedirectCheck(uint64_t) override;
+#if BUILDFLAG(IS_COBALT)
+  bool OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                               int bytes_read) override;
+  bool IsDirectBufferLoad() const;
+  BytesConsumer* GetResponseBodyConsumer(BytesConsumer& body);
+  bool ShouldBufferResponseBody() const;
+#endif  // BUILDFLAG(IS_COBALT)
 
   class IntegrityVerifier final : public GarbageCollected<IntegrityVerifier>,
                                   public BytesConsumer::Client {
@@ -610,6 +773,9 @@ class FetchManager::Loader final
   Member<ResponseResolver> response_resolver_;
   Member<ThreadableLoader> threadable_loader_;
   Member<PlaceHolderBytesConsumer> place_holder_body_;
+#if BUILDFLAG(IS_COBALT)
+  Member<DirectBufferBytesConsumer> direct_buffer_consumer_;
+#endif  // BUILDFLAG(IS_COBALT)
   bool failed_;
   bool finished_;
   int response_http_status_code_;
@@ -650,6 +816,9 @@ void FetchManager::Loader::Trace(Visitor* visitor) const {
   visitor->Trace(response_resolver_);
   visitor->Trace(threadable_loader_);
   visitor->Trace(place_holder_body_);
+#if BUILDFLAG(IS_COBALT)
+  visitor->Trace(direct_buffer_consumer_);
+#endif  // BUILDFLAG(IS_COBALT)
   visitor->Trace(integrity_verifier_);
   visitor->Trace(cached_metadata_handler_);
   FetchLoaderBase::Trace(visitor);
@@ -808,10 +977,18 @@ void FetchManager::Loader::DidReceiveCachedMetadata(mojo_base::BigBuffer data) {
 }
 
 void FetchManager::Loader::DidStartLoadingResponseBody(BytesConsumer& body) {
-  if (GetFetchRequestData()->Integrity().empty() &&
 #if BUILDFLAG(IS_COBALT)
-      !base::FeatureList::IsEnabled(features::kCobaltBypassBufferingBytesConsumer) &&
-#endif  // BUILDFLAG(IS_COBALT)
+  BytesConsumer* target_body = GetResponseBodyConsumer(body);
+
+  if (ShouldBufferResponseBody()) {
+    place_holder_body_->Update(BufferingBytesConsumer::CreateWithDelay(
+        target_body,
+        GetExecutionContext()->GetTaskRunner(TaskType::kNetworking)));
+  } else {
+    place_holder_body_->Update(target_body);
+  }
+#else  // BUILDFLAG(IS_COBALT)
+  if (GetFetchRequestData()->Integrity().empty() &&
       !response_has_no_store_header_) {
     // BufferingBytesConsumer reads chunks from |bytes_consumer| as soon as
     // they get available to relieve backpressure.  Buffering starts after
@@ -826,12 +1003,19 @@ void FetchManager::Loader::DidStartLoadingResponseBody(BytesConsumer& body) {
   } else {
     place_holder_body_->Update(&body);
   }
+#endif  // BUILDFLAG(IS_COBALT)
   place_holder_body_ = nullptr;
 }
 
 void FetchManager::Loader::DidFinishLoading(uint64_t) {
   DCHECK(!place_holder_body_);
   DCHECK(!failed_);
+
+#if BUILDFLAG(IS_COBALT)
+  if (direct_buffer_consumer_) {
+    direct_buffer_consumer_->OnDirectBufferAvailable(nullptr, 0);
+  }
+#endif  // BUILDFLAG(IS_COBALT)
 
   finished_ = true;
 
@@ -846,6 +1030,12 @@ void FetchManager::Loader::DidFinishLoading(uint64_t) {
 
 void FetchManager::Loader::DidFail(uint64_t identifier,
                                    const ResourceError& error) {
+#if BUILDFLAG(IS_COBALT)
+  if (direct_buffer_consumer_) {
+    direct_buffer_consumer_->SetError(error.ErrorCode());
+  }
+#endif  // BUILDFLAG(IS_COBALT)
+
   // Record the failures for blob fetch request.
   if (GetFetchRequestData() &&
       GetFetchRequestData()->Url().ProtocolIs("blob")) {
@@ -885,6 +1075,58 @@ void FetchManager::Loader::DidFailRedirectCheck(uint64_t identifier) {
   Failed(String(), nullptr,
          IdentifiersFactory::SubresourceRequestId(identifier));
 }
+
+#if BUILDFLAG(IS_COBALT)
+bool FetchManager::Loader::OnDirectBufferAvailable(
+    scoped_refptr<net::IOBuffer> buffer,
+    int bytes_read) {
+  if (!direct_buffer_consumer_) {
+    direct_buffer_consumer_ = MakeGarbageCollected<DirectBufferBytesConsumer>(
+        GetExecutionContext()->GetTaskRunner(TaskType::kNetworking));
+    if (place_holder_body_) {
+      DidStartLoadingResponseBody(*direct_buffer_consumer_);
+    }
+  }
+  direct_buffer_consumer_->OnDirectBufferAvailable(std::move(buffer),
+                                                   bytes_read);
+  return true;
+}
+
+bool FetchManager::Loader::IsDirectBufferLoad() const {
+  if (!base::FeatureList::IsEnabled(
+          network::features::kCobaltDirectBufferLoad)) {
+    return false;
+  }
+  return network::IsDirectBufferRequest(
+      GetFetchRequestData()->Destination(),
+      GURL(GetFetchRequestData()->Url()));
+}
+
+BytesConsumer* FetchManager::Loader::GetResponseBodyConsumer(
+    BytesConsumer& body) {
+  if (IsDirectBufferLoad()) {
+    if (!direct_buffer_consumer_) {
+      direct_buffer_consumer_ = MakeGarbageCollected<DirectBufferBytesConsumer>(
+          GetExecutionContext()->GetTaskRunner(TaskType::kNetworking));
+    }
+    return direct_buffer_consumer_.Get();
+  }
+  return &body;
+}
+
+bool FetchManager::Loader::ShouldBufferResponseBody() const {
+  if (!GetFetchRequestData()->Integrity().empty() ||
+      response_has_no_store_header_) {
+    return false;
+  }
+  if (base::FeatureList::IsEnabled(
+          features::kCobaltBypassBufferingBytesConsumer) ||
+      IsDirectBufferLoad()) {
+    return false;
+  }
+  return true;
+}
+#endif  // BUILDFLAG(IS_COBALT)
 
 void FetchLoaderBase::Start(ExceptionState& exception_state) {
   // "1. If |request|'s url contains a Known HSTS Host, modify it per the
@@ -997,6 +1239,12 @@ void FetchManager::Loader::Dispose() {
   }
   if (integrity_verifier_)
     integrity_verifier_->Cancel();
+#if BUILDFLAG(IS_COBALT)
+  if (direct_buffer_consumer_) {
+    direct_buffer_consumer_->Cancel();
+    direct_buffer_consumer_ = nullptr;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   SetExecutionContext(nullptr);
 }
 

@@ -1150,6 +1150,23 @@ void ResourceLoader::DidReceiveDataImpl(
   }
 }
 
+#if BUILDFLAG(IS_COBALT)
+bool ResourceLoader::OnDirectBufferAvailable(
+    scoped_refptr<net::IOBuffer> buffer,
+    int bytes_read) {
+  if (!buffer || bytes_read <= 0) {
+    resource_->OnDirectBufferAvailable(buffer, bytes_read);
+    return true;
+  }
+  if (resource_->OnDirectBufferAvailable(buffer, bytes_read)) {
+    return true;
+  }
+  DidReceiveDataImpl(
+      base::span<const char>(buffer->data(), static_cast<size_t>(bytes_read)));
+  return true;
+}
+#endif  // BUILDFLAG(IS_COBALT)
+
 void ResourceLoader::DidReceiveTransferSizeUpdate(int transfer_size_diff) {
   if (auto* observer = fetcher_->GetResourceLoadObserver()) {
     observer->DidReceiveTransferSizeUpdate(resource_->InspectorId(),

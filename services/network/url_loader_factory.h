@@ -24,6 +24,10 @@
 
 namespace network {
 
+#if BUILDFLAG(IS_COBALT)
+class DirectURLLoaderClient;
+#endif  // BUILDFLAG(IS_COBALT)
+
 class NetworkContext;
 class ResourceSchedulerClient;
 

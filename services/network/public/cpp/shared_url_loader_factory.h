@@ -9,11 +9,19 @@
 
 #include "base/component_export.h"
 #include "base/memory/ref_counted.h"
+#include "build/build_config.h"
 #include "mojo/public/cpp/bindings/pending_receiver.h"
 #include "services/network/public/mojom/url_loader_factory.mojom.h"
 
+#if BUILDFLAG(IS_COBALT)
+#include "base/memory/weak_ptr.h"
+#endif  // BUILDFLAG(IS_COBALT)
+
 namespace network {
 
+#if BUILDFLAG(IS_COBALT)
+class DirectURLLoaderClient;
+#endif  // BUILDFLAG(IS_COBALT)
 class PendingSharedURLLoaderFactory;
 
 // This is a ref-counted C++ interface to replace raw mojom::URLLoaderFactory
@@ -44,6 +52,17 @@ class COMPONENT_EXPORT(NETWORK_CPP) SharedURLLoaderFactory
 
   // If this returns true, any redirect safety checks should be bypassed.
   virtual bool BypassRedirectChecks() const;
+
+#if BUILDFLAG(IS_COBALT)
+  virtual void CreateLoaderAndStartWithDirectClient(
+      mojo::PendingReceiver<mojom::URLLoader> receiver,
+      int32_t request_id,
+      uint32_t options,
+      const ResourceRequest& resource_request,
+      mojo::PendingRemote<mojom::URLLoaderClient> client,
+      base::WeakPtr<DirectURLLoaderClient> direct_client,
+      const net::MutableNetworkTrafficAnnotationTag& traffic_annotation);
+#endif  // BUILDFLAG(IS_COBALT)
 
  protected:
   friend class base::RefCounted<SharedURLLoaderFactory>;

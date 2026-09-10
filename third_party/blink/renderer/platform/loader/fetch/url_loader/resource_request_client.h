@@ -18,6 +18,10 @@
 #include "third_party/blink/public/platform/web_common.h"
 #include "third_party/blink/renderer/platform/wtf/ref_counted.h"
 
+#if BUILDFLAG(IS_COBALT)
+#include "net/base/io_buffer.h"
+#endif  // BUILDFLAG(IS_COBALT)
+
 namespace net {
 struct RedirectInfo;
 class HttpRequestHeaders;
@@ -65,6 +69,13 @@ class BLINK_PLATFORM_EXPORT ResourceRequestClient
   // |transfer_size_diff| is the difference from the value previously reported
   // one (including the one in OnReceivedResponse). It must be positive.
   virtual void OnTransferSizeUpdated(int transfer_size_diff) = 0;
+
+#if BUILDFLAG(IS_COBALT)
+  virtual bool OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                                       int bytes_read) {
+    return false;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
 
   // Called when the response is complete.  This method signals completion of
   // the resource load.

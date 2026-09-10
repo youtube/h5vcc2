@@ -23,4 +23,18 @@ bool SharedURLLoaderFactory::BypassRedirectChecks() const {
   return false;
 }
 
+#if BUILDFLAG(IS_COBALT)
+void SharedURLLoaderFactory::CreateLoaderAndStartWithDirectClient(
+    mojo::PendingReceiver<mojom::URLLoader> receiver,
+    int32_t request_id,
+    uint32_t options,
+    const ResourceRequest& resource_request,
+    mojo::PendingRemote<mojom::URLLoaderClient> client,
+    base::WeakPtr<DirectURLLoaderClient> direct_client,
+    const net::MutableNetworkTrafficAnnotationTag& traffic_annotation) {
+  CreateLoaderAndStart(std::move(receiver), request_id, options,
+                       resource_request, std::move(client), traffic_annotation);
+}
+#endif  // BUILDFLAG(IS_COBALT)
+
 }  // namespace network

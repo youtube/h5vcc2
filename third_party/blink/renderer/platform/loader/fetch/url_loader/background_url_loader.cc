@@ -48,6 +48,10 @@
 #include "third_party/blink/renderer/platform/wtf/forward.h"
 #include "third_party/blink/renderer/platform/wtf/wtf.h"
 
+#if BUILDFLAG(IS_COBALT)
+#include "third_party/blink/renderer/platform/allow_discouraged_type.h"
+#endif  // BUILDFLAG(IS_COBALT)
+
 namespace {
 
 using FollowRedirectCallback =
@@ -365,6 +369,21 @@ class BackgroundURLLoader::Context
           CrossThreadBindOnce(&Context::OnCompletedRequest, context_, status));
     }
 
+#if BUILDFLAG(IS_COBALT)
+    bool OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                                 int bytes_read) override {
+      CHECK(background_task_runner_->RunsTasksInCurrentSequence());
+      if (waiting_for_background_response_processor_) {
+        deferred_direct_buffers_.emplace_back(buffer, bytes_read);
+        return true;
+      }
+      context_->PostTaskToMainThread(CrossThreadBindOnce(
+          &Context::OnDirectBufferAvailableOnMainThread, context_,
+          buffer, bytes_read));
+      return true;
+    }
+#endif  // BUILDFLAG(IS_COBALT)
+
     // BackgroundResponseProcessor::Client overrides:
     void DidFinishBackgroundResponseProcessor(
         network::mojom::URLResponseHeadPtr head,
@@ -377,10 +396,21 @@ class BackgroundURLLoader::Context
         context_->DidReadDataByBackgroundResponseProcessorOnBackground(
             std::get<SegmentedBuffer>(body).size());
       }
+#if BUILDFLAG(IS_COBALT)
+      auto buffers_to_pass = std::make_unique<
+          std::vector<std::pair<scoped_refptr<net::IOBuffer>, int>>>(
+          std::move(deferred_direct_buffers_));
+      deferred_direct_buffers_.clear();
+#endif  // BUILDFLAG(IS_COBALT)
       context_->PostTaskToMainThread(CrossThreadBindOnce(
           &Context::DidFinishBackgroundResponseProcessor, context_,
           std::move(head), std::move(body), std::move(cached_metadata),
-          deferred_transfer_size_diff_, std::move(deferred_status_)));
+          deferred_transfer_size_diff_, std::move(deferred_status_)
+#if BUILDFLAG(IS_COBALT)
+          ,
+          std::move(buffers_to_pass)
+#endif  // BUILDFLAG(IS_COBALT)
+          ));
     }
     void PostTaskToMainThread(CrossThreadOnceClosure task) override {
       context_->PostTaskToMainThread(std::move(task));
@@ -393,6 +423,13 @@ class BackgroundURLLoader::Context
 
     int deferred_transfer_size_diff_ = 0;
     std::optional<network::URLLoaderCompletionStatus> deferred_status_;
+#if BUILDFLAG(IS_COBALT)
+    ALLOW_DISCOURAGED_TYPE(
+        "std::vector required for cross-thread buffer transfer from "
+        "background fetch thread to main thread")
+    std::vector<std::pair<scoped_refptr<net::IOBuffer>, int>>
+        deferred_direct_buffers_;
+#endif  // BUILDFLAG(IS_COBALT)
     bool waiting_for_background_response_processor_ = false;
     base::WeakPtrFactory<RequestClient> weak_factory_{this};
   };
@@ -572,6 +609,10 @@ class BackgroundURLLoader::Context
       std::optional<mojo_base::BigBuffer> cached_metadata,
       int deferred_transfer_size_diff,
       std::optional<network::URLLoaderCompletionStatus> deferred_status,
+#if BUILDFLAG(IS_COBALT)
+      std::unique_ptr<std::vector<std::pair<scoped_refptr<net::IOBuffer>, int>>>
+          deferred_direct_buffers,
+#endif  // BUILDFLAG(IS_COBALT)
       int request_id) {
     DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
 
@@ -580,6 +621,15 @@ class BackgroundURLLoader::Context
     if (client_ && deferred_transfer_size_diff > 0) {
       OnTransferSizeUpdated(deferred_transfer_size_diff);
     }
+#if BUILDFLAG(IS_COBALT)
+    if (deferred_direct_buffers) {
+      for (auto& [buf, bytes] : *deferred_direct_buffers) {
+        if (client_) {
+          client_->OnDirectBufferAvailable(std::move(buf), bytes);
+        }
+      }
+    }
+#endif  // BUILDFLAG(IS_COBALT)
     if (client_ && deferred_status) {
       OnCompletedRequest(*deferred_status);
     }
@@ -601,6 +651,16 @@ class BackgroundURLLoader::Context
                                 encoded_body_size, status.decoded_body_length);
     }
   }
+
+#if BUILDFLAG(IS_COBALT)
+  void OnDirectBufferAvailableOnMainThread(scoped_refptr<net::IOBuffer> buffer,
+                                           int bytes_read) {
+    DCHECK_CALLED_ON_VALID_SEQUENCE(main_thread_sequence_checker_);
+    if (client_) {
+      client_->OnDirectBufferAvailable(std::move(buffer), bytes_read);
+    }
+  }
+#endif  // BUILDFLAG(IS_COBALT)
 
   void EvictFromBackForwardCacheOnBackground(
       mojom::blink::RendererEvictionReason reason) {

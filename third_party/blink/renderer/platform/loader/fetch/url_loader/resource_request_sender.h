@@ -16,6 +16,7 @@
 #include "base/memory/weak_ptr.h"
 #include "base/task/sequenced_task_runner.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "mojo/public/cpp/base/big_buffer.h"
 #include "mojo/public/cpp/system/data_pipe.h"
 #include "net/base/host_port_pair.h"
@@ -38,6 +39,10 @@
 #include "third_party/blink/renderer/platform/loader/fetch/loader_freeze_mode.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
 #include "third_party/blink/renderer/platform/wtf/vector.h"
+
+#if BUILDFLAG(IS_COBALT)
+#include "net/base/io_buffer.h"
+#endif  // BUILDFLAG(IS_COBALT)
 
 namespace base {
 class WaitableEvent;
@@ -141,6 +146,11 @@ class BLINK_PLATFORM_EXPORT ResourceRequestSender {
 
   // Called as upload progress is made.
   virtual void OnUploadProgress(int64_t position, int64_t size);
+
+#if BUILDFLAG(IS_COBALT)
+  virtual void OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                                       int bytes_read);
+#endif  // BUILDFLAG(IS_COBALT)
 
   // Called when response headers are available.
   virtual void OnReceivedResponse(

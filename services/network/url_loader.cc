@@ -131,6 +131,10 @@
 #include "third_party/abseil-cpp/absl/container/inlined_vector.h"
 #include "url/origin.h"
 
+#if BUILDFLAG(IS_COBALT)
+#include "services/network/public/cpp/cobalt/direct_url_loader_client.h"
+#endif  // BUILDFLAG(IS_COBALT)
+
 namespace network {
 
 namespace {
@@ -309,7 +313,7 @@ int32_t PopulateOptions(int32_t initial_options,
 #if BUILDFLAG(IS_COBALT)
   options |= mojom::kURLLoadOptionUseHeaderClient;
   options |= mojom::kURLLoadOptionAsCorsPreflight;
-#endif
+#endif  // BUILDFLAG(IS_COBALT)
 
   return options;
 }
@@ -1184,7 +1188,24 @@ void URLLoader::ContinueOnResponseStarted() {
     upload_progress_tracker_ = nullptr;
   }
 
+#if BUILDFLAG(IS_COBALT)
+  use_direct_buffer_ =
+      base::FeatureList::IsEnabled(features::kCobaltDirectBufferLoad) &&
+      network::DirectURLLoaderClientProxy::Get(request_id_);
+  if (use_direct_buffer_) {
+    if (scoped_refptr<network::DirectURLLoaderClientProxy> proxy =
+            network::DirectURLLoaderClientProxy::Get(request_id_)) {
+      proxy->SetResumeCallback(
+          base::BindRepeating(&URLLoader::ResumeDirectBufferReads,
+                              weak_ptr_factory_.GetWeakPtr()),
+          base::SequencedTaskRunner::GetCurrentDefault());
+    }
+  }
+  if (!(options_ & mojom::kURLLoadOptionReadAndDiscardBody) &&
+      !use_direct_buffer_) {
+#else  // BUILDFLAG(IS_COBALT)
   if (!(options_ & mojom::kURLLoadOptionReadAndDiscardBody)) {
+#endif  // BUILDFLAG(IS_COBALT)
     MojoCreateDataPipeOptions options;
     options.struct_size = sizeof(MojoCreateDataPipeOptions);
     options.flags = MOJO_CREATE_DATA_PIPE_FLAG_NONE;
@@ -1220,7 +1241,7 @@ void URLLoader::ContinueOnResponseStarted() {
           DataPipeAllocationSize::kLargerSizeIfPossible);
     }
 
-#else
+#else  // BUILDFLAG(IS_COBALT)
     options.capacity_num_bytes = GetDataPipeDefaultAllocationSize(
         DataPipeAllocationSize::kLargerSizeIfPossible);
 #endif  // BUILDFLAG(IS_COBALT)
@@ -1465,6 +1486,32 @@ void URLLoader::CheckPartialDecoderResult(int result) {
 
 void URLLoader::ReadMore() {
   if (partial_decoder_result_) {
+#if BUILDFLAG(IS_COBALT)
+    if (use_direct_buffer_) {
+      while (partial_decoder_result_->HasRawData()) {
+        // 64 KB matches standard Chromium NetToMojoPendingBuffer socket
+        // read capacity.
+        constexpr int kCobaltDirectReadBufferSize = 65536;
+        auto buf = base::MakeRefCounted<net::IOBufferWithSize>(
+            kCobaltDirectReadBufferSize);
+        size_t bytes_consumed =
+            partial_decoder_result_->ConsumeRawData(buf->span());
+        CHECK(bytes_consumed > 0);
+        pending_direct_read_buffer_ = buf;
+        DidRead(static_cast<int>(bytes_consumed),
+                /*completed_synchronously=*/true, /*into_slop_bucket=*/false);
+        if (!partial_decoder_result_) {
+          return;
+        }
+      }
+      if (partial_decoder_result_->completion_status()) {
+        NotifyCompleted(*partial_decoder_result_->completion_status());
+        return;
+      }
+      partial_decoder_result_.reset();
+      return;
+    }
+#endif  // BUILDFLAG(IS_COBALT)
     // If we have buffered raw data from the partial decoder, send that first.
     while (partial_decoder_result_->HasRawData()) {
       MojoResult result = NetToMojoPendingBuffer::BeginWrite(
@@ -1506,6 +1553,36 @@ void URLLoader::ReadMore() {
   }
 
   DCHECK(!read_in_progress_);
+#if BUILDFLAG(IS_COBALT)
+  if (use_direct_buffer_) {
+    if (scoped_refptr<network::DirectURLLoaderClientProxy> proxy =
+            network::DirectURLLoaderClientProxy::Get(request_id_)) {
+      if (proxy->IsPaused()) {
+        read_in_progress_ = false;
+        return;
+      }
+    }
+    // 64 KB matches standard Chromium NetToMojoPendingBuffer socket read
+    // capacity. Reuse the buffer allocation if downstream consumers have
+    // already released their reference to avoid excessive malloc/free heap
+    // churn during media streaming.
+    constexpr int kCobaltDirectReadBufferSize = 65536;
+    if (!pending_direct_read_buffer_ ||
+        !pending_direct_read_buffer_->HasOneRef()) {
+      pending_direct_read_buffer_ =
+          base::MakeRefCounted<net::IOBufferWithSize>(
+              kCobaltDirectReadBufferSize);
+    }
+    read_in_progress_ = true;
+    int bytes_read = url_request_->Read(pending_direct_read_buffer_.get(),
+                                        kCobaltDirectReadBufferSize);
+    if (bytes_read != net::ERR_IO_PENDING) {
+      DidRead(bytes_read, /*completed_synchronously=*/true,
+              /*into_slop_bucket=*/false);
+    }
+    return;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   // Once the MIME type is sniffed, all data is sent as soon as it is read from
   // the network.
   DCHECK(consumer_handle_.is_valid() || !pending_write_);
@@ -1611,6 +1688,14 @@ void URLLoader::ReadMore() {
   }
 }
 
+#if BUILDFLAG(IS_COBALT)
+void URLLoader::ResumeDirectBufferReads() {
+  if (!read_in_progress_) {
+    ReadMore();
+  }
+}
+#endif  // BUILDFLAG(IS_COBALT)
+
 // Handles the completion of a read. `num_bytes` is the number of bytes read, 0
 // if we reached the end of the response body, or a net::Error otherwise.
 // `completed_synchronously` is true if the call to URLRequest::Read did not
@@ -1623,6 +1708,112 @@ void URLLoader::DidRead(int num_bytes,
   read_in_progress_ = false;
 
   size_t new_data_offset = pending_write_buffer_offset_;
+#if BUILDFLAG(IS_COBALT)
+  if (pending_direct_read_buffer_) {
+    if (num_bytes > 0 && !into_slop_bucket) {
+      pending_write_buffer_offset_ += num_bytes;
+      if (sent_response_to_client_ && ShouldSendTransferSizeUpdated()) {
+        int64_t total_encoded_bytes = url_request_->GetTotalReceivedBytes();
+        int64_t delta = total_encoded_bytes - reported_total_encoded_bytes_;
+        if (delta > 0) {
+          url_loader_client_.Get()->OnTransferSizeUpdated(delta);
+        }
+        reported_total_encoded_bytes_ = total_encoded_bytes;
+      }
+    }
+
+    if (!sent_response_to_client_) {
+      CHECK(!into_slop_bucket);
+      size_t data_length = pending_write_buffer_offset_;
+      if (data_length > net::kMaxBytesToSniff)
+        data_length = net::kMaxBytesToSniff;
+
+      std::string_view data(pending_direct_read_buffer_->data(), data_length);
+      bool stop_sniffing_after_processing_current_data =
+          (num_bytes <= 0 ||
+           pending_write_buffer_offset_ >= net::kMaxBytesToSniff);
+
+      if (is_more_mime_sniffing_needed_) {
+        CHECK(mime_type_before_sniffing_.has_value());
+        std::string new_type;
+        is_more_mime_sniffing_needed_ = !net::SniffMimeType(
+            data, url_request_->url(), mime_type_before_sniffing_.value(),
+            net::ForceSniffFileUrlsForHtml::kDisabled, &new_type);
+        response_->mime_type.assign(new_type);
+        response_->did_mime_sniff = true;
+
+        if (stop_sniffing_after_processing_current_data)
+          is_more_mime_sniffing_needed_ = false;
+      }
+
+      if (is_more_orb_sniffing_needed_) {
+        orb::ResponseAnalyzer::Decision orb_decision =
+            orb::ResponseAnalyzer::Decision::kSniffMore;
+        bool has_new_data_to_sniff = new_data_offset < data.length();
+        if (has_new_data_to_sniff)
+          orb_decision = orb_analyzer_->Sniff(data);
+
+        if (orb_decision == orb::ResponseAnalyzer::Decision::kSniffMore &&
+            stop_sniffing_after_processing_current_data) {
+          orb_decision = orb_analyzer_->HandleEndOfSniffableResponseBody();
+        }
+
+        if (MaybeBlockResponseForOrb(orb_decision)) {
+          return;
+        }
+      }
+
+      if (!is_more_mime_sniffing_needed_ && !is_more_orb_sniffing_needed_) {
+        SendResponseToClient();
+      }
+    }
+
+    if (num_bytes > 0) {
+      total_written_bytes_ += num_bytes;
+      if (scoped_refptr<DirectURLLoaderClientProxy> cors_proxy =
+              network::DirectURLLoaderClientProxy::GetCorsLoader(request_id_)) {
+        cors_proxy->OnDirectBufferAvailable(pending_direct_read_buffer_,
+                                            num_bytes);
+      } else if (scoped_refptr<DirectURLLoaderClientProxy> direct_proxy =
+                     network::DirectURLLoaderClientProxy::Get(request_id_)) {
+        direct_proxy->OnDirectBufferAvailable(pending_direct_read_buffer_,
+                                              num_bytes);
+      }
+      pending_write_buffer_offset_ = 0;
+      if (use_direct_buffer_ && completed_synchronously) {
+        base::SequencedTaskRunner::GetCurrentDefault()->PostTask(
+            FROM_HERE,
+            base::BindOnce(&URLLoader::ReadMore,
+                           weak_ptr_factory_.GetWeakPtr()));
+      } else {
+        ReadMore();
+      }
+    } else if (num_bytes == 0) {
+      if (scoped_refptr<DirectURLLoaderClientProxy> cors_proxy =
+              network::DirectURLLoaderClientProxy::GetCorsLoader(request_id_)) {
+        cors_proxy->OnDirectBufferAvailable(nullptr, 0);
+      } else if (scoped_refptr<DirectURLLoaderClientProxy> direct_proxy =
+                     network::DirectURLLoaderClientProxy::Get(request_id_)) {
+        direct_proxy->OnDirectBufferAvailable(nullptr, 0);
+      }
+      pending_write_buffer_offset_ = 0;
+      pending_direct_read_buffer_ = nullptr;
+      NotifyCompleted(net::OK);
+    } else {
+      if (scoped_refptr<DirectURLLoaderClientProxy> cors_proxy =
+              network::DirectURLLoaderClientProxy::GetCorsLoader(request_id_)) {
+        cors_proxy->OnDirectBufferAvailable(nullptr, num_bytes);
+      } else if (scoped_refptr<DirectURLLoaderClientProxy> direct_proxy =
+                     network::DirectURLLoaderClientProxy::Get(request_id_)) {
+        direct_proxy->OnDirectBufferAvailable(nullptr, num_bytes);
+      }
+      pending_write_buffer_offset_ = 0;
+      pending_direct_read_buffer_ = nullptr;
+      NotifyCompleted(num_bytes);
+    }
+    return;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   if (num_bytes > 0) {
     if (!into_slop_bucket) {
       pending_write_buffer_offset_ += num_bytes;
@@ -2025,6 +2216,9 @@ void URLLoader::SendResponseToClient() {
   DCHECK_EQ(emitted_devtools_raw_request_, emitted_devtools_raw_response_);
   response_->emitted_extra_info = emitted_devtools_raw_request_;
 
+#if BUILDFLAG(IS_COBALT)
+  sent_response_to_client_ = true;
+#endif  // BUILDFLAG(IS_COBALT)
   url_loader_client_.Get()->OnReceiveResponse(
       response_->Clone(), std::move(consumer_handle_), std::nullopt);
 }

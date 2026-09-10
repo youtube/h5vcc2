@@ -11,6 +11,7 @@
 #include "base/memory/ref_counted.h"
 #include "base/memory/weak_ptr.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "mojo/public/cpp/bindings/pending_receiver.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "mojo/public/cpp/bindings/receiver.h"
@@ -31,6 +32,11 @@
 #include "services/network/public/mojom/url_loader_factory.mojom.h"
 #include "url/gurl.h"
 #include "url/origin.h"
+
+#if BUILDFLAG(IS_COBALT)
+#include "base/containers/queue.h"
+#include "services/network/public/cpp/cobalt/direct_url_loader_client.h"
+#endif  // BUILDFLAG(IS_COBALT)
 
 namespace net {
 class SharedDictionary;
@@ -55,9 +61,16 @@ class OriginAccessList;
 // well as potential preflight requests to the supplied
 // `network_loader_factory`. It is owned by the CorsURLLoaderFactory that
 // created it.
+#if BUILDFLAG(IS_COBALT)
+class COMPONENT_EXPORT(NETWORK_SERVICE) CorsURLLoader
+    : public mojom::URLLoader,
+      public mojom::URLLoaderClient,
+      public network::DirectURLLoaderClient {
+#else  // BUILDFLAG(IS_COBALT)
 class COMPONENT_EXPORT(NETWORK_SERVICE) CorsURLLoader
     : public mojom::URLLoader,
       public mojom::URLLoaderClient {
+#endif  // BUILDFLAG(IS_COBALT)
  public:
   using DeleteCallback = base::OnceCallback<void(CorsURLLoader* loader)>;
 
@@ -121,6 +134,12 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) CorsURLLoader
                         base::OnceCallback<void()> callback) override;
   void OnTransferSizeUpdated(int32_t transfer_size_diff) override;
   void OnComplete(const URLLoaderCompletionStatus& status) override;
+
+#if BUILDFLAG(IS_COBALT)
+  // DirectURLLoaderClient override.
+  void OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                               int bytes_read) override;
+#endif  // BUILDFLAG(IS_COBALT)
 
   // Cancel the request because network revocation was triggered.
   void CancelRequestIfNonceMatchesAndUrlNotExempted(
@@ -323,6 +342,12 @@ class COMPONENT_EXPORT(NETWORK_SERVICE) CorsURLLoader
 
   // Outlives `this`.
   const raw_ptr<const OriginAccessList> origin_access_list_;
+
+#if BUILDFLAG(IS_COBALT)
+  base::queue<std::pair<scoped_refptr<net::IOBuffer>, int>>
+      pending_direct_buffers_;
+  scoped_refptr<DirectURLLoaderClientProxy> direct_proxy_;
+#endif  // BUILDFLAG(IS_COBALT)
 
   // Flag to specify if the CORS-enabled scheme check should be applied.
   const bool skip_cors_enabled_scheme_check_;

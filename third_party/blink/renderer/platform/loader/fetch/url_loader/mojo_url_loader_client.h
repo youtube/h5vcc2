@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include "build/build_config.h"
 #include "base/functional/callback_forward.h"
 #include "base/memory/raw_ptr.h"
 #include "base/memory/scoped_refptr.h"
@@ -23,6 +24,15 @@
 #include "third_party/blink/renderer/platform/heap/persistent.h"
 #include "third_party/blink/renderer/platform/loader/fetch/loader_freeze_mode.h"
 #include "third_party/blink/renderer/platform/weborigin/kurl.h"
+
+#if BUILDFLAG(IS_COBALT)
+#include "base/containers/queue.h"
+#include "base/memory/ref_counted.h"
+#include "base/synchronization/lock.h"
+#include "net/base/io_buffer.h"
+#include "services/network/public/cpp/cobalt/direct_url_loader_client.h"
+#include "third_party/blink/renderer/platform/allow_discouraged_type.h"
+#endif  // BUILDFLAG(IS_COBALT)
 
 namespace base {
 class SequencedTaskRunner;
@@ -41,10 +51,20 @@ class ResourceRequestSender;
 
 // MojoURLLoaderClient is an implementation of
 // network::mojom::URLLoaderClient to receive messages from a single URLLoader.
+#if BUILDFLAG(IS_COBALT)
+class BLINK_PLATFORM_EXPORT MojoURLLoaderClient final
+    : public network::mojom::URLLoaderClient,
+      public network::DirectURLLoaderClient {
+#else
 class BLINK_PLATFORM_EXPORT MojoURLLoaderClient final
     : public network::mojom::URLLoaderClient {
+#endif  // BUILDFLAG(IS_COBALT)
  public:
   MojoURLLoaderClient(
+#if BUILDFLAG(IS_COBALT)
+      int32_t request_id,
+      bool use_direct_buffer,
+#endif  // BUILDFLAG(IS_COBALT)
       ResourceRequestSender* resource_request_sender,
       scoped_refptr<base::SequencedTaskRunner> task_runner,
       bool bypass_redirect_checks,
@@ -75,6 +95,12 @@ class BLINK_PLATFORM_EXPORT MojoURLLoaderClient final
   void OnTransferSizeUpdated(int32_t transfer_size_diff) override;
   void OnComplete(const network::URLLoaderCompletionStatus& status) override;
 
+#if BUILDFLAG(IS_COBALT)
+  // network::DirectURLLoaderClient implementation
+  void OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                               int bytes_read) override;
+#endif  // BUILDFLAG(IS_COBALT)
+
   void EvictFromBackForwardCache(mojom::blink::RendererEvictionReason reason);
   void DidBufferLoadWhileInBackForwardCache(size_t num_bytes);
   bool CanContinueBufferingWhileInBackForwardCache();
@@ -89,6 +115,9 @@ class BLINK_PLATFORM_EXPORT MojoURLLoaderClient final
   class DeferredOnReceiveCachedMetadata;
   class DeferredOnStartLoadingResponseBody;
   class DeferredOnComplete;
+#if BUILDFLAG(IS_COBALT)
+  class DeferredOnDirectBufferAvailable;
+#endif  // BUILDFLAG(IS_COBALT)
 
   bool NeedsStoringMessage() const;
   void StoreAndDispatch(std::unique_ptr<DeferredMessage> message);
@@ -119,6 +148,49 @@ class BLINK_PLATFORM_EXPORT MojoURLLoaderClient final
       evict_from_bfcache_callback_;
   base::RepeatingCallback<void(size_t)>
       did_buffer_load_while_in_bfcache_callback_;
+
+#if BUILDFLAG(IS_COBALT)
+  struct CoalescedBufferQueue
+      : public base::RefCountedThreadSafe<CoalescedBufferQueue> {
+    CoalescedBufferQueue(
+        base::WeakPtr<MojoURLLoaderClient> client,
+        scoped_refptr<base::SequencedTaskRunner> task_runner,
+        scoped_refptr<network::DirectURLLoaderClientProxy> direct_proxy);
+
+    void PushAndPost(scoped_refptr<net::IOBuffer> buffer, int bytes_read);
+    static void Dispatch(scoped_refptr<CoalescedBufferQueue> coalesced_queue);
+
+    base::Lock lock;
+    std::vector<std::pair<scoped_refptr<net::IOBuffer>, int>> queue
+        ALLOW_DISCOURAGED_TYPE(
+            "Thread-safe cross-sequence buffer coalescing queue");
+    bool task_posted = false;
+    std::atomic<size_t> total_queued_bytes{0};
+    std::atomic<bool> is_paused{false};
+    base::WeakPtr<MojoURLLoaderClient> client_weak_;
+    scoped_refptr<base::SequencedTaskRunner> task_runner_;
+    scoped_refptr<network::DirectURLLoaderClientProxy> direct_proxy_;
+
+   private:
+    friend class base::RefCountedThreadSafe<CoalescedBufferQueue>;
+    ~CoalescedBufferQueue() = default;
+  };
+
+  void DispatchCoalescedBuffers(
+      scoped_refptr<CoalescedBufferQueue> coalesced_queue);
+
+  int32_t request_id_ = 0;
+  bool use_direct_buffer_ = false;
+  bool direct_buffer_mode_active_ = false;
+  bool direct_buffer_eof_received_ = false;
+  ALLOW_DISCOURAGED_TYPE(
+      "Thread-safe direct buffer queueing before response head arrival")
+  base::queue<std::pair<scoped_refptr<net::IOBuffer>, int>>
+      pending_direct_buffers_;
+  scoped_refptr<CoalescedBufferQueue> coalesced_queue_;
+  scoped_refptr<network::DirectURLLoaderClientProxy> direct_proxy_;
+  base::WeakPtr<MojoURLLoaderClient> weak_ptr_;
+#endif  // BUILDFLAG(IS_COBALT)
 
   base::WeakPtrFactory<MojoURLLoaderClient> weak_factory_{this};
 };

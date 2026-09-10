@@ -198,6 +198,10 @@ class WebMojoURLLoaderClientTest : public ::testing::Test,
         blink::scheduler::GetSingleThreadTaskRunnerForTesting();
 
     client_ = std::make_unique<MojoURLLoaderClient>(
+#if BUILDFLAG(IS_COBALT)
+        request_id_,
+        /*use_direct_buffer=*/true,
+#endif  // BUILDFLAG(IS_COBALT)
         resource_request_sender_.get(), loading_task_runner,
         url_loader_factory->BypassRedirectChecks(), request->url,
         /*evict_from_bfcache_callback=*/

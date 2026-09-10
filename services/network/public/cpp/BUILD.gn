@@ -161,6 +161,13 @@ component("cpp") {
     "x_frame_options_parser.h",
   ]
 
+  if (is_cobalt) {
+    sources += [
+      "cobalt/direct_url_loader_client.cc",
+      "cobalt/direct_url_loader_client.h",
+    ]
+  }
+
   configs += [ "//build/config/compiler:wexit_time_destructors" ]
 
   public_deps = [

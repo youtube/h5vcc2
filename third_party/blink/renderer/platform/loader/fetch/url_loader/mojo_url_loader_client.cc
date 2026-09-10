@@ -29,6 +29,10 @@
 #include "third_party/blink/renderer/platform/loader/fetch/url_loader/resource_request_sender.h"
 #include "third_party/blink/renderer/platform/wtf/functional.h"
 
+#if BUILDFLAG(IS_COBALT)
+#include "services/network/public/cpp/cobalt/direct_url_loader_client.h"
+#endif  // BUILDFLAG(IS_COBALT)
+
 namespace blink {
 namespace {
 
@@ -47,6 +51,9 @@ class MojoURLLoaderClient::DeferredMessage {
   virtual void HandleMessage(
       ResourceRequestSender* resource_request_sender) = 0;
   virtual bool IsCompletionMessage() const = 0;
+#if BUILDFLAG(IS_COBALT)
+  virtual bool IsSuccessfulCompletionMessage() const { return false; }
+#endif  // BUILDFLAG(IS_COBALT)
 };
 
 class MojoURLLoaderClient::DeferredOnReceiveResponse final
@@ -127,11 +134,36 @@ class MojoURLLoaderClient::DeferredOnComplete final : public DeferredMessage {
                                                complete_ipc_arrival_time_);
   }
   bool IsCompletionMessage() const override { return true; }
+#if BUILDFLAG(IS_COBALT)
+  bool IsSuccessfulCompletionMessage() const override {
+    return status_.error_code == net::OK;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
 
  private:
   const network::URLLoaderCompletionStatus status_;
   const base::TimeTicks complete_ipc_arrival_time_;
 };
+
+#if BUILDFLAG(IS_COBALT)
+class MojoURLLoaderClient::DeferredOnDirectBufferAvailable final
+    : public DeferredMessage {
+ public:
+  DeferredOnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                                  int bytes_read)
+      : buffer_(std::move(buffer)), bytes_read_(bytes_read) {}
+
+  void HandleMessage(ResourceRequestSender* resource_request_sender) override {
+    resource_request_sender->OnDirectBufferAvailable(std::move(buffer_),
+                                                     bytes_read_);
+  }
+  bool IsCompletionMessage() const override { return false; }
+
+ private:
+  scoped_refptr<net::IOBuffer> buffer_;
+  const int bytes_read_;
+};
+#endif  // BUILDFLAG(IS_COBALT)
 
 class MojoURLLoaderClient::BodyBuffer final
     : public mojo::DataPipeDrainer::Client {
@@ -244,6 +276,10 @@ class MojoURLLoaderClient::BodyBuffer final
 };
 
 MojoURLLoaderClient::MojoURLLoaderClient(
+#if BUILDFLAG(IS_COBALT)
+    int32_t request_id,
+    bool use_direct_buffer,
+#endif  // BUILDFLAG(IS_COBALT)
     ResourceRequestSender* resource_request_sender,
     scoped_refptr<base::SequencedTaskRunner> task_runner,
     bool bypass_redirect_checks,
@@ -264,9 +300,30 @@ MojoURLLoaderClient::MojoURLLoaderClient(
       last_loaded_url_(request_url),
       evict_from_bfcache_callback_(std::move(evict_from_bfcache_callback)),
       did_buffer_load_while_in_bfcache_callback_(
-          std::move(did_buffer_load_while_in_bfcache_callback)) {}
+          std::move(did_buffer_load_while_in_bfcache_callback)) {
+#if BUILDFLAG(IS_COBALT)
+  request_id_ = request_id;
+  use_direct_buffer_ = use_direct_buffer;
+  weak_ptr_ = weak_factory_.GetWeakPtr();
+  if (use_direct_buffer_ && base::FeatureList::IsEnabled(
+                                network::features::kCobaltDirectBufferLoad)) {
+    direct_proxy_ =
+        base::MakeRefCounted<network::DirectURLLoaderClientProxy>(this);
+    coalesced_queue_ =
+        base::MakeRefCounted<CoalescedBufferQueue>(weak_ptr_, task_runner_, direct_proxy_);
+    network::DirectURLLoaderClientProxy::Register(request_id_, direct_proxy_);
+  }
+#endif  // BUILDFLAG(IS_COBALT)
+}
 
-MojoURLLoaderClient::~MojoURLLoaderClient() = default;
+MojoURLLoaderClient::~MojoURLLoaderClient() {
+#if BUILDFLAG(IS_COBALT)
+  if (direct_proxy_) {
+    direct_proxy_->Detach();
+    network::DirectURLLoaderClientProxy::Unregister(request_id_);
+  }
+#endif  // BUILDFLAG(IS_COBALT)
+}
 
 void MojoURLLoaderClient::Freeze(LoaderFreezeMode mode) {
   freeze_mode_ = mode;
@@ -308,6 +365,31 @@ void MojoURLLoaderClient::OnReceiveResponse(
   base::TimeTicks response_ipc_arrival_time = base::TimeTicks::Now();
 
   base::WeakPtr<MojoURLLoaderClient> weak_this = weak_factory_.GetWeakPtr();
+#if BUILDFLAG(IS_COBALT)
+  if (use_direct_buffer_ && base::FeatureList::IsEnabled(
+                                network::features::kCobaltDirectBufferLoad)) {
+    if (freeze_mode_ == LoaderFreezeMode::kNone &&
+        accumulated_transfer_size_diff_during_deferred_ == 0) {
+      resource_request_sender_->OnReceivedResponse(
+          std::move(response_head), std::move(body), std::move(cached_metadata),
+          response_ipc_arrival_time);
+      if (!weak_this)
+        return;
+      while (!pending_direct_buffers_.empty()) {
+        auto [buf, bytes] = pending_direct_buffers_.front();
+        pending_direct_buffers_.pop();
+        resource_request_sender_->OnDirectBufferAvailable(std::move(buf),
+                                                          bytes);
+        if (!weak_this || freeze_mode_ != LoaderFreezeMode::kNone)
+          return;
+      }
+      if (!deferred_messages_.empty()) {
+        FlushDeferredMessages();
+      }
+      return;
+    }
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   if (!NeedsStoringMessage()) {
     resource_request_sender_->OnReceivedResponse(
         std::move(response_head), std::move(body), std::move(cached_metadata),
@@ -430,12 +512,166 @@ void MojoURLLoaderClient::OnTransferSizeUpdated(int32_t transfer_size_diff) {
   }
 }
 
+#if BUILDFLAG(IS_COBALT)
+MojoURLLoaderClient::CoalescedBufferQueue::CoalescedBufferQueue(
+    base::WeakPtr<MojoURLLoaderClient> client,
+    scoped_refptr<base::SequencedTaskRunner> task_runner,
+    scoped_refptr<network::DirectURLLoaderClientProxy> direct_proxy)
+    : client_weak_(std::move(client)),
+      task_runner_(std::move(task_runner)),
+      direct_proxy_(std::move(direct_proxy)) {}
+
+void MojoURLLoaderClient::CoalescedBufferQueue::PushAndPost(
+    scoped_refptr<net::IOBuffer> buffer,
+    int bytes_read) {
+  if (buffer && bytes_read > 0) {
+    size_t current =
+        total_queued_bytes.fetch_add(bytes_read, std::memory_order_relaxed) +
+        bytes_read;
+    constexpr size_t kHighWatermark = 4 * 1024 * 1024;  // 4 MB
+    if (current >= kHighWatermark &&
+        !is_paused.load(std::memory_order_relaxed)) {
+      is_paused.store(true, std::memory_order_relaxed);
+      if (direct_proxy_) {
+        direct_proxy_->SetPaused(true);
+      }
+    }
+  } else if (!buffer || bytes_read <= 0) {
+    total_queued_bytes.store(0, std::memory_order_relaxed);
+    if (is_paused.exchange(false, std::memory_order_relaxed)) {
+      if (direct_proxy_) {
+        direct_proxy_->SetPaused(false);
+      }
+    }
+  }
+
+  {
+    base::AutoLock auto_lock(lock);
+    queue.emplace_back(std::move(buffer), bytes_read);
+    if (task_posted) {
+      return;
+    }
+    task_posted = true;
+  }
+  task_runner_->PostTask(
+      FROM_HERE,
+      base::BindOnce(&CoalescedBufferQueue::Dispatch,
+                     scoped_refptr<CoalescedBufferQueue>(this)));
+}
+
+// static
+void MojoURLLoaderClient::CoalescedBufferQueue::Dispatch(
+    scoped_refptr<CoalescedBufferQueue> coalesced_queue) {
+  DCHECK(coalesced_queue->task_runner_->RunsTasksInCurrentSequence());
+  if (coalesced_queue->client_weak_) {
+    coalesced_queue->client_weak_->DispatchCoalescedBuffers(coalesced_queue);
+  } else {
+    base::AutoLock lock(coalesced_queue->lock);
+    coalesced_queue->task_posted = false;
+  }
+}
+
+void MojoURLLoaderClient::DispatchCoalescedBuffers(
+    scoped_refptr<CoalescedBufferQueue> coalesced_queue) {
+  DCHECK(task_runner_->RunsTasksInCurrentSequence());
+  std::vector<std::pair<scoped_refptr<net::IOBuffer>, int>> local_queue;
+  {
+    base::AutoLock lock(coalesced_queue->lock);
+    local_queue.swap(coalesced_queue->queue);
+  }
+
+  base::WeakPtr<MojoURLLoaderClient> weak_this = weak_ptr_;
+  for (auto& [buffer, bytes_read] : local_queue) {
+    if (buffer && bytes_read > 0) {
+      size_t current = coalesced_queue->total_queued_bytes.fetch_sub(
+                           bytes_read, std::memory_order_relaxed) -
+                       bytes_read;
+      constexpr size_t kLowWatermark = 1 * 1024 * 1024;  // 1 MB
+      if (current <= kLowWatermark &&
+          coalesced_queue->is_paused.load(std::memory_order_relaxed)) {
+        coalesced_queue->is_paused.store(false, std::memory_order_relaxed);
+        if (direct_proxy_) {
+          direct_proxy_->SetPaused(false);
+        }
+      }
+    }
+    OnDirectBufferAvailable(std::move(buffer), bytes_read);
+    if (!weak_this) {
+      base::AutoLock lock(coalesced_queue->lock);
+      coalesced_queue->task_posted = false;
+      return;
+    }
+  }
+
+  base::AutoLock lock(coalesced_queue->lock);
+  if (!coalesced_queue->queue.empty()) {
+    coalesced_queue->task_runner_->PostTask(
+        FROM_HERE,
+        base::BindOnce(&CoalescedBufferQueue::Dispatch, coalesced_queue));
+  } else {
+    coalesced_queue->task_posted = false;
+  }
+}
+
+void MojoURLLoaderClient::OnDirectBufferAvailable(
+    scoped_refptr<net::IOBuffer> buffer,
+    int bytes_read) {
+  if (!task_runner_->RunsTasksInCurrentSequence()) {
+    coalesced_queue_->PushAndPost(std::move(buffer), bytes_read);
+    return;
+  }
+  direct_buffer_mode_active_ = true;
+  if (bytes_read <= 0 && !buffer) {
+    direct_buffer_eof_received_ = true;
+    if (!deferred_messages_.empty()) {
+      FlushDeferredMessages();
+    }
+  }
+  if (!has_received_response_head_) {
+    pending_direct_buffers_.emplace(std::move(buffer), bytes_read);
+    return;
+  }
+  if (NeedsStoringMessage()) {
+    StoreAndDispatch(std::make_unique<DeferredOnDirectBufferAvailable>(
+        std::move(buffer), bytes_read));
+    return;
+  }
+  resource_request_sender_->OnDirectBufferAvailable(std::move(buffer),
+                                                    bytes_read);
+}
+#endif  // BUILDFLAG(IS_COBALT)
+
 void MojoURLLoaderClient::OnComplete(
     const network::URLLoaderCompletionStatus& status) {
   base::TimeTicks complete_ipc_arrival_time = base::TimeTicks::Now();
   has_received_complete_ = true;
   StopBackForwardCacheEvictionTimer();
 
+#if BUILDFLAG(IS_COBALT)
+  if (use_direct_buffer_ && !direct_buffer_eof_received_) {
+    OnDirectBufferAvailable(
+        nullptr, status.error_code == net::OK ? 0 : status.error_code);
+  }
+
+  const bool has_body = has_received_response_body_ ||
+                        direct_buffer_mode_active_ || use_direct_buffer_;
+  DCHECK(has_body || status.error_code != net::OK);
+  if (NeedsStoringMessage() ||
+      (direct_buffer_mode_active_ && !direct_buffer_eof_received_ &&
+       status.error_code == net::OK)) {
+    StoreAndDispatch(std::make_unique<DeferredOnComplete>(
+        status, complete_ipc_arrival_time));
+  } else {
+    while (!pending_direct_buffers_.empty() && has_received_response_head_) {
+      auto [buf, bytes] = pending_direct_buffers_.front();
+      pending_direct_buffers_.pop();
+      resource_request_sender_->OnDirectBufferAvailable(std::move(buf),
+                                                        bytes);
+    }
+    resource_request_sender_->OnRequestComplete(status,
+                                                complete_ipc_arrival_time);
+  }
+#else
   // Dispatch completion status to the ResourceRequestSender.
   // Except for errors, there must always be a response's body.
   DCHECK(has_received_response_body_ || status.error_code != net::OK);
@@ -446,6 +682,7 @@ void MojoURLLoaderClient::OnComplete(
     resource_request_sender_->OnRequestComplete(status,
                                                 complete_ipc_arrival_time);
   }
+#endif  // BUILDFLAG(IS_COBALT)
 }
 
 bool MojoURLLoaderClient::NeedsStoringMessage() const {
@@ -456,6 +693,14 @@ bool MojoURLLoaderClient::NeedsStoringMessage() const {
 
 void MojoURLLoaderClient::StoreAndDispatch(
     std::unique_ptr<DeferredMessage> message) {
+#if BUILDFLAG(IS_COBALT)
+  if (direct_buffer_mode_active_ && !direct_buffer_eof_received_ &&
+      message->IsCompletionMessage() &&
+      message->IsSuccessfulCompletionMessage()) {
+    deferred_messages_.emplace_back(std::move(message));
+    return;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   DCHECK(NeedsStoringMessage());
   if (freeze_mode_ != LoaderFreezeMode::kNone) {
     deferred_messages_.emplace_back(std::move(message));
@@ -476,6 +721,82 @@ void MojoURLLoaderClient::OnConnectionClosed() {
   }
 }
 
+#if BUILDFLAG(IS_COBALT)
+void MojoURLLoaderClient::FlushDeferredMessages() {
+  if (freeze_mode_ != LoaderFreezeMode::kNone) {
+    return;
+  }
+  Vector<std::unique_ptr<DeferredMessage>> messages;
+  messages.swap(deferred_messages_);
+  std::unique_ptr<DeferredMessage> completion_message;
+  base::WeakPtr<MojoURLLoaderClient> weak_this = weak_factory_.GetWeakPtr();
+  // First, dispatch all messages excluding the followings:
+  //  - transfer size change
+  //  - completion
+  // These two types of messages are dispatched later.
+  for (size_t index = 0; index < messages.size(); ++index) {
+    if (messages[index]->IsCompletionMessage()) {
+      DCHECK(!completion_message);
+      completion_message = std::move(messages[index]);
+      continue;
+    }
+
+    messages[index]->HandleMessage(resource_request_sender_);
+    if (!weak_this)
+      return;
+    if (freeze_mode_ != LoaderFreezeMode::kNone) {
+      if (completion_message) {
+        deferred_messages_.emplace_back(std::move(completion_message));
+      }
+      deferred_messages_.reserve(deferred_messages_.size() + messages.size() -
+                                 index - 1);
+      for (size_t i = index + 1; i < messages.size(); ++i) {
+        if (messages[i]) {
+          deferred_messages_.emplace_back(std::move(messages[i]));
+        }
+      }
+      return;
+    }
+  }
+
+  // Dispatch the transfer size update.
+  if (accumulated_transfer_size_diff_during_deferred_ > 0) {
+    auto transfer_size_diff = accumulated_transfer_size_diff_during_deferred_;
+    accumulated_transfer_size_diff_during_deferred_ = 0;
+    resource_request_sender_->OnTransferSizeUpdated(transfer_size_diff);
+    if (!weak_this)
+      return;
+    if (freeze_mode_ != LoaderFreezeMode::kNone) {
+      if (completion_message) {
+        deferred_messages_.emplace_back(std::move(completion_message));
+      }
+      return;
+    }
+  }
+
+  // Dispatch the completion message.
+  if (completion_message) {
+    if ((body_buffer_ && body_buffer_->active()) ||
+        (direct_buffer_mode_active_ && !direct_buffer_eof_received_ &&
+         completion_message->IsSuccessfulCompletionMessage())) {
+      // If we still have an active body buffer, or if direct buffer mode is
+      // active and we haven't received direct buffer EOF yet, we shouldn't
+      // dispatch the completion message now, so put the message back into
+      // |deferred_messages_| to be sent later after the body buffer/direct
+      // buffer is complete.
+      deferred_messages_.emplace_back(std::move(completion_message));
+      return;
+    }
+    while (!pending_direct_buffers_.empty() && has_received_response_head_) {
+      auto [buf, bytes] = pending_direct_buffers_.front();
+      pending_direct_buffers_.pop();
+      resource_request_sender_->OnDirectBufferAvailable(std::move(buf),
+                                                        bytes);
+    }
+    completion_message->HandleMessage(resource_request_sender_);
+  }
+}
+#else  // BUILDFLAG(IS_COBALT)
 void MojoURLLoaderClient::FlushDeferredMessages() {
   if (freeze_mode_ != LoaderFreezeMode::kNone) {
     return;
@@ -541,5 +862,6 @@ void MojoURLLoaderClient::FlushDeferredMessages() {
     messages.back()->HandleMessage(resource_request_sender_);
   }
 }
+#endif  // BUILDFLAG(IS_COBALT)
 
 }  // namespace blink

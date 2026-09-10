@@ -33,6 +33,7 @@
 #include "base/functional/callback.h"
 #include "base/task/single_thread_task_runner.h"
 #include "base/time/time.h"
+#include "build/build_config.h"
 #include "mojo/public/cpp/base/big_buffer.h"
 #include "third_party/blink/public/mojom/loader/code_cache.mojom-blink-forward.h"
 #include "third_party/blink/public/platform/scheduler/web_scoped_virtual_time_pauser.h"
@@ -63,6 +64,10 @@
 #include "third_party/blink/renderer/platform/wtf/text/atomic_string.h"
 #include "third_party/blink/renderer/platform/wtf/text/text_encoding.h"
 #include "third_party/blink/renderer/platform/wtf/text/wtf_string.h"
+
+#if BUILDFLAG(IS_COBALT)
+#include "net/base/io_buffer.h"
+#endif  // BUILDFLAG(IS_COBALT)
 
 namespace base {
 class Clock;
@@ -277,6 +282,12 @@ class PLATFORM_EXPORT Resource : public GarbageCollected<Resource>,
   virtual void WillNotFollowRedirect() {}
 
   virtual void ResponseReceived(const ResourceResponse&);
+#if BUILDFLAG(IS_COBALT)
+  virtual bool OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                                       int bytes_read) {
+    return false;
+  }
+#endif  // BUILDFLAG(IS_COBALT)
   virtual void ResponseBodyReceived(
       ResponseBodyLoaderDrainableInterface& body_loader,
       scoped_refptr<base::SingleThreadTaskRunner> loader_task_runner) {}

@@ -7,6 +7,10 @@
 #include <algorithm>
 #include <utility>
 
+#if BUILDFLAG(IS_COBALT)
+#include <string_view>
+#endif  // BUILDFLAG(IS_COBALT)
+
 #include "base/compiler_specific.h"
 #include "base/containers/to_vector.h"
 #include "base/debug/alias.h"
@@ -316,6 +320,11 @@ int ResourceRequestSender::SendAsync(
                                     request->priority, request->is_ad_tagged);
 
   auto url_loader_client = std::make_unique<MojoURLLoaderClient>(
+#if BUILDFLAG(IS_COBALT)
+      request_id,
+      /*use_direct_buffer=*/network::IsDirectBufferRequest(
+          request->destination, request->url),
+#endif  // BUILDFLAG(IS_COBALT)
       this, loading_task_runner, url_loader_factory->BypassRedirectChecks(),
       request->url, std::move(evict_from_bfcache_callback),
       std::move(did_buffer_load_while_in_bfcache_callback));
@@ -477,6 +486,23 @@ void ResourceRequestSender::OnUploadProgress(int64_t position, int64_t size) {
 
   request_info_->client->OnUploadProgress(position, size);
 }
+
+#if BUILDFLAG(IS_COBALT)
+void ResourceRequestSender::OnDirectBufferAvailable(
+    scoped_refptr<net::IOBuffer> buffer,
+    int bytes_read) {
+  if (ShouldDeferTask()) {
+    pending_tasks_.emplace_back(
+        WTF::BindOnce(&ResourceRequestSender::OnDirectBufferAvailable,
+                      weak_factory_.GetWeakPtr(), buffer, bytes_read));
+    return;
+  }
+  if (!request_info_) {
+    return;
+  }
+  request_info_->client->OnDirectBufferAvailable(std::move(buffer), bytes_read);
+}
+#endif  // BUILDFLAG(IS_COBALT)
 
 void ResourceRequestSender::OnReceivedResponse(
     network::mojom::URLResponseHeadPtr response_head,

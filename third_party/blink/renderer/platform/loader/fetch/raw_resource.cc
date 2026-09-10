@@ -201,6 +201,20 @@ void RawResource::DidAddClient(ResourceClient* c) {
   Resource::DidAddClient(client);
 }
 
+#if BUILDFLAG(IS_COBALT)
+bool RawResource::OnDirectBufferAvailable(scoped_refptr<net::IOBuffer> buffer,
+                                          int bytes_read) {
+  bool consumed = false;
+  ResourceClientWalker<RawResourceClient> w(Clients());
+  while (RawResourceClient* c = w.Next()) {
+    if (c->OnDirectBufferAvailable(this, buffer, bytes_read)) {
+      consumed = true;
+    }
+  }
+  return consumed;
+}
+#endif  // BUILDFLAG(IS_COBALT)
+
 bool RawResource::WillFollowRedirect(
     const ResourceRequest& new_request,
     const ResourceResponse& redirect_response) {
