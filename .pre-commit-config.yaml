@@ -138,3 +138,10 @@ repos:
         entry: gn format
         language: system
         files: '.*\.gni?$'
+    -   id: no-autoroll-conflicts
+        name: Check for CONFLICT
+        description: Ensures autoroller is rolling.
+        entry: 'CONFLICT'
+        language: pygrep
+        types: [text]
+        files: ^\.github/AUTOROLL$
