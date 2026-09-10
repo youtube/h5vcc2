@@ -235,7 +235,7 @@ bool IsSDRVideo(int bit_depth,
                 SbMediaPrimaryId primary_id,
                 SbMediaTransferId transfer_id,
                 SbMediaMatrixId matrix_id) {
-  SB_DCHECK(bit_depth == 8 || bit_depth == 10);
+  SB_DCHECK(bit_depth == 8 || bit_depth == 10 || bit_depth == 12);
 
   if (bit_depth != 8) {
     return false;
@@ -302,9 +302,8 @@ bool IsSDRVideo(const char* mime) {
   }
 
   SB_DCHECK_NE(video_codec, kSbMediaVideoCodecNone);
-  // TODO: Consider to consolidate the two IsSDRVideo() implementations by
-  //       calling IsSDRVideo(bit_depth, primary_id, transfer_id, matrix_id).
-  return bit_depth == 8;
+
+  return IsSDRVideo(bit_depth, primary_id, transfer_id, matrix_id);
 }
 
 int GetBytesPerSample(SbMediaAudioSampleType sample_type) {
