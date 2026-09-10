@@ -150,6 +150,9 @@ declare_args() {
 if (is_starboard) {
   use_relative_vtables_abi =
       sb_is_evergreen && (current_toolchain == default_toolchain)
+} else if (is_android) {
+  use_relative_vtables_abi = (current_cpu == "arm64" || current_cpu == "arm") &&
+                             use_custom_libcxx && !is_component_build
 }
 
 # To try out this combination, delete this assert.
