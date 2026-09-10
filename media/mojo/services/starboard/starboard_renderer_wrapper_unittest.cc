@@ -140,19 +140,12 @@ class MockStarboardGpuFactory : public StarboardGpuFactory {
     std::move(callback).Run();
   }
 
-  void RunSbDecodeTargetFunctionOnGpu(
-      SbDecodeTargetGlesContextRunnerTarget target_function,
-      void* target_function_context,
-      base::WaitableEvent* done_event) override {
-    done_event->Signal();
+  void RunWithGlesContext(base::OnceClosure callback,
+                          base::WaitableEvent* done_event) override {
+    if (done_event) {
+      done_event->Signal();
+    }
   }
-
-  void RunCallbackOnGpu(base::OnceCallback<void()> callback,
-                        base::WaitableEvent* done_event) override {
-    done_event->Signal();
-  }
-
-  void PostCallbackToGpu(base::OnceCallback<void()> callback) override {}
 
   void CreateImageOnGpu(const gfx::Size& coded_size,
                         const gfx::ColorSpace& color_space,

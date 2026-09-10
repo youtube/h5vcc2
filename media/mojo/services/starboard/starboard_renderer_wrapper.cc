@@ -35,6 +35,15 @@ namespace {
 // Time interval to update media time when bypass is active. This matches
 // `kTimeUpdateInterval` in media/mojo/services/mojo_renderer_service.cc.
 constexpr auto kTimeUpdateInterval = base::Milliseconds(125);
+
+// Disable CFI checks for this function because it executes function pointers
+// provided by the Starboard library, which cannot be verified across the
+// component boundary.
+NO_SANITIZE("cfi-icall")
+void CallTargetFunction(SbDecodeTargetGlesContextRunnerTarget target_function,
+                        void* target_function_context) {
+  target_function(target_function_context);
+}
 }  // namespace
 
 // A proxy DemuxerStream that forwards Read calls to the
@@ -340,16 +349,15 @@ void StarboardRendererWrapper::GetCurrentVideoFrame(
     GetCurrentVideoFrameCallback callback) {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   {
-    // Post GetRenderer()->GetSbDecodeTarget() on the gpu thread.
-    base::OnceCallback<void()> get_current_decode_target_cb =
-        base::BindOnce(&StarboardRendererWrapper::GetCurrentDecodeTarget,
-                       base::Unretained(this));
     base::WaitableEvent done_event(
         base::WaitableEvent::ResetPolicy::MANUAL,
         base::WaitableEvent::InitialState::NOT_SIGNALED);
     GetGpuFactory()
-        ->AsyncCall(&StarboardGpuFactory::RunCallbackOnGpu)
-        .WithArgs(std::move(get_current_decode_target_cb), &done_event);
+        ->AsyncCall(&StarboardGpuFactory::RunWithGlesContext)
+        .WithArgs(
+            base::BindOnce(&StarboardRendererWrapper::GetCurrentDecodeTarget,
+                           base::Unretained(this)),
+            &done_event);
     // This call blocks because the underlying Starboard API
     // (SbPlayerGetCurrentFrame) is synchronous and needs to be executed on the
     // GPU thread.
@@ -362,16 +370,17 @@ void StarboardRendererWrapper::GetCurrentVideoFrame(
     if (!SbDecodeTargetGetInfo(decode_target_, info.get())) {
       LOG(ERROR) << "SbDecodeTargetGetInfo failed";
       GetGpuFactory()
-          ->AsyncCall(&StarboardGpuFactory::PostCallbackToGpu)
+          ->AsyncCall(&StarboardGpuFactory::RunWithGlesContext)
           .WithArgs(base::BindOnce(
-              [](void* target) {
-                SbDecodeTarget decode_target =
-                    reinterpret_cast<SbDecodeTarget>(target);
-                if (SbDecodeTargetIsValid(decode_target)) {
-                  SbDecodeTargetRelease(decode_target);
-                }
-              },
-              reinterpret_cast<void*>(decode_target_)));
+                        [](void* target) {
+                          SbDecodeTarget decode_target =
+                              reinterpret_cast<SbDecodeTarget>(target);
+                          if (SbDecodeTargetIsValid(decode_target)) {
+                            SbDecodeTargetRelease(decode_target);
+                          }
+                        },
+                        reinterpret_cast<void*>(decode_target_)),
+                    /*done_event=*/nullptr);
       decode_target_ = kSbDecodeTargetInvalid;
       std::move(callback).Run(nullptr);
       return;
@@ -411,16 +420,17 @@ void StarboardRendererWrapper::GetCurrentVideoFrame(
       LOG(ERROR) << "Unsupported SbDecodeTargetFormat: "
                  << static_cast<int>(info.get()->format);
       GetGpuFactory()
-          ->AsyncCall(&StarboardGpuFactory::PostCallbackToGpu)
+          ->AsyncCall(&StarboardGpuFactory::RunWithGlesContext)
           .WithArgs(base::BindOnce(
-              [](void* target) {
-                SbDecodeTarget decode_target =
-                    reinterpret_cast<SbDecodeTarget>(target);
-                if (SbDecodeTargetIsValid(decode_target)) {
-                  SbDecodeTargetRelease(decode_target);
-                }
-              },
-              reinterpret_cast<void*>(decode_target_)));
+                        [](void* target) {
+                          SbDecodeTarget decode_target =
+                              reinterpret_cast<SbDecodeTarget>(target);
+                          if (SbDecodeTargetIsValid(decode_target)) {
+                            SbDecodeTargetRelease(decode_target);
+                          }
+                        },
+                        reinterpret_cast<void*>(decode_target_)),
+                    /*done_event=*/nullptr);
       decode_target_ = kSbDecodeTargetInvalid;
       std::move(callback).Run(nullptr);
       return;
@@ -438,16 +448,17 @@ void StarboardRendererWrapper::GetCurrentVideoFrame(
         texture_service_ids == last_texture_service_ids_) {
       shared_image = current_shared_image_;
       GetGpuFactory()
-          ->AsyncCall(&StarboardGpuFactory::PostCallbackToGpu)
+          ->AsyncCall(&StarboardGpuFactory::RunWithGlesContext)
           .WithArgs(base::BindOnce(
-              [](void* target) {
-                SbDecodeTarget decode_target =
-                    reinterpret_cast<SbDecodeTarget>(target);
-                if (SbDecodeTargetIsValid(decode_target)) {
-                  SbDecodeTargetRelease(decode_target);
-                }
-              },
-              reinterpret_cast<void*>(decode_target_)));
+                        [](void* target) {
+                          SbDecodeTarget decode_target =
+                              reinterpret_cast<SbDecodeTarget>(target);
+                          if (SbDecodeTargetIsValid(decode_target)) {
+                            SbDecodeTargetRelease(decode_target);
+                          }
+                        },
+                        reinterpret_cast<void*>(decode_target_)),
+                    /*done_event=*/nullptr);
       decode_target_ = kSbDecodeTargetInvalid;
     } else {
       base::WaitableEvent done_event(
@@ -732,9 +743,10 @@ void StarboardRendererWrapper::GraphicsContextRunner(
     base::WaitableEvent done_event(
         base::WaitableEvent::ResetPolicy::MANUAL,
         base::WaitableEvent::InitialState::NOT_SIGNALED);
-    provider->gpu_factory_
-        .AsyncCall(&StarboardGpuFactory::RunSbDecodeTargetFunctionOnGpu)
-        .WithArgs(target_function, target_function_context, &done_event);
+    provider->gpu_factory_.AsyncCall(&StarboardGpuFactory::RunWithGlesContext)
+        .WithArgs(base::BindOnce(&CallTargetFunction, target_function,
+                                 target_function_context),
+                  &done_event);
     // Blocking is okay here to allow SbPlayer to post |target_function|
     // on gpu thread, and StarboardRenderer waits for the execution.
     base::ScopedAllowBaseSyncPrimitives allow_wait;
