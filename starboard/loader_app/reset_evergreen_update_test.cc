@@ -24,7 +24,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 #if BUILDFLAG(IS_STARBOARD)
-
 namespace loader_app {
 namespace {
 
@@ -91,5 +90,4 @@ TEST(ResetEvergreenUpdateTest, TestSunnyDaySubdir) {
 }
 }  // namespace
 }  // namespace loader_app
-
-#endif  //  BUILDFLAG(IS_STARBOARD)
+#endif  // BUILDFLAG(IS_STARBOARD)

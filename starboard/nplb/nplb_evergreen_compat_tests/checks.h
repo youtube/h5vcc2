@@ -18,12 +18,11 @@
 #include "starboard/configuration.h"
 
 #if BUILDFLAG(IS_STARBOARD)
-
 #if SB_API_VERSION < 16
 #if !SB_CAN(MAP_EXECUTABLE_MEMORY)
 #error "Evergreen requires executable memory support!"
 #endif
-#endif
-
+#endif  // SB_API_VERSION < 16
 #endif  // BUILDFLAG(IS_STARBOARD)
+
 #endif  // STARBOARD_NPLB_NPLB_EVERGREEN_COMPAT_TESTS_CHECKS_H_

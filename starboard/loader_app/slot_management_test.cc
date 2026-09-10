@@ -36,7 +36,6 @@
 #include "testing/gtest/include/gtest/gtest.h"
 
 #if BUILDFLAG(IS_STARBOARD)
-
 namespace loader_app {
 namespace {
 using ::starboard::SbFileDeleteRecursive;
@@ -506,4 +505,4 @@ INSTANTIATE_TEST_SUITE_P(SlotManagementTests,
 
 }  // namespace
 }  // namespace loader_app
-#endif  // #if BUILDFLAG(IS_STARBOARD)
+#endif  // BUILDFLAG(IS_STARBOARD)

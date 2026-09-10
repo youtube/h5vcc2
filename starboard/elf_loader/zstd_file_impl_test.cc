@@ -37,10 +37,10 @@ constexpr char kUncompressedData[] =
 
 // Returns the absolute path to the requested test data file.
 //
-// In |sb_is_evergreen_compatible| build configurations, the build copies the
-// test data to a starboard subdirectory under the executable directory. In
-// other build configurations, the test data is copied directly to the content
-// directory. This helper checks both locations.
+// In `is_starboard` build configurations, the build copies the test data to a
+// starboard subdirectory under the executable directory. In other build
+// configurations, the test data is copied directly to the content directory.
+// This helper checks both locations.
 std::string GetTestFilePath(const std::string& filename) {
   std::vector<char> content_path(kSbFileMaxPath + 1);
   if (!SbSystemGetPath(kSbSystemPathContentDirectory, content_path.data(),

@@ -46,6 +46,5 @@ TEST_F(PendingRestartTest, PendingRestart) {
 }
 
 }  // namespace
-
 }  // namespace loader_app
-#endif  //  BUILDFLAG(IS_STARBOARD)
+#endif  // BUILDFLAG(IS_STARBOARD)
