@@ -237,6 +237,8 @@ static_library("starboard_platform") {
     "base_starboard_bridge.cc",
     "starboard_bridge.h",
     "starboard_feature_list.cc",
+    "surface_destroy_notifier.cc",
+    "surface_destroy_notifier.h",
     "system_get_extensions.cc",
     "system_get_locale_id.cc",
     "system_get_path.cc",

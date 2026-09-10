@@ -297,6 +297,8 @@ class MediaCodecVideoDecoder : public VideoDecoder,
       const PlatformOptions& platform_options);
 
   const std::unique_ptr<VideoSurfaceTextureBridge> surface_texture_bridge_;
+
+  scoped_refptr<SurfaceDestroyNotifier> surface_destroy_notifier_;
 };
 
 }  // namespace starboard
