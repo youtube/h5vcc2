@@ -38,15 +38,19 @@ runs:
         git config --global --add safe.directory "${GITHUB_WORKSPACE}"
         git sparse-checkout add --skip-checks testing build third_party/catapult third_party/logdog
         git submodule update --init third_party/catapult
-    - name: Download Artifacts
-      uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
-      with:
-        name: ${{ inputs.test_artifacts_key }}
-    - name: Extract Artifacts
+    - name: Download and Extract Test Artifacts from GCS
       shell: bash
+      env:
+        WORKFLOW: ${{ github.workflow }}
+        PLATFORM: ${{ matrix.platform }}
       run: |
-        set -x
+        set -eux
+        project_name=$(gcloud config get-value project)
+        gcloud storage cp \
+          "gs://${project_name}-test-artifacts/${WORKFLOW}/${GITHUB_RUN_NUMBER}/${PLATFORM}/test_artifacts.tar.zstd" \
+          test_artifacts.tar.zstd
         tar -I 'zstd -T0' -xf test_artifacts.tar.zstd
+        rm -f test_artifacts.tar.zstd
     - name: Prepare Test Filters
       id: prepare-test-filters
       uses: ./.github/actions/prepare_test_filters

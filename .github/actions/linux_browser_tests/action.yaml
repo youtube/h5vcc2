@@ -20,11 +20,18 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Download Artifacts
-      uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
-      with:
-        name: ${{ inputs.test_artifacts_key }}
-        path: artifacts
+    - name: Download Artifacts from GCS
+      shell: bash
+      env:
+        WORKFLOW: ${{ github.workflow }}
+        PLATFORM: ${{ inputs.platform }}
+      run: |
+        set -eux
+        project_name=$(gcloud config get-value project)
+        mkdir -p artifacts
+        gcloud storage cp \
+          "gs://${project_name}-test-artifacts/${WORKFLOW}/${GITHUB_RUN_NUMBER}/${PLATFORM}/cobalt_browsertests_deps.tar.zstd" \
+          artifacts/cobalt_browsertests_deps.tar.zstd
 
     - name: Run Browser Tests (Linux)
       shell: bash

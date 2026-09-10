@@ -10,17 +10,21 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Download Artifacts
-      uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
-      with:
-        name: ${{ inputs.test_artifacts_key }}
-    - name: Extract Artifacts
+    - name: Download and Extract Test Artifacts from GCS
       shell: bash
       working-directory: cobalt/src
+      env:
+        WORKFLOW: ${{ github.workflow }}
+        PLATFORM: ${{ matrix.platform }}
       run: |
-        set -x
+        set -eux
+        project_name=$(gcloud config get-value project)
+        gcloud storage cp \
+          "gs://${project_name}-test-artifacts/${WORKFLOW}/${GITHUB_RUN_NUMBER}/${PLATFORM}/test_artifacts.tar.zstd" \
+          "${GITHUB_WORKSPACE}/test_artifacts.tar.zstd"
         # The web tests fail when not run from the source folder. Use the existing checkout.
         tar -I 'zstd -T0' -xf "${GITHUB_WORKSPACE}/test_artifacts.tar.zstd"
+        rm -f "${GITHUB_WORKSPACE}/test_artifacts.tar.zstd"
     - name: Run Web Tests
       id: run-tests
       shell: bash

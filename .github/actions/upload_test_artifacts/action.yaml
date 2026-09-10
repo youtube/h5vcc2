@@ -142,15 +142,9 @@ runs:
           --targets "${BROWSER_WEB_TEST_TARGETS}" \
           ${ARCHIVE_FLAGS}
       shell: bash
-    - name: Upload On-Host Test Artifacts Archive
-      if: inputs.upload_on_host_test_artifacts == 'true'
-      uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
-      with:
-        name: ${{ inputs.test_artifacts_key }}
-        path: artifacts/*
-        retention-days: 3
-    - name: Upload On-Device Test Artifacts to GCS
-      if: inputs.upload_on_device_test_artifacts == 'true' || inputs.upload_e2e_test_artifacts == 'true'
+
+    - name: Upload Test Artifacts to GCS
+      if: inputs.upload_on_device_test_artifacts == 'true' || inputs.upload_e2e_test_artifacts == 'true' || inputs.upload_on_host_test_artifacts == 'true'
       env:
         WORKFLOW: ${{ github.workflow }}
         PLATFORM: ${{ inputs.platform }}
