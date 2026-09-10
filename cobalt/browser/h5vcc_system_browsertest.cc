@@ -88,12 +88,16 @@ IN_PROC_BROWSER_TEST_F(H5vccSystemBrowserTest, VerifyWasLowMemoryKilled) {
                   "window.h5vcc.system.wasLowMemoryKilled() instanceof Promise")
                   .ExtractBool());
 
-  // Verify that the promise resolves to a boolean.
+  // Verify that the promise resolves to a boolean and is false initially.
   EXPECT_TRUE(content::EvalJs(
                   shell()->web_contents(),
                   "(async () => typeof (await "
                   "window.h5vcc.system.wasLowMemoryKilled()) === 'boolean')()")
                   .ExtractBool());
+  EXPECT_FALSE(content::EvalJs(shell()->web_contents(),
+                               "(async () => await "
+                               "window.h5vcc.system.wasLowMemoryKilled())()")
+                   .ExtractBool());
 }
 
 }  // namespace cobalt
