@@ -139,7 +139,8 @@ template("evergreen_final_target") {
         data_deps += [ ":${original_target_name}_apk($starboard_toolchain)" ]
 
         if (defined(invoker.testonly) && invoker.testonly) {
-          data_deps += [ ":${original_target_name}__test_runner_script($starboard_toolchain)" ]
+          data_deps +=
+              [ ":${target_name}__test_runner_script($starboard_toolchain)" ]
         }
       }
 
