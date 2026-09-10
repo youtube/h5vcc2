@@ -232,6 +232,7 @@ static_library("starboard_platform") {
     sources += internal_tvos_sources
 
     deps += [
+      "//cobalt/internal/third_party/platform_drm:headers",
       "//starboard/shared/widevine:oemcrypto",
       "//third_party/internal/ce_cdm/cdm:widevine_cdm_core",
       "//third_party/internal/ce_cdm/cdm:widevine_ce_cdm_static",

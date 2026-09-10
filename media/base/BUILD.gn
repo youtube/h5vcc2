@@ -499,6 +499,13 @@ source_set("base") {
       "//starboard:starboard_group",
       "//starboard/common",
     ]
+
+    if (is_ios) {
+      sources += [
+        "platform_init_data_types.cc",
+        "platform_init_data_types.h",
+      ]
+    }
   } else if (is_android) {
     sources += [ "demuxer_memory_limit_android.cc" ]
   } else if (is_castos) {

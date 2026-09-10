@@ -5,8 +5,12 @@
 #include "third_party/blink/renderer/modules/encryptedmedia/encrypted_media_utils.h"
 
 #include "base/notreached.h"
+#include "build/build_config.h"
 #include "media/base/eme_constants.h"
 #include "media/base/key_systems.h"
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+#include "media/base/platform_init_data_types.h"
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
 #include "services/metrics/public/cpp/ukm_builders.h"
 #include "services/metrics/public/cpp/ukm_recorder.h"
 #include "third_party/blink/public/web/web_local_frame_client.h"
@@ -33,6 +37,12 @@ media::EmeInitDataType EncryptedMediaUtils::ConvertToInitDataType(
   if (init_data_type == "webm")
     return media::EmeInitDataType::WEBM;
 
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+  if (init_data_type == media::GetPlatformDrmInitDataTypeString().c_str()) {
+    return media::EmeInitDataType::PLATFORM_DRM;
+  }
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+
   // |initDataType| is not restricted in the idl, so anything is possible.
   return media::EmeInitDataType::UNKNOWN;
 }
@@ -51,6 +61,10 @@ String EncryptedMediaUtils::ConvertFromInitDataType(
       // Chromium should not use Unknown, but we use it in Blink when the
       // actual value has been blocked for non-same-origin or mixed content.
       return String();
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+    case media::EmeInitDataType::PLATFORM_DRM:
+      return String(media::GetPlatformDrmInitDataTypeString().c_str());
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
   }
 
   NOTREACHED();

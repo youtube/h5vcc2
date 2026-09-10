@@ -403,5 +403,6 @@ test("nplb") {
 
   if (is_ios && target_platform == "tvos" && is_internal_build) {
     sources += internal_tvos_test_sources
+    deps += [ "//cobalt/internal/third_party/platform_drm:headers" ]
   }
 }

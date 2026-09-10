@@ -9,6 +9,7 @@
 
 #include <optional>
 
+#include "build/build_config.h"
 #include "media/base/media_export.h"
 #include "media/media_buildflags.h"
 
@@ -22,7 +23,12 @@ enum class EmeInitDataType {
   WEBM,
   CENC,
   KEYIDS,
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+  PLATFORM_DRM,
+  kMaxValue = PLATFORM_DRM,
+#else
   kMaxValue = KEYIDS,
+#endif
 };
 
 // Defines bitmask values that specify codecs used in Encrypted Media Extensions

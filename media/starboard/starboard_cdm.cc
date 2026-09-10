@@ -21,7 +21,11 @@
 #include <vector>
 
 #include "base/logging.h"
+#include "build/build_config.h"
 #include "starboard/common/drm.h"
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+#include "media/base/platform_init_data_types.h"
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
 
 namespace media {
 
@@ -37,6 +41,12 @@ const char* GetInitDataTypeName(EmeInitDataType type) {
       return "keyids";
     case EmeInitDataType::UNKNOWN:
       return "unknown";
+#if BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
+    case EmeInitDataType::PLATFORM_DRM: {
+      const std::string& name = GetPlatformDrmInitDataTypeString();
+      return name.empty() ? "unknown" : name.c_str();
+    }
+#endif  // BUILDFLAG(IS_IOS_TVOS) && BUILDFLAG(USE_STARBOARD_MEDIA)
   }
   NOTREACHED() << "Unexpected EmeInitDataType";
 }
