@@ -56,34 +56,16 @@ void StarboardGpuFactoryImpl::Initialize(base::UnguessableToken channel_token,
   std::move(callback).Run();
 }
 
-void StarboardGpuFactoryImpl::RunSbDecodeTargetFunctionOnGpu(
-    SbDecodeTargetGlesContextRunnerTarget target_function,
-    void* target_function_context,
-    base::WaitableEvent* done_event) {
-  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-  if (MakeContextCurrent(stub_)) {
-    target_function(target_function_context);
-  }
-  done_event->Signal();
-}
-
-void StarboardGpuFactoryImpl::RunCallbackOnGpu(
-    base::OnceCallback<void()> callback,
+void StarboardGpuFactoryImpl::RunWithGlesContext(
+    base::OnceClosure callback,
     base::WaitableEvent* done_event) {
   DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (MakeContextCurrent(stub_)) {
     std::move(callback).Run();
   }
-  done_event->Signal();
-}
-
-void StarboardGpuFactoryImpl::PostCallbackToGpu(
-    base::OnceCallback<void()> callback) {
-  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
-  if (!MakeContextCurrent(stub_)) {
-    return;
+  if (done_event) {
+    done_event->Signal();
   }
-  std::move(callback).Run();
 }
 
 void StarboardGpuFactoryImpl::CreateImageOnGpu(

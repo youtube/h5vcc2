@@ -33,13 +33,8 @@ class StarboardGpuFactoryImpl : public StarboardGpuFactory {
   void Initialize(base::UnguessableToken channel_token,
                   int32_t route_id,
                   base::OnceClosure callback) override;
-  void RunSbDecodeTargetFunctionOnGpu(
-      SbDecodeTargetGlesContextRunnerTarget target_function,
-      void* target_function_context,
-      base::WaitableEvent* done_event) override;
-  void RunCallbackOnGpu(base::OnceCallback<void()> callback,
-                        base::WaitableEvent* done_event) override;
-  void PostCallbackToGpu(base::OnceCallback<void()> callback) override;
+  void RunWithGlesContext(base::OnceClosure callback,
+                          base::WaitableEvent* done_event) override;
   void CreateImageOnGpu(const gfx::Size& coded_size,
                         const gfx::ColorSpace& color_space,
                         viz::SharedImageFormat format,

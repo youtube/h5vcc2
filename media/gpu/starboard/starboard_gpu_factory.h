@@ -22,7 +22,6 @@
 #include "base/unguessable_token.h"
 #include "gpu/ipc/service/command_buffer_stub.h"
 #include "gpu/ipc/service/gpu_channel_shared_image_interface.h"
-#include "starboard/decode_target.h"
 #include "ui/gfx/color_space.h"
 #include "ui/gfx/geometry/size.h"
 
@@ -48,13 +47,8 @@ class StarboardGpuFactory : public gpu::CommandBufferStub::DestructionObserver {
   virtual void Initialize(base::UnguessableToken channel_token,
                           int32_t route_id,
                           base::OnceClosure callback) = 0;
-  virtual void RunSbDecodeTargetFunctionOnGpu(
-      SbDecodeTargetGlesContextRunnerTarget target_function,
-      void* target_function_context,
-      base::WaitableEvent* done_event) = 0;
-  virtual void RunCallbackOnGpu(base::OnceCallback<void()> callback,
-                                base::WaitableEvent* done_event) = 0;
-  virtual void PostCallbackToGpu(base::OnceCallback<void()> callback) = 0;
+  virtual void RunWithGlesContext(base::OnceClosure callback,
+                                  base::WaitableEvent* done_event) = 0;
   virtual void CreateImageOnGpu(
       const gfx::Size& coded_size,
       const gfx::ColorSpace& color_space,
