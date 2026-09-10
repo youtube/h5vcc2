@@ -109,7 +109,9 @@ TEST_F(AppEventRunnerTest, OnFocus) {
 TEST_F(AppEventRunnerTest, OnConceal) {
   CreateTestShell(true /* is_visible */);
 
-  EXPECT_CALL(*platform_, OnConceal());
+  EXPECT_CALL(*platform_, OnConceal()).WillOnce([this]() {
+    platform_->ShellPlatformDelegate::OnConceal();
+  });
   EXPECT_CALL(*platform_, ConcealShell(shell_));
   runner_->OnConceal();
 
@@ -120,10 +122,6 @@ TEST_F(AppEventRunnerTest, OnConceal) {
 
 TEST_F(AppEventRunnerTest, OnReveal) {
   CreateTestShell(false /* is_visible */);
-
-  // Simulate that the frame was visible before conceal, so OnReveal will
-  // trigger WasShown().
-  platform_->AddPreviouslyVisibleWebContentsForTesting(shell_->web_contents());
 
   // Bind a mock renderer to CobaltLifecycleManager.
   mojo::Remote<cobalt::mojom::CobaltLifecycleObserver> remote;

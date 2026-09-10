@@ -55,39 +55,53 @@ enum class PendingAck {
 
 class CobaltLifecycleManagerObserver {
  public:
-  // Called when all frames of a specific WebContents have completed reveal.
-  virtual void OnAllFramesVisible(content::WebContents* web_contents) = 0;
+  // =========================================================================
+  // Tier 1: Per-WebContents Granular Hooks
+  // Fired when an individual WebContents completes its frame transitions.
+  // =========================================================================
 
-  // Called to proactively map/show the platform window during reveal
-  // transitions to enable standard Chromium visibility IPCs to propagate.
+  // Called when all frames of a specific WebContents have completed reveal.
+  virtual void OnWebContentsVisible(content::WebContents* web_contents) {}
+
+  // Proactively map/show the platform window during reveal transitions.
   virtual void OnProactiveMapWindow(content::WebContents* web_contents) {}
 
   // Called when the main frame of a WebContents is registered.
   virtual void OnMainFrameRegistered(content::WebContents* web_contents) {}
 
-  // Called when a WebContents starts waiting for reveal. This is used by
-  // observers (like AppEventDelegate) to know that they should expect
-  // a corresponding OnAllFramesVisible call later, and thus should defer
-  // focus if it arrives too early.
+  // Called when a WebContents starts waiting for reveal.
   virtual void OnStartWaitingForReveal(content::WebContents* web_contents) {}
 
-  // Step 1 of Conceal: Called when all renderer-side Blink frames have finished
-  // acknowledging page deactivation (visibilitychange/pagehide). This signals
-  // ShellPlatformDelegate to unmap platform windows and initiate asynchronous
-  // GPU teardown.
-  virtual void OnAllFramesConcealed(content::WebContents* web_contents) {}
+  // Called when all frames of a specific WebContents have acknowledged conceal.
+  virtual void OnWebContentsConcealed(content::WebContents* web_contents) {}
 
-  // Step 2 of Conceal: Called after the entire platform window and GPU teardown
-  // sequence (destroying EGL surfaces, contexts, and terminating the
-  // EGLDisplay) has fully completed on the GPU thread. This unblocks
-  // AppEventRunner's conceal wait barrier.
-  virtual void OnConcealCompleted(content::WebContents* web_contents) {}
+  // Called when all frames of a specific WebContents have acknowledged blur.
+  virtual void OnWebContentsBlurred(content::WebContents* web_contents) {}
 
-  // Called when a WebContents has completed blur.
-  virtual void OnAllFramesBlurred(content::WebContents* web_contents) {}
+  // Called when all frames of a specific WebContents have acknowledged resume.
+  virtual void OnWebContentsResumed(content::WebContents* web_contents) {}
 
-  // Called when all frames of a specific WebContents have completed resume.
-  virtual void OnAllFramesResumed(content::WebContents* web_contents) {}
+  // =========================================================================
+  // Tier 2: Process-Wide Barrier Synchronization Hooks
+  // Fired ONLY when ALL active WebContents participating in the transition
+  // have reached completion.
+  // =========================================================================
+
+  // Called when ALL participating WebContents have completed reveal and layout.
+  virtual void OnAllWebContentsVisible() {}
+
+  // Called when ALL participating WebContents have completed conceal.
+  virtual void OnAllWebContentsConcealed() {}
+
+  // Called when ALL participating WebContents have completed blur.
+  virtual void OnAllWebContentsBlurred() {}
+
+  // Called when ALL participating WebContents have completed resume.
+  virtual void OnAllWebContentsResumed() {}
+
+  // Called after GPU resources and EGLDisplay are completely destroyed on GPU
+  // thread.
+  virtual void OnConcealCompleted() {}
 
  protected:
   virtual ~CobaltLifecycleManagerObserver() = default;
@@ -171,9 +185,15 @@ class CobaltLifecycleManager : public cobalt::mojom::CobaltLifecycleObserver {
   void RemoveObserver(CobaltLifecycleManagerObserver* observer);
 
   // Called when background GPU cleanup and platform window conceal complete.
-  void OnConcealCompleted(content::WebContents* web_contents);
+  void OnConcealCompleted();
 
-  // Called to start waiting for a specific ACK type.
+  // Called to start waiting for a specific ACK type across a batch of
+  // WebContents.
+  void StartWaitingForAck(
+      const std::vector<content::WebContents*>& web_contents_list,
+      PendingAck ack_type);
+
+  // Convenience overload for a single WebContents.
   void StartWaitingForAck(content::WebContents* web_contents,
                           PendingAck ack_type);
 
@@ -191,6 +211,7 @@ class CobaltLifecycleManager : public cobalt::mojom::CobaltLifecycleObserver {
                               PendingAck ack_type);
 
   void CheckCompletion(content::WebContents* web_contents);
+  void CheckProcessCompletion(PendingAck ack_type);
   void NotifyStartWaitingForReveal(
       base::WeakPtr<content::WebContents> web_contents);
   void OnAckTimeout(base::WeakPtr<content::WebContents> web_contents,
@@ -216,13 +237,6 @@ class CobaltLifecycleManager : public cobalt::mojom::CobaltLifecycleObserver {
     void DidFinishNavigation(
         content::NavigationHandle* navigation_handle) override;
 
-    // Methods to update the tracked state of a specific frame.
-    void SetResumed(content::RenderFrameHost* frame);
-    void SetVisible(content::RenderFrameHost* frame, bool visible);
-    void SetFocused(content::RenderFrameHost* frame, bool focused);
-
-    bool IsComplete(PendingAck ack_type) const;
-
     // Checks if the remote controller for the specified frame is bound and
     // connected.
     bool IsConnected(content::RenderFrameHost* frame) const;
@@ -240,12 +254,6 @@ class CobaltLifecycleManager : public cobalt::mojom::CobaltLifecycleObserver {
     absl::flat_hash_map<content::RenderFrameHost*,
                         mojo::Remote<cobalt::mojom::CobaltLifecycleController>>
         controllers_;
-
-    // Sets to track the current state of each frame. A frame is considered
-    // to have achieved the state if it is present in the corresponding set.
-    absl::flat_hash_set<content::RenderFrameHost*> resumed_frames_;
-    absl::flat_hash_set<content::RenderFrameHost*> visible_frames_;
-    absl::flat_hash_set<content::RenderFrameHost*> focused_frames_;
   };
 
   WebContentsTracker* GetOrCreateTracker(content::WebContents* web_contents);
@@ -253,15 +261,6 @@ class CobaltLifecycleManager : public cobalt::mojom::CobaltLifecycleObserver {
                                    WebContentsTracker* tracker,
                                    PendingAck ack_type);
 
-  // Note: We use raw WebContents* as keys here instead of WeakPtr<WebContents>
-  // because base::WeakPtr does not implement operator< in this version of base,
-  // making it unusable as a std::map key without a custom comparator. A custom
-  // comparator comparing raw pointers would be unsafe because once the
-  // WebContents is destroyed, all WeakPtrs pointing to it become null and
-  // compare equal, violating strict weak ordering. We rely on
-  // OnWebContentsDestroyed for cleanup.
-  absl::flat_hash_map<content::WebContents*, content::RenderFrameHost*>
-      main_frames_;
   absl::flat_hash_map<content::WebContents*,
                       absl::flat_hash_set<content::RenderFrameHost*>>
       frames_;
@@ -273,6 +272,13 @@ class CobaltLifecycleManager : public cobalt::mojom::CobaltLifecycleObserver {
 
   // What we are waiting for per WebContents.
   absl::flat_hash_map<content::WebContents*, PendingAck> pending_acks_;
+
+  // Active process-wide pending transition type.
+  PendingAck current_process_ack_ = PendingAck::kNone;
+
+  // Set of WebContents currently participating in the active process-wide
+  // transition.
+  absl::flat_hash_set<content::WebContents*> pending_transition_web_contents_;
 
   absl::flat_hash_map<content::WebContents*,
                       std::unique_ptr<WebContentsTracker>>

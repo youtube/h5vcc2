@@ -742,12 +742,17 @@ struct ShellPlatformDelegate::ShellData {
 struct ShellPlatformDelegate::PlatformData {};
 
 ShellPlatformDelegate::ShellPlatformDelegate() = default;
-ShellPlatformDelegate::~ShellPlatformDelegate() = default;
+ShellPlatformDelegate::~ShellPlatformDelegate() {
+  cobalt::CobaltLifecycleManager::GetInstance()->RemoveObserver(
+      static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
+}
 
 void ShellPlatformDelegate::Initialize(const gfx::Size& default_window_size,
                                        bool is_visible) {
   is_visible_ = is_visible;
   screen_ = std::make_unique<display::ScopedNativeScreen>();
+  cobalt::CobaltLifecycleManager::GetInstance()->AddObserver(
+      static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
 }
 
 void ShellPlatformDelegate::RevealShell(Shell* shell) {}

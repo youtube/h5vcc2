@@ -447,10 +447,8 @@ class AppEventRunnerImpl : public AppEventRunner,
         return;
       }
     } else {
-      for (auto* web_contents : GetWebContents()) {
-        CobaltLifecycleManager::GetInstance()->StartWaitingForAck(web_contents,
-                                                                  ack_type);
-      }
+      CobaltLifecycleManager::GetInstance()->StartWaitingForAck(
+          GetWebContents(), ack_type);
     }
 
     base::RunLoop run_loop(base::RunLoop::Type::kNestableTasksAllowed);
@@ -466,8 +464,8 @@ class AppEventRunnerImpl : public AppEventRunner,
     pending_ack_ = PendingAck::kNone;
   }
 
-  // CobaltLifecycleManagerObserver implementation.
-  void OnAllFramesVisible(content::WebContents* web_contents) override {
+  // CobaltLifecycleManagerObserver implementation (Tier 2 Process Barriers).
+  void OnAllWebContentsVisible() override {
     base::AutoLock lock(lock_);
     if (pending_ack_ == PendingAck::kReveal) {
       if (quit_closure_) {
@@ -479,7 +477,7 @@ class AppEventRunnerImpl : public AppEventRunner,
   // Called by CobaltLifecycleManager when the full conceal sequence (renderer
   // frame ACKs, platform window unmapping, and GPU resource/EGLDisplay
   // teardown) has completed, unblocking WaitForAck(PendingAck::kConceal).
-  void OnConcealCompleted(content::WebContents* web_contents) override {
+  void OnConcealCompleted() override {
     base::AutoLock lock(lock_);
     if (pending_ack_ == PendingAck::kConceal) {
       if (quit_closure_) {
@@ -488,7 +486,7 @@ class AppEventRunnerImpl : public AppEventRunner,
     }
   }
 
-  void OnAllFramesBlurred(content::WebContents* web_contents) override {
+  void OnAllWebContentsBlurred() override {
     base::AutoLock lock(lock_);
     if (pending_ack_ == PendingAck::kBlur) {
       if (quit_closure_) {
@@ -497,7 +495,7 @@ class AppEventRunnerImpl : public AppEventRunner,
     }
   }
 
-  void OnAllFramesResumed(content::WebContents* web_contents) override {
+  void OnAllWebContentsResumed() override {
     base::AutoLock lock(lock_);
     if (pending_ack_ == PendingAck::kUnfreeze) {
       if (quit_closure_) {

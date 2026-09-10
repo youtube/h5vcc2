@@ -142,9 +142,6 @@ class ShellPlatformDelegate : public cobalt::CobaltLifecycleManagerObserver {
   // destruction. Returns false if the Shell should destroy itself.
   virtual bool DestroyShell(Shell* shell);
 
-  void AddPreviouslyVisibleWebContentsForTesting(
-      content::WebContents* web_contents);
-
 #if !BUILDFLAG(IS_ANDROID)
   // Returns the native window. Valid after calling CreatePlatformWindow().
   virtual gfx::NativeWindow GetNativeWindow(Shell* shell);
@@ -198,12 +195,13 @@ class ShellPlatformDelegate : public cobalt::CobaltLifecycleManagerObserver {
 #if defined(USE_AURA) && BUILDFLAG(IS_STARBOARD)
   void OnProactiveMapWindow(content::WebContents* web_contents) override;
 #endif
-  void OnAllFramesVisible(content::WebContents* web_contents) override;
-  void OnAllFramesConcealed(content::WebContents* web_contents) override;
+  void OnWebContentsConcealed(content::WebContents* web_contents) override;
+  void OnAllWebContentsConcealed() override;
+  void OnAllWebContentsVisible() override;
 
   // Flag to remember that an OS-initiated focus event arrived while we were
   // waiting for Reveal ACK. If true, focus will be applied to the window
-  // as soon as OnAllFramesVisible is called.
+  // as soon as OnAllWebContentsVisible is called.
   bool deferred_focus_ = false;
   friend class ShellTestBase;
   friend class MockShellPlatformDelegate;
@@ -223,26 +221,6 @@ class ShellPlatformDelegate : public cobalt::CobaltLifecycleManagerObserver {
   // source of truth in PlatformWindowStarboard is not accessible during
   // early resume stages (root_window is null).
   bool waiting_for_reveal_ack_ = false;
-
-  class WebContentsTracker;
-  struct WebContentsTrackerDeleter {
-    void operator()(WebContentsTracker* ptr) const;
-  };
-
-  // Set of WebContents that were visible before the application was concealed.
-  // This is used on reveal to decide which WebContents we should wait for
-  // Reveal ACK from. We only wait for those that were active before.
-  // The map stores self-unregistering observers to guarantee clean container
-  // state upon WebContents destruction.
-  base::flat_map<content::WebContents*,
-                 std::unique_ptr<WebContentsTracker, WebContentsTrackerDeleter>>
-      previously_visible_web_contents_;
-  std::set<content::WebContents*> pending_conceal_web_contents_;
-  std::set<content::WebContents*> pending_reveal_web_contents_;
-
-  void TrackPreviouslyVisibleWebContents(content::WebContents* web_contents);
-  void RemovePreviouslyVisibleWebContents(content::WebContents* web_contents);
-  friend class WebContentsTracker;
 
   // Data held in ShellPlatformDelegate that is shared between all Shells. This
   // is created in Initialize(), and is defined for each platform

@@ -29,11 +29,22 @@ namespace cobalt {
 
 class MockCobaltLifecycleObserver : public CobaltLifecycleManagerObserver {
  public:
-  MOCK_METHOD(void, OnAllFramesVisible, (content::WebContents*), (override));
+  MOCK_METHOD(void, OnWebContentsVisible, (content::WebContents*), (override));
+  MOCK_METHOD(void,
+              OnWebContentsConcealed,
+              (content::WebContents*),
+              (override));
+  MOCK_METHOD(void, OnWebContentsBlurred, (content::WebContents*), (override));
+  MOCK_METHOD(void, OnWebContentsResumed, (content::WebContents*), (override));
   MOCK_METHOD(void,
               OnStartWaitingForReveal,
               (content::WebContents*),
               (override));
+  MOCK_METHOD(void, OnAllWebContentsVisible, (), (override));
+  MOCK_METHOD(void, OnAllWebContentsConcealed, (), (override));
+  MOCK_METHOD(void, OnAllWebContentsBlurred, (), (override));
+  MOCK_METHOD(void, OnAllWebContentsResumed, (), (override));
+  MOCK_METHOD(void, OnConcealCompleted, (), (override));
 };
 
 class CobaltLifecycleManagerTest : public content::ShellTestBase {
@@ -95,9 +106,9 @@ TEST_F(CobaltLifecycleManagerTest, ScopedWaiting) {
   // Start waiting for contents1.
   manager_->StartWaitingForAck(contents1.get(), PendingAck::kReveal);
 
-  // We expect OnAllFramesVisible to be called only for contents1.
-  EXPECT_CALL(observer, OnAllFramesVisible(contents1.get())).Times(1);
-  EXPECT_CALL(observer, OnAllFramesVisible(contents2.get())).Times(0);
+  // We expect OnWebContentsVisible to be called only for contents1.
+  EXPECT_CALL(observer, OnWebContentsVisible(contents1.get())).Times(1);
+  EXPECT_CALL(observer, OnWebContentsVisible(contents2.get())).Times(0);
 
   // Frame 1 reports visible via Mojo.
   remote1->OnPageVisibilityChanged(true);
@@ -108,7 +119,7 @@ TEST_F(CobaltLifecycleManagerTest, ScopedWaiting) {
   // Start waiting for contents2.
   manager_->StartWaitingForAck(contents2.get(), PendingAck::kReveal);
 
-  EXPECT_CALL(observer, OnAllFramesVisible(contents2.get())).Times(1);
+  EXPECT_CALL(observer, OnWebContentsVisible(contents2.get())).Times(1);
 
   // Frame 2 reports visible via Mojo.
   remote2->OnPageVisibilityChanged(true);
@@ -118,6 +129,113 @@ TEST_F(CobaltLifecycleManagerTest, ScopedWaiting) {
 
   remote1.reset();
   remote2.reset();
+  base::RunLoop().RunUntilIdle();
+}
+
+// Verifies that multi-WebContents batch transitions fire Tier 1 per-WebContents
+// hooks as each WebContents completes, and fire the Tier 2 process-wide barrier
+// hook (OnAllWebContentsVisible) only once ALL participating WebContents have
+// finished.
+TEST_F(CobaltLifecycleManagerTest, MultiWebContentsProcessBarrierReveal) {
+  std::unique_ptr<content::WebContents> contents1 =
+      CreateScopedTestWebContents();
+  content::RenderFrameHostTester::For(contents1->GetPrimaryMainFrame())
+      ->InitializeRenderFrameIfNeeded();
+
+  std::unique_ptr<content::WebContents> contents2 =
+      CreateScopedTestWebContents();
+  content::RenderFrameHostTester::For(contents2->GetPrimaryMainFrame())
+      ->InitializeRenderFrameIfNeeded();
+
+  mojo::Remote<cobalt::mojom::CobaltLifecycleObserver> remote1;
+  manager_->BindReceiver(contents1->GetPrimaryMainFrame(),
+                         remote1.BindNewPipeAndPassReceiver());
+  remote1->OnFrameReady();
+
+  mojo::Remote<cobalt::mojom::CobaltLifecycleObserver> remote2;
+  manager_->BindReceiver(contents2->GetPrimaryMainFrame(),
+                         remote2.BindNewPipeAndPassReceiver());
+  remote2->OnFrameReady();
+
+  base::RunLoop().RunUntilIdle();
+
+  MockCobaltLifecycleObserver observer;
+  manager_->AddObserver(&observer);
+
+  // Batch wait for both WebContents.
+  std::vector<content::WebContents*> batch = {contents1.get(), contents2.get()};
+  manager_->StartWaitingForAck(batch, PendingAck::kReveal);
+
+  // Neither process barrier nor second window hook should fire when only
+  // frame 1 completes.
+  EXPECT_CALL(observer, OnWebContentsVisible(contents1.get())).Times(1);
+  EXPECT_CALL(observer, OnWebContentsVisible(contents2.get())).Times(0);
+  EXPECT_CALL(observer, OnAllWebContentsVisible()).Times(0);
+
+  remote1->OnPageVisibilityChanged(true);
+  base::RunLoop().RunUntilIdle();
+  testing::Mock::VerifyAndClearExpectations(&observer);
+
+  // When frame 2 completes, both the per-WebContents hook and the process
+  // barrier must fire.
+  EXPECT_CALL(observer, OnWebContentsVisible(contents2.get())).Times(1);
+  EXPECT_CALL(observer, OnAllWebContentsVisible()).Times(1);
+
+  remote2->OnPageVisibilityChanged(true);
+  base::RunLoop().RunUntilIdle();
+
+  manager_->RemoveObserver(&observer);
+  remote1.reset();
+  remote2.reset();
+  base::RunLoop().RunUntilIdle();
+}
+
+// Verifies that if one of the WebContents is destroyed mid-transition, it is
+// cleanly erased from the process barrier set, allowing the barrier to satisfy
+// once the remaining WebContents completes.
+TEST_F(CobaltLifecycleManagerTest,
+       MultiWebContentsDestroyedCompletesProcessBarrier) {
+  std::unique_ptr<content::WebContents> contents1 =
+      CreateScopedTestWebContents();
+  content::RenderFrameHostTester::For(contents1->GetPrimaryMainFrame())
+      ->InitializeRenderFrameIfNeeded();
+
+  std::unique_ptr<content::WebContents> contents2 =
+      CreateScopedTestWebContents();
+  content::RenderFrameHostTester::For(contents2->GetPrimaryMainFrame())
+      ->InitializeRenderFrameIfNeeded();
+
+  mojo::Remote<cobalt::mojom::CobaltLifecycleObserver> remote1;
+  manager_->BindReceiver(contents1->GetPrimaryMainFrame(),
+                         remote1.BindNewPipeAndPassReceiver());
+  remote1->OnFrameReady();
+
+  mojo::Remote<cobalt::mojom::CobaltLifecycleObserver> remote2;
+  manager_->BindReceiver(contents2->GetPrimaryMainFrame(),
+                         remote2.BindNewPipeAndPassReceiver());
+  remote2->OnFrameReady();
+
+  base::RunLoop().RunUntilIdle();
+
+  MockCobaltLifecycleObserver observer;
+  manager_->AddObserver(&observer);
+
+  std::vector<content::WebContents*> batch = {contents1.get(), contents2.get()};
+  manager_->StartWaitingForAck(batch, PendingAck::kReveal);
+
+  // Destroy contents2 while waiting.
+  contents2.reset();
+  base::RunLoop().RunUntilIdle();
+
+  // Completing contents1 should now satisfy the entire process barrier.
+  EXPECT_CALL(observer, OnWebContentsVisible(contents1.get())).Times(1);
+  EXPECT_CALL(observer, OnAllWebContentsVisible()).Times(1);
+
+  remote1->OnPageVisibilityChanged(true);
+  base::RunLoop().RunUntilIdle();
+
+  manager_->RemoveObserver(&observer);
+  remote1.reset();
   base::RunLoop().RunUntilIdle();
 }
 
@@ -173,8 +291,10 @@ TEST_F(CobaltLifecycleManagerTest, MainFrameUnregistrationWhileWaiting) {
 
   manager_->StartWaitingForAck(contents.get(), PendingAck::kReveal);
 
-  // Expect OnAllFramesVisible to be called when the main frame is unregistered.
-  EXPECT_CALL(observer, OnAllFramesVisible(contents.get())).Times(1);
+  // Expect OnWebContentsVisible to be called when the main frame is
+  // unregistered.
+  EXPECT_CALL(observer, OnWebContentsVisible(contents.get())).Times(1);
+  EXPECT_CALL(observer, OnAllWebContentsVisible()).Times(1);
 
   // Resetting the remote destroys the receiver, which unregisters the frame.
   remote.reset();
@@ -193,28 +313,11 @@ TEST_F(CobaltLifecycleManagerTest, ImmediateCompletion) {
   manager_->AddObserver(&observer);
 
   // Expect immediate completion callback.
-  EXPECT_CALL(observer, OnAllFramesVisible(contents.get())).Times(1);
+  EXPECT_CALL(observer, OnWebContentsVisible(contents.get())).Times(1);
+  EXPECT_CALL(observer, OnAllWebContentsVisible()).Times(1);
 
   manager_->StartWaitingForAck(contents.get(), PendingAck::kReveal);
   base::RunLoop().RunUntilIdle();
-
-  manager_->RemoveObserver(&observer);
-}
-
-TEST_F(CobaltLifecycleManagerTest, DISABLED_RevealTimeout) {
-  std::unique_ptr<content::WebContents> contents =
-      CreateScopedTestWebContents();
-
-  MockCobaltLifecycleObserver observer;
-  manager_->AddObserver(&observer);
-
-  manager_->StartWaitingForAck(contents.get(), PendingAck::kReveal);
-
-  // Expect OnAllFramesVisible to be called when the timeout duration fires.
-  EXPECT_CALL(observer, OnAllFramesVisible(contents.get())).Times(1);
-
-  // Fast forward time by 2 seconds.
-  task_environment()->FastForwardBy(base::Seconds(2));
 
   manager_->RemoveObserver(&observer);
 }
@@ -267,13 +370,14 @@ TEST_F(CobaltLifecycleManagerTest,
   manager_->StartWaitingForAck(contents.get(), PendingAck::kReveal);
 
   // Transition waits because remote2 has not yet reported its visibility ACK.
-  EXPECT_CALL(observer, OnAllFramesVisible(contents.get())).Times(0);
+  EXPECT_CALL(observer, OnWebContentsVisible(contents.get())).Times(0);
   base::RunLoop().RunUntilIdle();
   testing::Mock::VerifyAndClearExpectations(&observer);
 
   // Disconnecting the active remote unregisters the frame and completes the
   // wait.
-  EXPECT_CALL(observer, OnAllFramesVisible(contents.get())).Times(1);
+  EXPECT_CALL(observer, OnWebContentsVisible(contents.get())).Times(1);
+  EXPECT_CALL(observer, OnAllWebContentsVisible()).Times(1);
   remote2.reset();
   base::RunLoop().RunUntilIdle();
 
@@ -309,7 +413,8 @@ TEST_F(CobaltLifecycleManagerTest, StartWaitingForAckIgnoresSubframes) {
   manager_->StartWaitingForAck(contents.get(), PendingAck::kReveal);
 
   // Sending the ACK from the primary main frame alone must satisfy the wait.
-  EXPECT_CALL(observer, OnAllFramesVisible(contents.get())).Times(1);
+  EXPECT_CALL(observer, OnWebContentsVisible(contents.get())).Times(1);
+  EXPECT_CALL(observer, OnAllWebContentsVisible()).Times(1);
   main_remote->OnPageVisibilityChanged(true);
   base::RunLoop().RunUntilIdle();
 
@@ -346,7 +451,8 @@ TEST_F(CobaltLifecycleManagerTest,
 
   // ACKing the main frame must complete the transition without waiting on
   // child_remote.
-  EXPECT_CALL(observer, OnAllFramesVisible(contents.get())).Times(1);
+  EXPECT_CALL(observer, OnWebContentsVisible(contents.get())).Times(1);
+  EXPECT_CALL(observer, OnAllWebContentsVisible()).Times(1);
   main_remote->OnPageVisibilityChanged(true);
   base::RunLoop().RunUntilIdle();
 

@@ -82,10 +82,6 @@ TEST_F(LifecycleTest, Reveal) {
   EXPECT_FALSE(platform_->IsVisible());
   EXPECT_EQ(shell_->web_contents()->GetVisibility(), Visibility::HIDDEN);
 
-  // Simulate that the frame was visible before conceal, so OnReveal will
-  // trigger WasShown().
-  platform_->AddPreviouslyVisibleWebContentsForTesting(shell_->web_contents());
-
   // Trigger reveal.
   EXPECT_CALL(*platform_, OnReveal()).WillOnce([this]() {
     platform_->ShellPlatformDelegate::OnReveal();
@@ -135,10 +131,12 @@ TEST_F(LifecycleTest, Conceal) {
   Shell::OnConceal();
 
   // Symmetrical unit-test trigger: since there are no active Blink frames to
-  // dispatch Mojo visibility ACKs, we manually invoke the observer callback
+  // dispatch Mojo visibility ACKs, we manually invoke the observer callbacks
   // on the platform manager base class.
   static_cast<cobalt::CobaltLifecycleManagerObserver*>(platform_)
-      ->OnAllFramesConcealed(shell_->web_contents());
+      ->OnWebContentsConcealed(shell_->web_contents());
+  static_cast<cobalt::CobaltLifecycleManagerObserver*>(platform_)
+      ->OnAllWebContentsConcealed();
   base::RunLoop().RunUntilIdle();
 
   EXPECT_FALSE(platform_->IsVisible());

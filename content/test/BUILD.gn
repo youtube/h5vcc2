@@ -818,6 +818,10 @@ static_library("test_support") {
       "../public/test/*private_aggregation*",
       "../public/test/*aggregation_service*",
       "../public/test/*fenced_frame*",
+      "*test_aggregation_service*",
+      "*fenced_frame*",
+      "*shared_storage*",
+      "*private_aggregation*",
       "fenced_frame_test_utils.*",
     ])
     sources = []

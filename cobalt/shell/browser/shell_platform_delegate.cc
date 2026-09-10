@@ -57,55 +57,6 @@ ui::PlatformWindowStarboard* GetPlatformWindowStarboard(Shell* shell) {
 #endif
 }  // namespace
 
-class ShellPlatformDelegate::WebContentsTracker final
-    : public content::WebContentsObserver {
- public:
-  WebContentsTracker(content::WebContents* web_contents,
-                     ShellPlatformDelegate* delegate)
-      : content::WebContentsObserver(web_contents), delegate_(delegate) {}
-  ~WebContentsTracker() override = default;
-
-  void WebContentsDestroyed() override {
-    delegate_->RemovePreviouslyVisibleWebContents(web_contents());
-  }
-
- private:
-  ShellPlatformDelegate* delegate_;
-};
-
-void ShellPlatformDelegate::WebContentsTrackerDeleter::operator()(
-    WebContentsTracker* ptr) const {
-  delete ptr;
-}
-
-void ShellPlatformDelegate::TrackPreviouslyVisibleWebContents(
-    content::WebContents* web_contents) {
-  previously_visible_web_contents_[web_contents] =
-      std::unique_ptr<WebContentsTracker, WebContentsTrackerDeleter>(
-          new WebContentsTracker(web_contents, this));
-}
-
-void ShellPlatformDelegate::RemovePreviouslyVisibleWebContents(
-    content::WebContents* web_contents) {
-  previously_visible_web_contents_.erase(web_contents);
-  pending_reveal_web_contents_.erase(web_contents);
-
-  if (is_visible_ && IsWaitingForRevealAck() &&
-      pending_reveal_web_contents_.empty()) {
-    OnAllFramesVisible(nullptr);
-  } else if (!is_visible_) {
-    // If concealing, delegate to OnAllFramesConcealed which handles erasing
-    // from pending_conceal_web_contents_, unregistering the observer, and
-    // triggering CleanupGpuProcessOnUI once all pending windows are gone.
-    OnAllFramesConcealed(web_contents);
-  }
-}
-
-void ShellPlatformDelegate::AddPreviouslyVisibleWebContentsForTesting(
-    content::WebContents* web_contents) {
-  TrackPreviouslyVisibleWebContents(web_contents);
-}
-
 bool ShellPlatformDelegate::IsVisible() const {
   return is_visible_;
 }
@@ -142,38 +93,10 @@ void ShellPlatformDelegate::OnConceal() {
   if (!IsVisible()) {
     return;
   }
-
-  // Save the set of WebContents that were visible before conceal.
-  // This is used on reveal to decide which WebContents we should wait for
-  // Reveal ACK from. We only wait for those that were actually active/visible.
-  previously_visible_web_contents_.clear();
-  pending_conceal_web_contents_.clear();
   for (auto* shell : Shell::windows()) {
-    if (shell->web_contents()->GetVisibility() ==
-        content::Visibility::VISIBLE) {
-      TrackPreviouslyVisibleWebContents(shell->web_contents());
-      pending_conceal_web_contents_.insert(shell->web_contents());
-    }
     // Trigger logical JS conceal.
     shell->web_contents()->WasHidden();
-    // Note: ConcealShell() is called asynchronously inside
-    // OnAllFramesConcealed() after all frames have completed their deactivation
-    // ACKs.
   }
-
-  if (pending_conceal_web_contents_.empty()) {
-    is_visible_ = false;
-    content::CleanupGpuProcessOnUI(base::BindOnce([] {
-      cobalt::CobaltLifecycleManager::GetInstance()->OnConcealCompleted(
-          nullptr);
-    }));
-    return;
-  }
-
-  // Register as lifecycle manager observer to receive OnAllFramesConcealed
-  // callback!
-  cobalt::CobaltLifecycleManager::GetInstance()->AddObserver(
-      static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
 }
 
 void ShellPlatformDelegate::OnReveal() {
@@ -181,24 +104,14 @@ void ShellPlatformDelegate::OnReveal() {
     return;
   }
   content::RestoreGpuProcessOnUI();
-  pending_reveal_web_contents_.clear();
-  bool started_waiting = false;
+  waiting_for_reveal_ack_ = true;
   for (auto* shell : Shell::windows()) {
-    if (previously_visible_web_contents_.count(shell->web_contents())) {
-      pending_reveal_web_contents_.insert(shell->web_contents());
-      if (!started_waiting) {
-        waiting_for_reveal_ack_ = true;
-        cobalt::CobaltLifecycleManager::GetInstance()->AddObserver(
-            static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
-        started_waiting = true;
-      }
 #if defined(USE_AURA) && BUILDFLAG(IS_STARBOARD)
-      auto* platform_window = GetPlatformWindowStarboard(shell);
-      if (platform_window) {
-        platform_window->SetWaitingForRevealAck(true);
-      }
-#endif
+    auto* platform_window = GetPlatformWindowStarboard(shell);
+    if (platform_window) {
+      platform_window->SetWaitingForRevealAck(true);
     }
+#endif
     RevealShell(shell);
   }
   is_visible_ = true;
@@ -319,52 +232,34 @@ void ShellPlatformDelegate::OnProactiveMapWindow(
 }
 #endif
 
-void ShellPlatformDelegate::OnAllFramesVisible(
-    content::WebContents* web_contents) {
-  if (web_contents) {
-    pending_reveal_web_contents_.erase(web_contents);
-  }
-
-  if (pending_reveal_web_contents_.empty()) {
-    ClearWaitingForRevealAck();
-    is_visible_ = true;
-
-    // If an OS focus event arrived while we were waiting, apply it now that
-    // all pages are ready.
-    if (deferred_focus_) {
-      for (auto* w : Shell::windows()) {
-        w->Focus();
-      }
-      deferred_focus_ = false;
-    }
-
-    // Stop observing once all expected windows have completed reveal.
-    cobalt::CobaltLifecycleManager::GetInstance()->RemoveObserver(
-        static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
-  }
-}
-
-void ShellPlatformDelegate::OnAllFramesConcealed(
+void ShellPlatformDelegate::OnWebContentsConcealed(
     content::WebContents* web_contents) {
   if (web_contents) {
     Shell* shell = Shell::FromWebContents(web_contents);
     if (shell) {
       ConcealShell(shell);
     }
-    pending_conceal_web_contents_.erase(web_contents);
   }
+}
 
-  if (pending_conceal_web_contents_.empty()) {
-    cobalt::CobaltLifecycleManager::GetInstance()->RemoveObserver(
-        static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
-    is_visible_ = false;
+void ShellPlatformDelegate::OnAllWebContentsConcealed() {
+  is_visible_ = false;
+  content::CleanupGpuProcessOnUI(base::BindOnce([] {
+    cobalt::CobaltLifecycleManager::GetInstance()->OnConcealCompleted();
+  }));
+}
 
-    content::CleanupGpuProcessOnUI(base::BindOnce(
-        [](base::WeakPtr<content::WebContents> wc) {
-          cobalt::CobaltLifecycleManager::GetInstance()->OnConcealCompleted(
-              wc ? wc.get() : nullptr);
-        },
-        web_contents ? web_contents->GetWeakPtr() : nullptr));
+void ShellPlatformDelegate::OnAllWebContentsVisible() {
+  ClearWaitingForRevealAck();
+  is_visible_ = true;
+
+  // If an OS focus event arrived while we were waiting, apply it now that
+  // all pages are ready.
+  if (deferred_focus_) {
+    for (auto* w : Shell::windows()) {
+      w->Focus();
+    }
+    deferred_focus_ = false;
   }
 }
 

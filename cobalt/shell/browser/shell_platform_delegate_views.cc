@@ -261,6 +261,8 @@ void ShellPlatformDelegate::Initialize(const gfx::Size& default_window_size,
   }
 
   platform_->views_delegate = CreateViewsDelegate();
+  cobalt::CobaltLifecycleManager::GetInstance()->AddObserver(
+      static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
 }
 
 void ShellPlatformDelegate::CreatePlatformWindow(
@@ -334,9 +336,6 @@ void ShellPlatformDelegate::SetContents(Shell* shell) {
 void ShellPlatformDelegate::DidCreateOrAttachWebContents(
     Shell* shell,
     WebContents* web_contents) {
-  if (!is_visible_) {
-    TrackPreviouslyVisibleWebContents(web_contents);
-  }
   auto it = shell_data_map_.find(shell);
   if (it == shell_data_map_.end()) {
     return;

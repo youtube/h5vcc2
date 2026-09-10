@@ -45,9 +45,13 @@ void ShellPlatformDelegate::Initialize(const gfx::Size& default_window_size,
                                        bool is_visible) {
   is_visible_ = is_visible;
   // |platform_| is not used on this platform.
+  cobalt::CobaltLifecycleManager::GetInstance()->AddObserver(
+      static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
 }
 
 ShellPlatformDelegate::~ShellPlatformDelegate() {
+  cobalt::CobaltLifecycleManager::GetInstance()->RemoveObserver(
+      static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
   if (!skip_for_testing_) {
     DestroyShellManager();
   }

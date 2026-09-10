@@ -41,7 +41,10 @@ struct ShellPlatformDelegate::PlatformData {
 };
 
 ShellPlatformDelegate::ShellPlatformDelegate() = default;
-ShellPlatformDelegate::~ShellPlatformDelegate() = default;
+ShellPlatformDelegate::~ShellPlatformDelegate() {
+  cobalt::CobaltLifecycleManager::GetInstance()->RemoveObserver(
+      static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
+}
 
 void ShellPlatformDelegate::Initialize(const gfx::Size& default_window_size,
                                        bool is_visible) {
@@ -49,6 +52,8 @@ void ShellPlatformDelegate::Initialize(const gfx::Size& default_window_size,
   platform_ = std::make_unique<PlatformData>();
   platform_->default_window_size = default_window_size;
   platform_->aura = nullptr;
+  cobalt::CobaltLifecycleManager::GetInstance()->AddObserver(
+      static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
 }
 
 void ShellPlatformDelegate::CreatePlatformWindow(
@@ -138,11 +143,7 @@ void ShellPlatformDelegate::ConcealShell(Shell* shell) {
 }
 void ShellPlatformDelegate::DidCreateOrAttachWebContents(
     Shell* shell,
-    WebContents* web_contents) {
-  if (!is_visible_) {
-    TrackPreviouslyVisibleWebContents(web_contents);
-  }
-}
+    WebContents* web_contents) {}
 
 void ShellPlatformDelegate::LoadSplashScreenContents(Shell* shell) {}
 

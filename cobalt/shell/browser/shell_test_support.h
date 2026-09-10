@@ -102,6 +102,14 @@ class MockShellPlatformDelegate : public ShellPlatformDelegate {
                               bool is_visible) {
           ShellPlatformDelegate::Initialize(default_window_size, is_visible);
         });
+#else
+    ON_CALL(*this, Initialize)
+        .WillByDefault(
+            [this](const gfx::Size& default_window_size, bool is_visible) {
+              is_visible_ = is_visible;
+              cobalt::CobaltLifecycleManager::GetInstance()->AddObserver(
+                  static_cast<cobalt::CobaltLifecycleManagerObserver*>(this));
+            });
 #endif
   }
 
