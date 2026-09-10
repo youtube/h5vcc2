@@ -41,5 +41,6 @@ void InspectorDOMAgent::CharacterDataModified(CharacterData*) {}
 void InspectorDOMAgent::DidInvalidateStyleAttr(Node*) {}
 void InspectorDOMAgent::DidPerformSlotDistribution(HTMLSlotElement*) {}
 void InspectorDOMAgent::DidPushShadowRoot(Element*, ShadowRoot*) {}
+void InspectorDOMAgent::WillPopShadowRoot(Element*, ShadowRoot*) {}
 
 }  // namespace blink

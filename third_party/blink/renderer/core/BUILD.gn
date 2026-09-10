@@ -327,6 +327,7 @@ component("core") {
       "inspector/dev_tools_host.cc",
       "inspector/exception_metadata.cc",
       "inspector/identifiers_factory.cc",
+      "inspector/inspected_frames.cc",
       "inspector/inspector_audits_issue.cc",
       "inspector/inspector_issue.cc",
       "inspector/inspector_issue_conversion.cc",

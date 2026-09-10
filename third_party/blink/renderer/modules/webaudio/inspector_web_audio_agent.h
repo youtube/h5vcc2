@@ -5,6 +5,13 @@
 #ifndef THIRD_PARTY_BLINK_RENDERER_MODULES_WEBAUDIO_INSPECTOR_WEB_AUDIO_AGENT_H_
 #define THIRD_PARTY_BLINK_RENDERER_MODULES_WEBAUDIO_INSPECTOR_WEB_AUDIO_AGENT_H_
 
+#include "build/build_config.h"
+#include "third_party/blink/public/common/buildflags.h"
+
+#if !BUILDFLAG(ENABLE_DEVTOOLS_BACKEND)
+#include "third_party/blink/renderer/modules/webaudio/cobalt/inspector_web_audio_agent_stub.h"
+#else  // BUILDFLAG(ENABLE_DEVTOOLS_BACKEND)
+
 #include <memory>
 
 #include "third_party/blink/renderer/core/inspector/inspector_base_agent.h"
@@ -77,5 +84,7 @@ class MODULES_EXPORT InspectorWebAudioAgent final
 };
 
 }  // namespace blink
+
+#endif  // !BUILDFLAG(ENABLE_DEVTOOLS_BACKEND)
 
 #endif  // THIRD_PARTY_BLINK_RENDERER_MODULES_WEBAUDIO_INSPECTOR_WEB_AUDIO_AGENT_H_

@@ -177,6 +177,14 @@ void InspectorNetworkAgent::ShouldApplyDevtoolsCookieSettingOverrides(
     bool* should_apply_devtools_overrides) const {}
 void InspectorNetworkAgent::ShouldBlockRequest(const KURL&, bool*) {}
 void InspectorNetworkAgent::ShouldBypassServiceWorker(bool*) {}
+void InspectorNetworkAgent::ShouldForceCorsPreflight(bool*) {}
+void InspectorNetworkAgent::WillCreateP2PSocketUdp(
+    std::optional<base::UnguessableToken>*) {}
+void InspectorNetworkAgent::DidReceiveCorsRedirectResponse(
+    uint64_t,
+    DocumentLoader*,
+    const ResourceResponse&,
+    Resource*) {}
 void InspectorNetworkAgent::Trace(Visitor*) const {}
 
 }  // namespace blink
