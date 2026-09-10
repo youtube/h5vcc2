@@ -49,6 +49,7 @@
 #include "services/network/public/mojom/url_loader_factory.mojom-blink.h"
 #include "third_party/blink/public/mojom/fetch/fetch_api_request.mojom-blink.h"
 #include "third_party/blink/public/mojom/notifications/notification.mojom-blink.h"
+#include "third_party/blink/public/mojom/payments/payment_app.mojom-blink.h"
 #include "third_party/blink/public/mojom/push_messaging/push_messaging.mojom-blink.h"
 #include "third_party/blink/public/mojom/service_worker/service_worker_fetch_response_callback.mojom-blink.h"
 #include "third_party/blink/public/mojom/service_worker/service_worker_stream_handle.mojom-blink.h"
@@ -65,7 +66,9 @@
 #include "third_party/blink/renderer/bindings/modules/v8/v8_background_fetch_event_init.h"
 #include "third_party/blink/renderer/bindings/modules/v8/v8_content_index_event_init.h"
 #include "third_party/blink/renderer/bindings/modules/v8/v8_notification_event_init.h"
+#if !BUILDFLAG(IS_COBALT)
 #include "third_party/blink/renderer/bindings/modules/v8/v8_payment_request_event_init.h"
+#endif
 #include "third_party/blink/renderer/core/core_initializer.h"
 #include "third_party/blink/renderer/core/dom/events/event.h"
 #include "third_party/blink/renderer/core/execution_context/agent.h"
@@ -103,6 +106,7 @@
 #endif
 #include "third_party/blink/renderer/modules/notifications/notification.h"
 #include "third_party/blink/renderer/modules/notifications/notification_event.h"
+#if !BUILDFLAG(IS_COBALT)
 #include "third_party/blink/renderer/modules/payments/abort_payment_event.h"
 #include "third_party/blink/renderer/modules/payments/abort_payment_respond_with_observer.h"
 #include "third_party/blink/renderer/modules/payments/can_make_payment_event.h"
@@ -110,6 +114,7 @@
 #include "third_party/blink/renderer/modules/payments/payment_event_data_conversion.h"
 #include "third_party/blink/renderer/modules/payments/payment_request_event.h"
 #include "third_party/blink/renderer/modules/payments/payment_request_respond_with_observer.h"
+#endif
 #include "third_party/blink/renderer/modules/push_messaging/push_event.h"
 #include "third_party/blink/renderer/modules/push_messaging/push_message_data.h"
 #include "third_party/blink/renderer/modules/push_messaging/push_subscription_change_event.h"
@@ -2261,6 +2266,9 @@ void ServiceWorkerGlobalScope::DispatchAbortPaymentEvent(
     mojo::PendingRemote<payments::mojom::blink::PaymentHandlerResponseCallback>
         response_callback,
     DispatchAbortPaymentEventCallback callback) {
+#if BUILDFLAG(IS_COBALT)
+  std::move(callback).Run(mojom::ServiceWorkerEventStatus::REJECTED);
+#else
   DCHECK(IsContextThread());
   const int event_id = event_queue_->NextEventId();
   abort_payment_event_callbacks_.Set(event_id, std::move(callback));
@@ -2270,6 +2278,7 @@ void ServiceWorkerGlobalScope::DispatchAbortPaymentEvent(
       WTF::BindOnce(&ServiceWorkerGlobalScope::StartAbortPaymentEvent,
                     WrapWeakPersistent(this), std::move(response_callback)),
       CreateAbortCallback(&abort_payment_event_callbacks_), std::nullopt);
+#endif
 }
 
 void ServiceWorkerGlobalScope::StartAbortPaymentEvent(
@@ -2277,6 +2286,9 @@ void ServiceWorkerGlobalScope::StartAbortPaymentEvent(
         response_callback,
     int event_id) {
   DCHECK(IsContextThread());
+#if BUILDFLAG(IS_COBALT)
+  NOTREACHED();
+#else
   HeapMojoRemote<payments::mojom::blink::PaymentHandlerResponseCallback> remote(
       this);
   // Payment task need to be processed on the user interaction task
@@ -2305,6 +2317,7 @@ void ServiceWorkerGlobalScope::StartAbortPaymentEvent(
 
   DispatchExtendableEventWithRespondWith(event, wait_until_observer,
                                          respond_with_observer);
+#endif
 }
 
 void ServiceWorkerGlobalScope::DispatchCanMakePaymentEvent(
@@ -2312,6 +2325,9 @@ void ServiceWorkerGlobalScope::DispatchCanMakePaymentEvent(
     mojo::PendingRemote<payments::mojom::blink::PaymentHandlerResponseCallback>
         response_callback,
     DispatchCanMakePaymentEventCallback callback) {
+#if BUILDFLAG(IS_COBALT)
+  std::move(callback).Run(mojom::ServiceWorkerEventStatus::REJECTED);
+#else
   DCHECK(IsContextThread());
   const int event_id = event_queue_->NextEventId();
   can_make_payment_event_callbacks_.Set(event_id, std::move(callback));
@@ -2322,6 +2338,7 @@ void ServiceWorkerGlobalScope::DispatchCanMakePaymentEvent(
                     WrapWeakPersistent(this), std::move(event_data),
                     std::move(response_callback)),
       CreateAbortCallback(&can_make_payment_event_callbacks_), std::nullopt);
+#endif
 }
 
 void ServiceWorkerGlobalScope::StartCanMakePaymentEvent(
@@ -2330,6 +2347,9 @@ void ServiceWorkerGlobalScope::StartCanMakePaymentEvent(
         response_callback,
     int event_id) {
   DCHECK(IsContextThread());
+#if BUILDFLAG(IS_COBALT)
+  NOTREACHED();
+#else
   HeapMojoRemote<payments::mojom::blink::PaymentHandlerResponseCallback> remote(
       this);
   // Payment task need to be processed on the user interaction task
@@ -2360,6 +2380,7 @@ void ServiceWorkerGlobalScope::StartCanMakePaymentEvent(
 
   DispatchExtendableEventWithRespondWith(event, wait_until_observer,
                                          respond_with_observer);
+#endif
 }
 
 void ServiceWorkerGlobalScope::DispatchPaymentRequestEvent(
@@ -2367,6 +2388,9 @@ void ServiceWorkerGlobalScope::DispatchPaymentRequestEvent(
     mojo::PendingRemote<payments::mojom::blink::PaymentHandlerResponseCallback>
         response_callback,
     DispatchPaymentRequestEventCallback callback) {
+#if BUILDFLAG(IS_COBALT)
+  std::move(callback).Run(mojom::ServiceWorkerEventStatus::REJECTED);
+#else
   DCHECK(IsContextThread());
   const int event_id = event_queue_->NextEventId();
   payment_request_event_callbacks_.Set(event_id, std::move(callback));
@@ -2377,6 +2401,7 @@ void ServiceWorkerGlobalScope::DispatchPaymentRequestEvent(
                     WrapWeakPersistent(this), std::move(event_data),
                     std::move(response_callback)),
       CreateAbortCallback(&payment_request_event_callbacks_), std::nullopt);
+#endif
 }
 
 void ServiceWorkerGlobalScope::StartPaymentRequestEvent(
@@ -2385,6 +2410,9 @@ void ServiceWorkerGlobalScope::StartPaymentRequestEvent(
         response_callback,
     int event_id) {
   DCHECK(IsContextThread());
+#if BUILDFLAG(IS_COBALT)
+  NOTREACHED();
+#else
   HeapMojoRemote<payments::mojom::blink::PaymentHandlerResponseCallback> remote(
       this);
   // Payment task need to be processed on the user interaction task
@@ -2442,6 +2470,7 @@ void ServiceWorkerGlobalScope::StartPaymentRequestEvent(
 
   DispatchExtendableEventWithRespondWith(event, wait_until_observer,
                                          respond_with_observer);
+#endif
 }
 
 void ServiceWorkerGlobalScope::DispatchCookieChangeEvent(

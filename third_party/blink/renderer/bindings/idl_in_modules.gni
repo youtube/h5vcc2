@@ -1476,7 +1476,8 @@ if (!enable_privacy_sandbox_apis) {
             "//third_party/blink/renderer/modules/permissions/top_level_storage_access_permission_descriptor.idl",
             "//third_party/blink/renderer/modules/ad_auction/*",
             "//third_party/blink/renderer/modules/credentialmanagement/*",
-            "//third_party/blink/renderer/modules/payments/secure_payment_confirmation_request.idl",
+            "//third_party/blink/renderer/modules/payments/*",
+            "//third_party/blink/renderer/modules/contacts_picker/*",
           ])
   static_idl_files_in_modules = []
   static_idl_files_in_modules = _filtered_static_idl_files
