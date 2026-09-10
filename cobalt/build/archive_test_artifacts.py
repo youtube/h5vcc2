@@ -38,6 +38,19 @@ _EXCLUDE_DIRS_JUNIT = [
 
 _EXCLUDE_EXTENSIONS = ('.map',)
 
+# Secondary toolchains write their outputs to a subfolder of the out dir.
+_TOOLCHAIN_SUBDIRS = ('starboard', 'native_target')
+
+
+def _under_toolchain_subdirs(exclude_dirs: list[str]) -> list[str]:
+  """Also matches the out dir relative `exclude_dirs` under the subfolders."""
+  out_dir_relative = [d for d in exclude_dirs if not d.startswith('../../')]
+  return exclude_dirs + [
+      os.path.join(subdir, d.removeprefix('./'))
+      for subdir in _TOOLCHAIN_SUBDIRS
+      for d in out_dir_relative
+  ]
+
 
 def _find_strip_tool(source_dir: str) -> Optional[str]:
   """Locates llvm-strip or system strip tool."""
@@ -133,19 +146,16 @@ def _find_deps_file(*, target: str, target_name: str, target_path: str,
   """Checks possible search paths for the runtime deps files for a target."""
   search_paths = []
 
-  if use_android_deps_path:
-    search_paths.extend([
-        os.path.join(out_dir, 'gen.runtime', target_path,
-                     f'{target_name}__test_runner_script.runtime_deps'),
-    ])
-  else:
-    search_paths.extend([
-        os.path.join(out_dir, f'{target_name}.runtime_deps'),
-        # If |deps_file| doesn't exist it could be due to being generated with
-        # the starboard_toolchain. In that case, we should look in subfolders.
-        # For the time being, just try with an extra starboard/ in the path.
-        os.path.join(out_dir, 'starboard', f'{target_name}.runtime_deps')
-    ])
+  # If generated with the starboard_toolchain, the deps_file will be at
+  # starboard/.
+  for prefix in ('', 'starboard'):
+    if use_android_deps_path:
+      search_paths.append(
+          os.path.join(out_dir, prefix, 'gen.runtime', target_path,
+                       f'{target_name}__test_runner_script.runtime_deps'))
+    else:
+      search_paths.append(
+          os.path.join(out_dir, prefix, f'{target_name}.runtime_deps'))
 
   if is_junit_test:
     # Fallback for robolectric tests which don't append '__test_runner_script'
@@ -252,6 +262,13 @@ def create_archive(
       exclude_dirs = _EXCLUDE_DIRS_DEFAULT
       if is_junit_test:
         exclude_dirs = _EXCLUDE_DIRS_JUNIT
+      elif use_android_deps_path and target_name == 'nplb_loader':
+        # TODO(crbug.com/532068409): remove the test data exclusion and figure
+        # out a workaround for the increase in size.
+        exclude_dirs = _EXCLUDE_DIRS_DEFAULT + [
+            'test/starboard/shared/starboard/player/'
+        ]
+      exclude_dirs = _under_toolchain_subdirs(exclude_dirs)
 
       raw_lines = [line.strip() for line in runtime_deps_file if line.strip()]
       has_uncompressed_so = any(l.endswith('.so') for l in raw_lines)

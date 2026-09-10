@@ -71,10 +71,10 @@ template("modular_apk") {
     }
 
     if (_name == "nplb") {
-      deps += [
-        "//starboard/nplb/testdata/file_tests:nplb_file_tests_data_assets",
-        "//starboard/shared/starboard/player:player_test_data_assets",
-      ]
+      # TODO(crbug.com/532068409): package player_test_data_assets and figure
+      # out a workaround for the increase in size.
+      deps +=
+          [ "//starboard/nplb/testdata/file_tests:nplb_file_tests_data_assets" ]
     }
   }
 
@@ -83,10 +83,13 @@ template("modular_apk") {
     apk_name = _name
 
     # Test apks are emitted at the Chromium native-test convention path
-    # (<out>/<name>_apk/<name>-debug.apk) so build/android/test_runner.py
-    # finds them.
+    # (<out>/<suite>_apk/<suite>-debug.apk) so build/android/test_runner.py
+    # finds them. The suite is the `<name>_loader` target CI builds, so the
+    # apk, deps archive and filter names all derive from that one target.
     if (_testonly) {
-      final_apk_path = "$root_build_dir/${_name}_apk/${_name}-debug.apk"
+      create_apk_script = false
+      final_apk_path =
+          "$root_build_dir/${_name}_loader_apk/${_name}_loader-debug.apk"
     }
 
     android_manifest = cobalt_manifest
@@ -114,13 +117,13 @@ template("modular_apk") {
         [ get_label_info(_loader, "label_no_toolchain") + "__jni_registration" ]
   }
 
-  # For test apks, generate a bin/run_<name> wrapper so upstream
-  # build/android/test_runner.py can drive the suite (`--suite <name>`).
+  # For test apks, generate a bin/run_<name>_loader wrapper so upstream
+  # build/android/test_runner.py can drive the suite (`--suite <name>_loader`).
   if (_testonly) {
-    test_runner_script("${_name}__test_runner_script") {
+    test_runner_script("${_name}_loader__test_runner_script") {
       apk_target = ":${_name}_apk"
-      test_name = _name
-      test_suite = _name
+      test_name = "${_name}_loader"
+      test_suite = "${_name}_loader"
       test_type = "gtest"
     }
   }

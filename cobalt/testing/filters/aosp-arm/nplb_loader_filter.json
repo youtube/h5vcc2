@@ -1,0 +1,32 @@
+{
+  "_comment": "AOSP nplb exclusions.",
+  "failing_tests": [
+    "*MaximumPlayerConfigurationExplorer*",
+    "*MultiplePlayer*",
+    "*SbMediaSetAudioWriteDuration*",
+    "*SbPlayer*",
+    "*VerticalVideoTest*",
+    "CrashpadConfigTest.VerifyUploadCert",
+    "LoaderAppMetricsTest.VerifyLoaderAppMetricsExtension",
+    "NativeStabilityTest.VerifyNativeStabilityExtension",
+    "PosixFileGetInfoTest.ReportsHardLinkCount",
+    "PosixLinkTest.SuccessfulCreation",
+    "PosixPathconfTests/PosixFilePathconfValidNameTest.PathconfDoesNotFailWithEinval/12",
+    "PosixPathconfTests/PosixFilePathconfValidNameTest.PathconfDoesNotFailWithEinval/14",
+    "PosixPathconfTests/PosixFilePathconfValidNameTest.PathconfDoesNotFailWithEinval/15",
+    "PosixSetPriorityTests.ErrorOnPermissionDenied",
+    "PosixUnistdSysconfTests/PosixUnistdSysconfOptionalValueTest.OptionalScValuesAreValidNames/105",
+    "PosixUnistdSysconfTests/PosixUnistdSysconfOptionalValueTest.OptionalScValuesAreValidNames/106",
+    "PosixUnistdSysconfTests/PosixUnistdSysconfOptionalValueTest.OptionalScValuesAreValidNames/107",
+    "PosixUnistdSysconfTests/PosixUnistdSysconfOptionalValueTest.OptionalScValuesAreValidNames/108",
+    "PosixUnistdSysconfTests/PosixUnistdSysconfOptionalValueTest.OptionalScValuesAreValidNames/76",
+    "PosixUnistdSysconfTests/PosixUnistdSysconfOptionalValueTest.OptionalScValuesAreValidNames/77",
+    "PosixUnistdSysconfTests/PosixUnistdSysconfOptionalValueTest.OptionalScValuesAreValidNames/78",
+    "PosixUnistdSysconfTests/PosixUnistdSysconfOptionalValueTest.OptionalScValuesAreValidNames/79",
+    "SbAudioSinkTest.ContinuousAppend",
+    "SbDrmSessionTest.CloseDrmSessionBeforeUpdateSession",
+    "SbDrmSessionTest.InvalidSessionUpdateRequestParams",
+    "SbDrmSessionTest.SunnyDay",
+    "SbMediaCanPlayMimeAndKeySystem.MinimumSupport"
+  ]
+}
