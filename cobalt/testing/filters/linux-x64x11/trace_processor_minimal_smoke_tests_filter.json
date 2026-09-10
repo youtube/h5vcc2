@@ -1,6 +1,0 @@
-{
-  "comment": "All tests crash horribly.",
-  "failing_tests": [
-    "*"
-  ]
-}

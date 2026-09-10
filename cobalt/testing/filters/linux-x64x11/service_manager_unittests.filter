@@ -1,0 +1,5 @@
+-BackgroundServiceManagerTest.Basic
+-ConnectTest.*
+-LifecycleTest.*
+-ServiceManagerTest.*
+-ShutdownTest.*

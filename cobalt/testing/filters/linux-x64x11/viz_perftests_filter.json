@@ -1,6 +1,0 @@
-{
-  "failing_tests": [
-    "RendererPerfTest.*",
-    "SurfaceAggregatorPerfTest.*"
-  ]
-}

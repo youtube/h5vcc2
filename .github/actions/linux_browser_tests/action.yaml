@@ -49,14 +49,9 @@ runs:
         RUNNER_BINARY="./src/out/${PLATFORM}_${CONFIG}/bin/run_cobalt_browsertests"
 
         # Apply test filter if exists
-        TEST_FILTER_JSON="${GITHUB_WORKSPACE}/cobalt/testing/filters/${PLATFORM}/cobalt_browsertests_filter.json"
-        TEST_FILTER="*"
-        if [ -f "${TEST_FILTER_JSON}" ]; then
-            FAILING_TESTS=$(jq -r '.failing_tests | join(":")' "${TEST_FILTER_JSON}")
-            if [ -n "${FAILING_TESTS}" ]; then
-                TEST_FILTER="-${FAILING_TESTS}"
-            fi
-        fi
+        TEST_FILTER=$(python3 "${GITHUB_WORKSPACE}/cobalt/devinfra/github/test_filter.py" \
+            --filter-dir "${GITHUB_WORKSPACE}/cobalt/testing/filters/${PLATFORM}" \
+            --target "cobalt_browsertests")
 
         mkdir -p "${GITHUB_WORKSPACE}/results"
 

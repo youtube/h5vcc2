@@ -1,0 +1,4 @@
+# See b/536822943 and b/536822947
+-AdaptiveAudioDecoderTests/AdaptiveAudioDecoderTest.MultipleInput/*
+-AdaptiveAudioDecoderTests/AdaptiveAudioDecoderTest.SingleInput/*
+-VideoDecoderTests/VideoDecoderTest.*

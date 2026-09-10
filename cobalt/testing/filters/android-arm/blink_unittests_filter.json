@@ -1,6 +1,0 @@
-{
-  "comment": "blink_unittests are currently not supported. They take too long to run. The suite should fully pass once support is implemented for it.",
-  "failing_tests": [
-    "*"
-  ]
-}

@@ -22,8 +22,6 @@ TEST_SUITE="$2"
 # This removes the suffix starting with the last underscore.
 FILTER_PLATFORM=${PLATFORM%_*}
 BUILD_DIR="out/${PLATFORM}"
-FILTER_FILE="cobalt/testing/filters/${FILTER_PLATFORM}/${TEST_SUITE}_filter.json"
-
 
 # Check if the TEST_SUITE string ends with "_loader"
 if [[ "$TEST_SUITE" == *_loader ]]; then
@@ -47,24 +45,12 @@ echo "🚀 Running ${TEST_SUITE}..."
 
 GTEST_FILTER_FLAG=""
 
-# Check if the filter file exists and if jq is installed.
-if [ -f "$FILTER_FILE" ]; then
-  if ! command -v jq &> /dev/null; then
-    echo "⚠️ Warning: 'jq' is not installed. Cannot apply test filters. Running all tests."
-  else
-    echo "ℹ️ Found test filter file: ${FILTER_FILE}"
-    # Use jq to extract failing tests, join them with a colon for the filter.
-    FAILING_TESTS=$(jq -r '.failing_tests | join(":")' "$FILTER_FILE")
-    if [ -n "$FAILING_TESTS" ]; then
-      # Prepend '-' to exclude the failing tests.
-      GTEST_FILTER_FLAG="--gtest_filter=-${FAILING_TESTS}"
-      echo "🔬 Applying gtest_filter: ${GTEST_FILTER_FLAG}"
-    else
-      echo "ℹ️ No failing tests listed in filter file."
-    fi
-  fi
-else
-  echo "ℹ️ No filter file found for this test suite."
+# Evaluate test filter using centralized test_filter utility.
+FILTER_DIR="cobalt/testing/filters/${FILTER_PLATFORM}"
+TEST_FILTER=$(python3 cobalt/devinfra/github/test_filter.py --filter-dir "${FILTER_DIR}" --target "${TEST_SUITE}" 2>/dev/null || echo "*")
+if [ -n "$TEST_FILTER" ] && [ "$TEST_FILTER" != "*" ]; then
+  GTEST_FILTER_FLAG="--gtest_filter=${TEST_FILTER}"
+  echo "🔬 Applying gtest_filter: ${GTEST_FILTER_FLAG}"
 fi
 
 # Check if the C++ executable exists before trying to run it

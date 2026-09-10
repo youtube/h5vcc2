@@ -1,0 +1,4 @@
+-DirectReceiverTest.*
+-InvitationTest.SendInvitation
+-MessagePipeTest.DataPipeConsumerHandlePingPong
+-MessagePipeTest.DataPipeProducerHandlePingPong

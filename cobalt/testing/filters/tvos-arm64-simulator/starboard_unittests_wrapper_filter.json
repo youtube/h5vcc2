@@ -1,8 +1,0 @@
-{
-  "comment": "See b/536822943 and b/536822947",
-  "failing_tests": [
-    "AdaptiveAudioDecoderTests/AdaptiveAudioDecoderTest.MultipleInput/*",
-    "AdaptiveAudioDecoderTests/AdaptiveAudioDecoderTest.SingleInput/*",
-    "VideoDecoderTests/VideoDecoderTest.*"
-  ]
-}

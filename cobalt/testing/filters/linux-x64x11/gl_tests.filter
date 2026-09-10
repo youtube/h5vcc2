@@ -1,0 +1,8 @@
+-SharedImageGLBackingProduceDawnTest.Basic
+-TranslatorVariants/EXTBlendFuncExtendedES3DrawTest.*
+-WebGPUMailboxTest.*
+-WebGPUTest.*
+-*EGLImageBackingFactoryThreadSafeTest*
+-GLReadbackTest.ReadPixelsFloat
+-OzoneImageBackingFactoryTest.*
+-TranslatorVariants/EXTBlendFuncExtendedDrawTest.*

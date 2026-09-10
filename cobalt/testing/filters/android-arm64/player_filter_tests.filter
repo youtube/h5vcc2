@@ -1,0 +1,6 @@
+# Disable long-running hardware decoder tests on Android. Enable fast unit tests first.
+-*PlayerComponentsTest*
+-*AdaptiveAudioDecoderTest*
+-*AudioDecoderTest*
+-*VideoDecoderTest*
+-*AudioRendererTest*

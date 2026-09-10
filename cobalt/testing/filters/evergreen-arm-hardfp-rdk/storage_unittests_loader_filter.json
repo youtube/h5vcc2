@@ -1,6 +1,0 @@
-{
-  "comment": "TODO(b/509862971): Quarantined for initial test landing on evergreen-arm-hardfp-rdk.",
-  "failing_tests": [
-    "*"
-  ]
-}

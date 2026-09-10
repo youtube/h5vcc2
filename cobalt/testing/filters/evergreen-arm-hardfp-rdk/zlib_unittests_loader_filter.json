@@ -1,9 +1,0 @@
-{
-  "failing_tests": [
-    "CompressionUtilsTest.GzipCompression",
-    "CompressionUtilsTest.InPlace",
-    "CompressionUtilsTest.LargeInput",
-    "ZipReaderTest.*",
-    "ZipTest.*"
-  ]
-}

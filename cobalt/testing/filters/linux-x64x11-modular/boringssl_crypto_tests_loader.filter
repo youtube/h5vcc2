@@ -1,0 +1,7 @@
+-All/PerAEADTest.TestVector/AES_128_CCM_BLUETOOTH
+-All/PerAEADTest.TestVector/AES_128_EAX
+-All/PerAEADTest.TestVectorScatterGather/AES_128_EAX
+-ForkDetect.Test
+-MLKEMTest.Iterate1024
+-RandTest.Fork
+-X509Test.DirHashThreads

@@ -411,8 +411,8 @@ class RunCoverageTest(unittest.TestCase):
     target_output_dir = os.path.join(output_dir, sanitized_target)
     filter_file_path = os.path.join('/test/src/root', 'cobalt', 'testing',
                                     'filters', 'android-arm',
-                                    f'{executable_name}_filter.json')
-    mock_filter_content = '{"failing_tests": ["Test.Fails", "Test.Crashes"]}'
+                                    f'{executable_name}.filter')
+    mock_filter_content = '-Test.Fails\n-Test.Crashes\n'
     mock_open.side_effect = lambda path, *args, **kwargs: mock.mock_open(
         read_data=mock_filter_content
     ).return_value if path == filter_file_path else mock.DEFAULT

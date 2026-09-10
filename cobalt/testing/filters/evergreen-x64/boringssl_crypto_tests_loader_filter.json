@@ -1,9 +1,0 @@
-{
-  "failing_tests": [
-    "ForkDetect.Test",
-    "MLKEMTest.Iterate1024",
-    "RandTest.Fork",
-    "X509Test.DirHashThreads",
-    "X509Test.DuplicateName"
-  ]
-}

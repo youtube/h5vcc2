@@ -34,5 +34,5 @@
 # media team runs experiments through h5vcc settings.
 /third_party/blink/renderer/modules/cobalt/h5vcc_settings/ @youtube/cobalt-web-api @youtube/cobalt-media
 
-*.nplb_filter.json @youtube/nplb-filters
+*nplb*.filter @youtube/nplb-filters
 /starboard/contrib/rdk @youtube/starboard-rdk-owners

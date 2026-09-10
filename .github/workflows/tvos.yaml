@@ -164,6 +164,7 @@ jobs:
             cobalt/testing/filters
             .github
             cobalt/tools
+            cobalt/devinfra
 
       - name: Download from GitHub Actions
         uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
@@ -175,16 +176,13 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
         run: |
-          test_filter=""
-          filter_file="cobalt/testing/filters/tvos-arm64-simulator/${TARGET}_filter.json"
-          if [[ -f "${filter_file}" ]]; then
-            test_filter="$(jq -cr '.failing_tests[0]' "${filter_file}")"
-            if [[ "${test_filter}" == '*' ]]; then
-              echo "${TARGET} was skipped due to test filter."
-              echo "skipped=true" >> "${GITHUB_OUTPUT}"
-            else
-              echo "skipped=false" >> "${GITHUB_OUTPUT}"
-            fi
+          test_filter=$(python3 cobalt/devinfra/github/test_filter.py \
+              --filter-dir cobalt/testing/filters/tvos-arm64-simulator \
+              --target "${TARGET}")
+          echo "test_filter=${test_filter}" >> "${GITHUB_OUTPUT}"
+          if [[ "${test_filter}" == "-*" ]]; then
+            echo "${TARGET} was skipped due to test filter."
+            echo "skipped=true" >> "${GITHUB_OUTPUT}"
           else
             echo "skipped=false" >> "${GITHUB_OUTPUT}"
           fi
@@ -195,20 +193,16 @@ jobs:
         if: steps.filter.outputs.skipped != 'true'
         env:
           TARGET: ${{ matrix.target }}
+          TEST_FILTER: ${{ steps.filter.outputs.test_filter }}
         run: |
           tar -xzf "${TARGET}.tar.gz"
 
           mkdir -p results
 
-          filter_file="cobalt/testing/filters/tvos-arm64-simulator/${TARGET}_filter.json"
           gtest_args=()
-          if [[ -f "${filter_file}" ]]; then
-            echo "Found filter file: ${filter_file}"
-            failing_tests=$(jq -r '.failing_tests | join(":")' "${filter_file}")
-            if [[ -n "${failing_tests}" ]]; then
-              gtest_args+=(-c "--gtest_filter=-${failing_tests}")
-              echo "Applying gtest_filter: -${failing_tests}"
-            fi
+          if [[ -n "${TEST_FILTER}" && "${TEST_FILTER}" != "*" ]]; then
+            gtest_args+=(-c "--gtest_filter=${TEST_FILTER}")
+            echo "Applying gtest_filter: ${TEST_FILTER}"
           fi
 
           xml_path="${GITHUB_WORKSPACE}/results/${TARGET}_result.xml"

@@ -1,0 +1,5 @@
+-CompressionUtilsTest.GzipCompression
+-CompressionUtilsTest.InPlace
+-CompressionUtilsTest.LargeInput
+-ZipReaderTest.*
+-ZipTest.*

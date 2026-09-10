@@ -1,0 +1,4 @@
+-CorePerftest.*
+-MessagePipePerfTest.*
+-MojoBindingsPerftest.*
+-MojoE2EPerftest.*

@@ -1,0 +1,13 @@
+-GLReadbackTest.ReadPixelsFloat
+-GpuDiskCacheTest.ClearsCache
+-OzoneImageBackingFactoryTest.CorrectlyDestroysAndMarksContextLost
+-OzoneImageBackingFactoryTest.FindsCompatibleContextAndReusesTexture
+-OzoneImageBackingFactoryTest.MarksContextLostOnContextLost*
+-OzoneImageBackingFactoryTest.RemovesTextureHoldersOnContextDestroy
+-OzoneImageBackingFactoryTest.RestoresContextOnAnotherContextDestroy
+-OzoneImageBackingFactoryTest.UsesCacheForTextureHolders*
+-Service/EGLImageBackingFactoryThreadSafeTest.*
+-TranslatorVariants/EXTBlendFuncExtendedES3DrawTest.ES3Getters/*
+-TranslatorVariants/EXTBlendFuncExtendedES3DrawTest.ESSL3*
+-TranslatorVariants/EXTBlendFuncExtendedDrawTest.ESSL1FragColor/*
+-TranslatorVariants/EXTBlendFuncExtendedDrawTest.ESSL1FragData/*

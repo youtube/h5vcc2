@@ -1,0 +1,3 @@
+-FileVideoCaptureDeviceTest.*
+-VideoCaptureDeviceTests/VideoCaptureDeviceTest.UsingRealWebcam_*
+-All/V4l2CaptureDelegateGpuHelperTest.SuccessConvertWithCaptureParam/2

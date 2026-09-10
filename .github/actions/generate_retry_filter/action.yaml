@@ -26,35 +26,41 @@ runs:
         rm -rf "${GITHUB_WORKSPACE}/retry_filters_artifact"
         mkdir -p "${FILTER_DIR}"
 
-        generate_filter_json() {
+        generate_filter_file() {
           local xml_files=("$@")
           local failed_tests_json
 
-          # Extract failing test names from parser output. Prepend gtest fail prefix.
+          # Extract failing test names from parser output.
           raw_json=$(python3 cobalt/tools/junit_mini_parser.py "${xml_files[@]}" || true)
           failed_tests_json=$(echo "${raw_json}" | jq -c '[.failing_tests // {} | .[]? | .[]? | .name] | unique' 2>/dev/null || echo "[]")
 
-          # Build filter JSON. If no failures, skip all (*).
-          jq -n --argjson tests "${failed_tests_json:-"[]"}" '
-            if ($tests | length) > 0 then
-              { failing_tests: [], tests_to_run: $tests }
-            else
-              { failing_tests: ["*"], tests_to_run: [] }
-            end
-          '
+          # Build filter file. If failures exist, list each test to run. If no failures, skip all (-*).
+          python3 -c "
+          import json, sys
+          try:
+              tests = json.loads('''${failed_tests_json}''')
+          except Exception:
+              tests = []
+          if tests:
+              for t in tests:
+                  if t:
+                      print(t)
+          else:
+              print('-*')
+          "
         }
 
         shopt -s globstar nullglob
         xml_files=("${RESULTS_DIR}"/**/"${TEST_TARGET}"*.xml)
         if [ ${#xml_files[@]} -gt 0 ]; then
           # Generate global filter
-          generate_filter_json "${xml_files[@]}" > "${FILTER_DIR}/${TEST_TARGET}_filter.json"
+          generate_filter_file "${xml_files[@]}" > "${FILTER_DIR}/${TEST_TARGET}.filter"
 
           # Also generate shard-specific filter files if shards exist
           for xml_file in "${xml_files[@]}"; do
             if [[ "${xml_file}" =~ /shard_([0-9]+)/ ]]; then
               shard_id="${BASH_REMATCH[1]}"
-              generate_filter_json "${xml_file}" > "${FILTER_DIR}/${TEST_TARGET}_${shard_id}_filter.json"
+              generate_filter_file "${xml_file}" > "${FILTER_DIR}/${TEST_TARGET}_${shard_id}.filter"
             fi
           done
         fi

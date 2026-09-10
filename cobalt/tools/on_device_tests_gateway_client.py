@@ -28,19 +28,9 @@ _REPO_ROOT = os.path.abspath(
     os.path.join(os.path.dirname(__file__), '..', '..'))
 if _REPO_ROOT not in sys.path:
   sys.path.insert(0, _REPO_ROOT)
-_DEVINFRA_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', 'devinfra', 'github'))
-if _DEVINFRA_DIR not in sys.path:
-  sys.path.insert(0, _DEVINFRA_DIR)
 
 # pylint: disable=wrong-import-position
-try:
-  from cobalt.devinfra.github.test_filter import get_gtest_filter
-except ImportError:
-  try:
-    from cobalt.tools.test_filter import get_gtest_filter
-  except ImportError:
-    from test_filter import get_gtest_filter
+from cobalt.devinfra.github.test_filter import get_gtest_filter
 
 import on_device_tests_gateway_pb2
 import on_device_tests_gateway_pb2_grpc

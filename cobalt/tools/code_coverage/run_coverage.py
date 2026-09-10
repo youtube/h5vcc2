@@ -19,12 +19,14 @@ This script orchestrates the code coverage process by:
 """
 
 import argparse
+from dataclasses import dataclass
 import json
 import logging
 import os
 import subprocess
 import sys
-from dataclasses import dataclass
+
+from cobalt.devinfra.github.test_filter import get_gtest_filter
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
@@ -123,25 +125,15 @@ def parse_args():
 
 
 def is_target_skipped(src_root, target, discovery_platform):
-  """
-  Check if a target should be skipped based on its filter file.
-  """
-  executable_name = target.split(':')[-1]
-  filter_file = os.path.join(src_root, 'cobalt', 'testing', 'filters',
-                             discovery_platform,
-                             f'{executable_name}_filter.json')
-  if os.path.exists(filter_file):
-    with open(filter_file, 'r', encoding='utf-8') as f:
-      data = json.load(f)
-      if 'failing_tests' in data and '*' in data['failing_tests']:
-        return True
-  return False
+  """Check if a target should be skipped based on its filter file."""
+  filter_dir = os.path.join(src_root, 'cobalt', 'testing', 'filters',
+                            discovery_platform)
+  filter_val = get_gtest_filter(filter_dir, target)
+  return filter_val == '-*'
 
 
 def run_coverage_for_target(config, target):
-  """
-  Run code coverage for a single target.
-  """
+  """Run code coverage for a single target."""
   logging.info('--- Running coverage for target: %s ---', target)
   sanitized_target = target.replace(':', '_').replace('/', '_')
   target_output_dir = os.path.join(config.output_dir, sanitized_target)
@@ -151,15 +143,11 @@ def run_coverage_for_target(config, target):
   command = os.path.join(config.build_dir, executable_name)
 
   # Add the test filters to the command.
-  filter_file = os.path.join(config.src_root, 'cobalt', 'testing', 'filters',
-                             config.discovery_platform,
-                             f'{executable_name}_filter.json')
-  if os.path.exists(filter_file):
-    with open(filter_file, 'r', encoding='utf-8') as f:
-      data = json.load(f)
-      if 'failing_tests' in data and data['failing_tests']:
-        gtest_filter = f'--gtest_filter=-{":".join(data["failing_tests"])}'  # pylint: disable=inconsistent-quotes
-        command += f' {gtest_filter}'
+  filter_dir = os.path.join(config.src_root, 'cobalt', 'testing', 'filters',
+                            config.discovery_platform)
+  filter_val = get_gtest_filter(filter_dir, target)
+  if filter_val and filter_val != '*':
+    command += f' --gtest_filter={filter_val}'
 
   coverage_command = [
       sys.executable,

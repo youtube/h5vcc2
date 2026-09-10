@@ -1,0 +1,3 @@
+-CharacterRange/CharacterRangePerfTest.*
+-OffsetForPosition/OffsetForPositionPerfTest.*
+-WTFTypesTest.*

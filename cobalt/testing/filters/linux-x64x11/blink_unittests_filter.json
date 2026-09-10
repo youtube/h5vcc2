@@ -1,6 +1,0 @@
-{
-  "comment": "Temporarily disable Blink unit tests",
-  "failing_tests": [
-    "*"
-  ]
-}

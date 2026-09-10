@@ -1,5 +1,0 @@
-{
-  "failing_tests": [
-    "HistogramFetcherTest.FetchHistograms_CalculatesDeltaCorrectly"
-  ]
-}

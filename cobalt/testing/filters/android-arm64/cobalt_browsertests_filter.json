@@ -1,6 +1,0 @@
-{
-  "comment": "Cobalt browser tests are not currently supported by Cobalt's infra. It has different requirements and dependencies than unit tests.",
-  "failing_tests": [
-    "*"
-  ]
-}
