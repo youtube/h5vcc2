@@ -71,10 +71,10 @@ template("modular_apk") {
     }
 
     if (_name == "nplb") {
-      deps += [
-        "//starboard/nplb/testdata/file_tests:nplb_file_tests_data_assets",
-        "//starboard/shared/starboard/player:player_test_data_assets",
-      ]
+      # TODO(crbug.com/532068409): package player_test_data_assets and figure
+      # out a workaround for the increase in size.
+      deps +=
+          [ "//starboard/nplb/testdata/file_tests:nplb_file_tests_data_assets" ]
     }
   }
 

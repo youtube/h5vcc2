@@ -249,6 +249,12 @@ def create_archive(
       exclude_dirs = _EXCLUDE_DIRS_DEFAULT
       if is_junit_test:
         exclude_dirs = _EXCLUDE_DIRS_JUNIT
+      elif use_android_deps_path and target_name == 'nplb_loader':
+        # TODO(crbug.com/532068409): remove the test data exclusion and figure
+        # out a workaround for the increase in size.
+        exclude_dirs = _EXCLUDE_DIRS_DEFAULT + [
+            'test/starboard/shared/starboard/player/'
+        ]
 
       raw_lines = [line.strip() for line in runtime_deps_file if line.strip()]
       has_uncompressed_so = any(l.endswith('.so') for l in raw_lines)
