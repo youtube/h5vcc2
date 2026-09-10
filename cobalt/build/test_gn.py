@@ -50,9 +50,8 @@ class GnTest(unittest.TestCase):
     build_type = 'devel'
     expected_out_dir = f'out/{platform}_{build_type}'
     expected_args_content_part = (
-        'use_siso = false # Set by gn.py\n'
         'use_remoteexec = true # Set by gn.py\n'
-        'rbe_cfg_dir = rebase_path("//cobalt/reclient_cfgs") # Set by gn.py\n'
+        'use_siso = true # Set by gn.py\n'
         'build_type = "devel" # Set by gn.py\n'
         'symbol_level = 1 # Set by gn.py\n'
         'is_debug = false # Set by gn.py\n'
@@ -87,6 +86,65 @@ class GnTest(unittest.TestCase):
         expected_out_dir,
         '--check',
     ])
+
+  @mock.patch('pathlib.Path.mkdir')
+  @mock.patch('os.path.exists', return_value=False)
+  @mock.patch('os.rename')
+  @mock.patch('builtins.open', new_callable=mock.mock_open)
+  @mock.patch('subprocess.check_call')
+  def test_rdk_platform_build_types(  # pylint: disable=too-many-positional-arguments
+      self, mock_check_call, mock_open, mock_rename, mock_exists, mock_mkdir):
+    del mock_rename, mock_exists  # unused
+    platform = 'evergreen-arm-hardfp-rdk'
+    build_type = 'qa'
+    expected_out_dir = f'out/{platform}_{build_type}'
+    expected_args_content_part = (
+        'build_type = "qa" # Set by gn.py\n'
+        'symbol_level = 1 # Set by gn.py\n'
+        'is_official_build = true # Set by gn.py\n'
+        'exclude_unwind_tables = false # Set by gn.py\n'
+        'arm_use_thumb = false # Set by gn.py\n'
+        'enable_profiling = true # Set by gn.py\n'
+        'import("//cobalt/build/configs/evergreen-arm-hardfp-rdk/args.gn")\n')
+
+    sys.argv = [
+        'gn.py',
+        '-p',
+        platform,
+        '-c',
+        build_type,
+    ]
+
+    gn.main()
+
+    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+    mock_open.assert_called_once()
+    handle = mock_open()
+    actual_content = "".join(
+        [call.args[0] for call in handle.write.call_args_list])
+    self.assertIn(expected_args_content_part, actual_content)
+
+    mock_check_call.assert_called_once_with([
+        'gn',
+        'gen',
+        expected_out_dir,
+        '--check',
+    ])
+
+  @mock.patch('builtins.open', new_callable=mock.mock_open)
+  def test_write_build_args_backward_compatibility(self, mock_open):
+    # Verify write_build_args can be called positionally without platform
+    # argument.
+    gn.write_build_args('/tmp/args.gn',
+                        'cobalt/build/configs/android-x86/args.gn', 'devel',
+                        True, False, False)
+    handle = mock_open()
+    actual_content = "".join(
+        [call.args[0] for call in handle.write.call_args_list])
+    self.assertIn('use_remoteexec = true # Set by gn.py\n', actual_content)
+    self.assertIn('build_type = "devel" # Set by gn.py\n', actual_content)
+    self.assertIn('import("//cobalt/build/configs/android-x86/args.gn")\n',
+                  actual_content)
 
   @mock.patch('pathlib.Path.mkdir')
   @mock.patch('os.path.exists', return_value=False)

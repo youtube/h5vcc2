@@ -77,10 +77,28 @@ _COBALT_TVOS_PLATFORMS = [
     'tvos-arm64-simulator',
 ]
 
+_RDK_NON_RELEASE_DEFAULTS = {
+    'arm_use_thumb': 'false',
+    'enable_profiling': 'true',
+}
+
+_PLATFORM_BUILD_TYPES = {
+    'evergreen-arm-hardfp-rdk': {
+        'debug': _RDK_NON_RELEASE_DEFAULTS,
+        'devel': _RDK_NON_RELEASE_DEFAULTS,
+        'qa': _RDK_NON_RELEASE_DEFAULTS,
+    },
+}
+
 
 # pylint: disable=too-many-positional-arguments
-def write_build_args(build_args_path, platform_args_path, build_type, use_rbe,
-                     use_coverage, use_sccache):
+def write_build_args(build_args_path,
+                     platform_args_path,
+                     build_type,
+                     use_rbe,
+                     use_coverage,
+                     use_sccache,
+                     platform=None):
   """ Write args file, modifying settings for config"""
   gen_comment = '# Set by gn.py'
   with open(build_args_path, 'w', encoding='utf-8') as f:
@@ -92,6 +110,10 @@ def write_build_args(build_args_path, platform_args_path, build_type, use_rbe,
     f.write(f'build_type = "{build_type}" {gen_comment}\n')
     for key, value in _BUILD_TYPES[build_type].items():
       f.write(f'{key} = {value} {gen_comment}\n')
+    if platform:
+      platform_build_types = _PLATFORM_BUILD_TYPES.get(platform, {})
+      for key, value in platform_build_types.get(build_type, {}).items():
+        f.write(f'{key} = {value} {gen_comment}\n')
     f.write(f'import("//{platform_args_path}")\n')
     if use_coverage:
       f.write(f'import("//cobalt/build/configs/coverage.gn") {gen_comment}\n')
@@ -112,8 +134,14 @@ def configure_out_directory(out_directory: str, platform: str, build_type: str,
     print('WARNING: Existing args.gn was overwritten. '
           'Old file was copied to stale_args.gn.')
 
-  write_build_args(dst_args_gn_file, src_args_gn_file, build_type, use_rbe,
-                   use_coverage, use_sccache)
+  write_build_args(
+      dst_args_gn_file,
+      src_args_gn_file,
+      build_type,
+      use_rbe,
+      use_coverage=use_coverage,
+      use_sccache=use_sccache,
+      platform=platform)
 
   gn_command = ['gn', 'gen', out_directory] + gn_gen_args
   print('Running', ' '.join(gn_command))
