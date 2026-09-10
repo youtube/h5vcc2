@@ -16,10 +16,13 @@
 
 #include <functional>
 
+#include "build/build_config.h"
+#include "build/buildflag.h"
 #include "starboard/common/command_line.h"
 #include "starboard/common/log.h"
 #include "starboard/shared/starboard/application.h"
 #include "starboard/shared/starboard/audio_sink/stub_audio_sink_type.h"
+#include "starboard/shared/starboard/features.h"
 
 namespace starboard {
 namespace {
@@ -31,10 +34,6 @@ using std::placeholders::_3;
 bool is_fallback_to_stub_enabled;
 SbAudioSinkImpl::Type* primary_audio_sink_type;
 SbAudioSinkImpl::Type* fallback_audio_sink_type;
-
-// Command line switch that controls whether we default to the stub audio sink,
-// even when the primary audio sink may be available.
-const char kUseStubAudioSink[] = "use_stub_audio_sink";
 
 void WrapConsumeFramesFunc(SbAudioSinkConsumeFramesFunc sb_consume_frames_func,
                            int frames_consumed,
@@ -81,9 +80,17 @@ SbAudioSinkImpl::Type* SbAudioSinkImpl::GetFallbackType() {
 
 // static
 SbAudioSinkImpl::Type* SbAudioSinkImpl::GetPreferredType() {
-  SbAudioSinkImpl::Type* audio_sink_type = NULL;
+  bool use_stub_audio_sink = false;
+#if BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_STARBOARD)
+  use_stub_audio_sink =
+      features::FeatureList::IsEnabled(features::kUseStubAudioSink);
+#else   // BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_STARBOARD)
   auto command_line = Application::Get()->GetCommandLine();
-  if (!command_line->HasSwitch(kUseStubAudioSink)) {
+  use_stub_audio_sink = command_line->HasSwitch("use_stub_audio_sink");
+#endif  // BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_STARBOARD)
+
+  SbAudioSinkImpl::Type* audio_sink_type = nullptr;
+  if (!use_stub_audio_sink) {
     audio_sink_type = SbAudioSinkImpl::GetPrimaryType();
   }
   if (!audio_sink_type) {
@@ -91,7 +98,7 @@ SbAudioSinkImpl::Type* SbAudioSinkImpl::GetPreferredType() {
                        "opting to use Fallback instead.";
     audio_sink_type = SbAudioSinkImpl::GetFallbackType();
   }
-  if (audio_sink_type == NULL) {
+  if (audio_sink_type == nullptr) {
     SB_LOG(WARNING) << "Fallback audio sink type is not enabled.";
   }
   return audio_sink_type;

@@ -1307,6 +1307,7 @@ if (is_cobalt) {
             "//third_party/blink/renderer/modules/cobalt/h5vcc_accessibility/text_to_speech_change_event.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_accessibility/text_to_speech_change_event_init.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_experiments/h_5_vcc_experiments.idl",
+            "//third_party/blink/renderer/modules/cobalt/h5vcc_memory/h_5_vcc_memory.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_metrics/h_5_vcc_metrics.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_metrics/metrics_event.idl",
             "//third_party/blink/renderer/modules/cobalt/h5vcc_native_stability/h_5_vcc_native_stability.idl",

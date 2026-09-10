@@ -72,4 +72,28 @@ IN_PROC_BROWSER_TEST_F(H5vccSystemBrowserTest, VerifySystemProperties) {
       content::EvalJs(shell()->web_contents(), check_strategy).ExtractBool());
 }
 
+IN_PROC_BROWSER_TEST_F(H5vccSystemBrowserTest, VerifyWasLowMemoryKilled) {
+  ASSERT_TRUE(embedded_test_server()->Start());
+  GURL url = embedded_test_server()->GetURL("/title1.html");
+  ASSERT_TRUE(NavigateToURL(shell()->web_contents(), url));
+
+  // Verify that wasLowMemoryKilled() exists and returns a Promise.
+  EXPECT_TRUE(
+      content::EvalJs(
+          shell()->web_contents(),
+          "typeof window.h5vcc.system.wasLowMemoryKilled === 'function'")
+          .ExtractBool());
+  EXPECT_TRUE(content::EvalJs(
+                  shell()->web_contents(),
+                  "window.h5vcc.system.wasLowMemoryKilled() instanceof Promise")
+                  .ExtractBool());
+
+  // Verify that the promise resolves to a boolean.
+  EXPECT_TRUE(content::EvalJs(
+                  shell()->web_contents(),
+                  "(async () => typeof (await "
+                  "window.h5vcc.system.wasLowMemoryKilled()) === 'boolean')()")
+                  .ExtractBool());
+}
+
 }  // namespace cobalt

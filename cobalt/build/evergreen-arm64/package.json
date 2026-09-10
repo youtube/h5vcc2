@@ -9,6 +9,7 @@
             ],
             "files": [
                 "app/cobalt/lib/libcobalt.lz4",
+                "app/cobalt/lib/libcobalt.zst",
                 "cobalt_shell.pak",
                 "gen/build_info.json",
                 "gen/licenses_cobalt.spdx",
@@ -27,6 +28,10 @@
                 {
                     "from_file": "app/cobalt/lib/libcobalt.lz4",
                     "to_file": "lib/compressed/libcobalt.lz4"
+                },
+                {
+                    "from_file": "app/cobalt/lib/libcobalt.zst",
+                    "to_file": "lib/compressed/libcobalt.zst"
                 },
                 {
                     "from_file": "gen/build_info.json",

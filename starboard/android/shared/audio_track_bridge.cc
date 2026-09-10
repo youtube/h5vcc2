@@ -267,10 +267,10 @@ int64_t AudioTrackBridge::GetAudioTimestamp(int64_t* updated_at) {
   return Java_AudioTimestamp_getFramePosition(env, j_audio_timestamp);
 }
 
-bool AudioTrackBridge::GetAndResetHasAudioDeviceChanged() {
+AudioTrack::AudioDeviceChange AudioTrackBridge::GetAndResetAudioDeviceChange() {
   JNIEnv* env = AttachCurrentThread();
-  return AudioOutputManager::GetInstance()->GetAndResetHasAudioDeviceChanged(
-      env);
+  return Java_AudioTrackBridge_getAndResetAudioDeviceChange(
+      env, j_audio_track_bridge_);
 }
 
 int AudioTrackBridge::GetUnderrunCount() {

@@ -39,8 +39,6 @@ void DecodedAudioQueue::Clear() {
 }
 
 void DecodedAudioQueue::Append(DecodedAudio&& decoded_audio) {
-  SB_DCHECK_EQ(decoded_audio.storage_type(),
-               kSbMediaAudioFrameStorageTypeInterleaved);
   // Update the |frames_| counter since we have added frames.
   frames_ += decoded_audio.frames();
   SB_CHECK_GT(frames_, 0);  // make sure it doesn't overflow.

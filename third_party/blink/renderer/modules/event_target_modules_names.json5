@@ -98,6 +98,7 @@
     "VideoDecoder",
     // TODO(cobalt, b/400518318): "Extract Cobalt event to separate file"
     "H5vccAccessibility",
+    "H5vccMemory",
     "H5vccMetrics",
     "H5vccRuntime",
     "OnScreenKeyboard",

@@ -217,6 +217,7 @@ test("cobalt_browsertests") {
   sources = [
     # TODO(b/458665232): restore browser tests in M138.
     "//cobalt/browser/cache_storage_browsertest.cc",
+    "//cobalt/browser/h5vcc_memory_browsertest.cc",
     "//cobalt/browser/h5vcc_runtime_browsertest.cc",
     "//cobalt/browser/h5vcc_system_browsertest.cc",
 
@@ -443,6 +444,7 @@ test("cobalt_browsertests") {
   if (is_starboard) {
     deps += [
       ":cobalt_shell_test_lib",
+      "//cobalt/browser/h5vcc_memory:low_memory_manager",
       "//content/test:test_support",
       "//starboard:starboard_headers_only",
     ]

@@ -120,4 +120,11 @@ void H5vccSystemImpl::HideSplashScreen() {
   StarboardBridge::GetInstance()->HideSplashScreen(env);
 }
 
+void H5vccSystemImpl::GetWasLowMemoryKilled(
+    GetWasLowMemoryKilledCallback callback) {
+  CHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  // Stubbed.
+  std::move(callback).Run(false);
+}
+
 }  // namespace h5vcc_system

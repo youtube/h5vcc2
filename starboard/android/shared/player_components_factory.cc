@@ -365,11 +365,6 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
     const auto& experimental_features =
         creation_parameters.experimental_features();
 
-    Buffer::SetPoolEnabled(
-        experimental_features.GetBool(kMediaDecodedAudioBufferPool));
-    MediaCodecVideoDecoder::SetVideoFramePoolEnabled(
-        experimental_features.GetBool(kMediaVideoFrameImplPool));
-
     if (experimental_features.GetBool(kMediaEnableAv1StartupOptimization)) {
       MediaCapabilitiesCache::GetInstance()->SetAv1OptEnabled(true);
       SB_LOG(INFO) << "`enable_av1_startup_optimization` is set to true.";
@@ -592,6 +587,9 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
           experimental_features.GetBool(kMediaPauseUsingAudioTrackState);
       SB_LOG_IF(INFO, pause_using_audio_track_state)
           << "pause_using_audio_track_state is set to true.";
+
+      AudioOutputManager::SetSeamlessAudioSwitching(
+          experimental_features.GetBool(kMediaSeamlessAudioSwitching));
 
       const bool force_platform_opus_decoder = force_platform_opus_decoder_;
       auto decoder_creator =

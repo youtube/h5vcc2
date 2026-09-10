@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "base/base_paths.h"
 #include "base/metrics/persistent_histogram_allocator.h"
 #include "base/metrics/persistent_memory_allocator.h"
 #include "base/metrics/sparse_histogram.h"
 #include "base/metrics/statistics_recorder.h"
 #include "base/no_destructor.h"
+#include "base/path_service.h"
 #include "base/run_loop.h"
 #include "base/test/metrics/histogram_tester.h"
 #include "base/test/scoped_feature_list.h"
@@ -478,6 +480,39 @@ IN_PROC_BROWSER_TEST_F(CobaltMetricsBrowserTest,
   EXPECT_TRUE(
       local_state->FindPreference(metrics::prefs::kMetricsLastSeenPrefix +
                                   std::string("BrowserStabilityMetrics")));
+}
+
+IN_PROC_BROWSER_TEST_F(CobaltMetricsBrowserTest,
+                       StabilityMetricsPidExtraction) {
+  base::FilePath base_dir;
+  bool path_ok = false;
+#if BUILDFLAG(IS_ANDROID)
+  path_ok = base::PathService::Get(base::DIR_ANDROID_APP_DATA, &base_dir);
+#else
+  path_ok = base::PathService::Get(base::DIR_TEMP, &base_dir);
+#endif
+  ASSERT_TRUE(path_ok);
+
+  base::FilePath metrics_dir = base_dir.AppendASCII("BrowserStabilityMetrics");
+
+  // Verify that a prior session file name constructed with a known PID
+  // and timestamp correctly yields the PID upon ParseFilePath.
+  base::ProcessId simulated_pid = 12345;
+  base::Time simulated_stamp = base::Time::FromTimeT(1700000000);
+  base::FilePath simulated_file =
+      base::GlobalHistogramAllocator::ConstructFilePathForUploadDir(
+          metrics_dir, "BrowserStabilityMetrics", simulated_stamp,
+          simulated_pid);
+
+  std::string parsed_name;
+  base::Time parsed_stamp;
+  base::ProcessId parsed_pid = 0;
+  EXPECT_TRUE(base::GlobalHistogramAllocator::ParseFilePath(
+      simulated_file, &parsed_name, &parsed_stamp, &parsed_pid));
+  EXPECT_EQ(parsed_name, "BrowserStabilityMetrics");
+  EXPECT_EQ(parsed_stamp.ToTimeT(), simulated_stamp.ToTimeT());
+  EXPECT_EQ(parsed_pid, simulated_pid);
+  EXPECT_GT(parsed_pid, 0);
 }
 
 }  // namespace cobalt

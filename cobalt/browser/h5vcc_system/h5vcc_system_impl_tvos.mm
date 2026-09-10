@@ -132,6 +132,13 @@ void H5vccSystemImpl::GetUserOnExitStrategy(
 
 void H5vccSystemImpl::HideSplashScreen() {}
 
+void H5vccSystemImpl::GetWasLowMemoryKilled(
+    GetWasLowMemoryKilledCallback callback) {
+  CHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  // Stubbed.
+  std::move(callback).Run(false);
+}
+
 void H5vccSystemImpl::PerformExitStrategy() {
   SbSystemRequestConceal();
 }

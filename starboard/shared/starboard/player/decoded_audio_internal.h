@@ -29,9 +29,6 @@ namespace starboard {
 class DecodedAudio {
  public:
   static DecodedAudio CreateEOSBuffer();
-  // TODO(b/272837615): Remove `storage_type` support and always store data in
-  // interleaved. Refactor the places that store sample in planar to convert the
-  // samples to interleaved on creation.
   DecodedAudio(int channels,
                SbMediaAudioSampleType sample_type,
                int64_t timestamp,
@@ -55,7 +52,6 @@ class DecodedAudio {
 
   int channels() const { return channels_; }
   SbMediaAudioSampleType sample_type() const { return sample_type_; }
-  SbMediaAudioFrameStorageType storage_type() const { return storage_type_; }
 
   bool is_end_of_stream() const { return channels_ == 0; }
   int64_t timestamp() const { return timestamp_; }
@@ -87,16 +83,13 @@ class DecodedAudio {
                                    int64_t discarded_duration_from_front,
                                    int64_t discarded_duration_from_back);
 
-  bool IsFormat(SbMediaAudioSampleType sample_type,
-                SbMediaAudioFrameStorageType storage_type) const;
-  // During format switching, this method can perform the layout/sample type
-  // conversions on-the-fly.
+  // During format switching, this method can perform sample type conversions
+  // on-the-fly.
   // Note: The `force_simd` parameter allows explicitly forcing or disabling
   // the SIMD path, which is primarily intended for unit testing different
   // execution paths. When left as `nullopt` (default), it automatically
   // resolves to the global experimental setting.
   DecodedAudio SwitchFormatTo(SbMediaAudioSampleType new_sample_type,
-                              SbMediaAudioFrameStorageType new_storage_type,
                               std::optional<bool> force_simd =
                                   std::nullopt) const SB_WARN_UNUSED_RESULT;
 
@@ -107,29 +100,16 @@ class DecodedAudio {
 
   DecodedAudio SwitchSampleTypeTo(SbMediaAudioSampleType new_sample_type,
                                   bool enable_simd) const;
-  // TODO: b/272837615 - Remove SwitchStorageTypeTo and planar format switching
-  // support once planar audio frame cleanup is completed.
-  DecodedAudio SwitchStorageTypeTo(
-      SbMediaAudioFrameStorageType new_storage_type,
-      bool enable_simd) const;
 
   // These NEON helper methods are always declared to avoid leaking platform-
   // specific preprocessor macros (like USE_NEON_FOR_AUDIO) to this header
   // file. They are only defined and called in the implementation (.cc) file
   // when NEON is enabled on the target platform.
-  bool SwitchFormatTo_NEON(SbMediaAudioSampleType new_sample_type,
-                           SbMediaAudioFrameStorageType new_storage_type,
-                           DecodedAudio* destination_audio) const;
   bool SwitchSampleTypeTo_NEON(SbMediaAudioSampleType new_sample_type,
                                DecodedAudio* destination_audio) const;
-  bool SwitchStorageTypeTo_NEON(SbMediaAudioFrameStorageType new_storage_type,
-                                DecodedAudio* destination_audio) const;
 
   int channels_;
   SbMediaAudioSampleType sample_type_;
-  // TODO: b/272837615 - Remove this member variable once cleanup is completed.
-  SbMediaAudioFrameStorageType storage_type_ =
-      kSbMediaAudioFrameStorageTypeInterleaved;
   // The timestamp of the first audio frame in microseconds.
   int64_t timestamp_;
   Buffer storage_;

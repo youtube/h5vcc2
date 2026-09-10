@@ -99,7 +99,6 @@ class AudioChannelLayoutMixerTest
                                     const float* expected_output) {
     ASSERT_EQ(output_num_of_channels, output.channels());
     ASSERT_EQ(input.sample_type(), output.sample_type());
-    ASSERT_EQ(input.storage_type(), output.storage_type());
     ASSERT_EQ(input.timestamp(), output.timestamp());
     ASSERT_EQ(input.size_in_bytes() * output.channels(),
               output.size_in_bytes() * input.channels());
@@ -134,8 +133,6 @@ class AudioChannelLayoutMixerTest
   }
 
   SbMediaAudioSampleType sample_type_;
-  SbMediaAudioFrameStorageType storage_type_ =
-      kSbMediaAudioFrameStorageTypeInterleaved;
 };
 
 std::string GetAudioChannelLayoutMixerTestConfigName(
@@ -147,7 +144,7 @@ std::string GetAudioChannelLayoutMixerTestConfigName(
 
 TEST_P(AudioChannelLayoutMixerTest, MixToMono) {
   std::unique_ptr<AudioChannelLayoutMixer> mixer =
-      AudioChannelLayoutMixer::Create(sample_type_, storage_type_, 1);
+      AudioChannelLayoutMixer::Create(sample_type_, 1);
   ASSERT_TRUE(mixer);
 
   const float kExpectedMonoToMonoOutput[] = {
@@ -186,7 +183,7 @@ TEST_P(AudioChannelLayoutMixerTest, MixToMono) {
 
 TEST_P(AudioChannelLayoutMixerTest, MixToStereo) {
   std::unique_ptr<AudioChannelLayoutMixer> mixer =
-      AudioChannelLayoutMixer::Create(sample_type_, storage_type_, 2);
+      AudioChannelLayoutMixer::Create(sample_type_, 2);
   ASSERT_TRUE(mixer);
 
   const float kExpectedMonoToStereoOutput[] = {
@@ -225,7 +222,7 @@ TEST_P(AudioChannelLayoutMixerTest, MixToStereo) {
 
 TEST_P(AudioChannelLayoutMixerTest, MixToQuad) {
   std::unique_ptr<AudioChannelLayoutMixer> mixer =
-      AudioChannelLayoutMixer::Create(sample_type_, storage_type_, 4);
+      AudioChannelLayoutMixer::Create(sample_type_, 4);
   ASSERT_TRUE(mixer);
 
   const float kExpectedMonoToQuadOutput[] = {
@@ -269,7 +266,7 @@ TEST_P(AudioChannelLayoutMixerTest, MixToQuad) {
 
 TEST_P(AudioChannelLayoutMixerTest, MixToFivePointOne) {
   std::unique_ptr<AudioChannelLayoutMixer> mixer =
-      AudioChannelLayoutMixer::Create(sample_type_, storage_type_, 6);
+      AudioChannelLayoutMixer::Create(sample_type_, 6);
   ASSERT_TRUE(mixer);
 
   const float kExpectedMonoToFivePointOneOutput[] = {

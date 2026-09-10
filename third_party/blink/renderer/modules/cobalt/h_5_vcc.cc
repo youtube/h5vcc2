@@ -18,6 +18,7 @@
 #include "third_party/blink/renderer/modules/cobalt/crash_log/crash_log.h"
 #include "third_party/blink/renderer/modules/cobalt/h5vcc_accessibility/h_5_vcc_accessibility.h"
 #include "third_party/blink/renderer/modules/cobalt/h5vcc_experiments/h_5_vcc_experiments.h"
+#include "third_party/blink/renderer/modules/cobalt/h5vcc_memory/h_5_vcc_memory.h"
 #include "third_party/blink/renderer/modules/cobalt/h5vcc_metrics/h_5_vcc_metrics.h"
 #include "third_party/blink/renderer/modules/cobalt/h5vcc_native_stability/h_5_vcc_native_stability.h"
 #include "third_party/blink/renderer/modules/cobalt/h5vcc_runtime/h_5_vcc_runtime.h"
@@ -46,6 +47,7 @@ H5vcc::H5vcc(LocalDOMWindow& window)
       crash_log_(MakeGarbageCollected<CrashLog>(window)),
       accessibility_(MakeGarbageCollected<H5vccAccessibility>(window)),
       experiments_(MakeGarbageCollected<H5vccExperiments>(window)),
+      memory_(MakeGarbageCollected<H5vccMemory>(window)),
       metrics_(MakeGarbageCollected<H5vccMetrics>(window)),
       system_(MakeGarbageCollected<H5vccSystem>(window)),
       runtime_(MakeGarbageCollected<H5vccRuntime>(window)),
@@ -58,6 +60,7 @@ void H5vcc::Trace(Visitor* visitor) const {
   visitor->Trace(crash_log_);
   visitor->Trace(accessibility_);
   visitor->Trace(experiments_);
+  visitor->Trace(memory_);
   visitor->Trace(metrics_);
   visitor->Trace(system_);
   visitor->Trace(runtime_);

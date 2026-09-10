@@ -37,7 +37,6 @@ class AdaptiveAudioDecoder : public AudioDecoder, private JobQueue::JobOwner {
       AudioDecoderCreator;
 
   typedef std::function<void(SbMediaAudioSampleType* output_sample_type,
-                             SbMediaAudioFrameStorageType* output_storage_type,
                              int* output_samples_per_second,
                              int* output_number_of_channels)>
       OutputFormatAdjustmentCallback;
@@ -75,7 +74,6 @@ class AdaptiveAudioDecoder : public AudioDecoder, private JobQueue::JobOwner {
   const AudioDecoderCreator audio_decoder_creator_;
   const OutputFormatAdjustmentCallback output_adjustment_callback_;
   SbMediaAudioSampleType output_sample_type_;
-  SbMediaAudioFrameStorageType output_storage_type_;
   int output_samples_per_second_;
   int output_number_of_channels_;
   AudioStreamInfo input_audio_stream_info_;

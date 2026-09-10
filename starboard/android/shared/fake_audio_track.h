@@ -48,7 +48,7 @@ class FakeAudioTrack : public AudioTrack {
   void SetVolume(double volume) override;
 
   int64_t GetAudioTimestamp(int64_t* updated_at) override;
-  bool GetAndResetHasAudioDeviceChanged() override;
+  AudioDeviceChange GetAndResetAudioDeviceChange() override;
   int GetUnderrunCount() override;
   int GetStartThresholdInFrames() override;
   PlayState GetPlayState() override;
@@ -59,7 +59,9 @@ class FakeAudioTrack : public AudioTrack {
   double playback_rate() const;
   double volume() const;
   PlayState play_state() const;
+  int pause_and_flush_count() const;
   void set_consumed_frames(int64_t consumed);
+  void simulate_device_change(AudioDeviceChange change);
   void simulate_device_change(bool changed);
   void set_underrun_count(int count);
   void set_write_error(int error_code);
@@ -70,11 +72,12 @@ class FakeAudioTrack : public AudioTrack {
 
   mutable std::mutex mutex_;
   PlayState play_state_ = PlayState::kStopped;
+  int pause_and_flush_count_ = 0;
   int64_t written_frames_ = 0;
   int64_t consumed_frames_ = 0;
   double playback_rate_ = 1.0;
   double volume_ = 1.0;
-  bool device_changed_ = false;
+  AudioDeviceChange device_change_ = AudioDeviceChange::kNone;
   int underrun_count_ = 0;
   int start_threshold_ = 1024;
   int write_error_code_ = 0;

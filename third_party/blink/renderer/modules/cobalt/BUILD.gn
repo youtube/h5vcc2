@@ -27,6 +27,7 @@ blink_modules_sources("h_5_vcc") {
     "//third_party/blink/renderer/modules/cobalt/crash_log",
     "//third_party/blink/renderer/modules/cobalt/h5vcc_accessibility",
     "//third_party/blink/renderer/modules/cobalt/h5vcc_experiments",
+    "//third_party/blink/renderer/modules/cobalt/h5vcc_memory",
     "//third_party/blink/renderer/modules/cobalt/h5vcc_metrics",
     "//third_party/blink/renderer/modules/cobalt/h5vcc_native_stability",
     "//third_party/blink/renderer/modules/cobalt/h5vcc_runtime",

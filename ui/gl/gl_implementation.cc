@@ -520,8 +520,15 @@ gfx::ExtensionSet GetRequestableGLExtensionsFromCurrentContext() {
 
 gfx::ExtensionSet GetRequestableGLExtensionsFromCurrentContext(GLApi* api) {
 #if BUILDFLAG(IS_COBALT)
-  if (!api || GetGLImplementation() != kGLImplementationEGLANGLE)
+  if (!api)
     return gfx::ExtensionSet();
+
+  const char* renderer_str =
+      reinterpret_cast<const char*>(api->glGetStringFn(GL_RENDERER));
+  if (!renderer_str ||
+      !base::StartsWith(renderer_str, "ANGLE", base::CompareCase::SENSITIVE)) {
+    return gfx::ExtensionSet();
+  }
 #endif
   return GetGLExtensionsFromCurrentContext(api,
                                            GL_REQUESTABLE_EXTENSIONS_ANGLE);

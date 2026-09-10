@@ -16,6 +16,7 @@
     "H5vccSchemeURLLoaderFactoryBrowserTest.*",
     "H5vccSchemeURLLoaderFactoryCacheBrowserTest.*",
     "H5vccRuntimeBrowserTest.*",
+    "H5vccMemoryBrowserTest.*",
     "H5vccSystemBrowserTest.*",
     "CobaltMetricsBrowserTest.*",
     "GranularMemoryBrowsertest.*",

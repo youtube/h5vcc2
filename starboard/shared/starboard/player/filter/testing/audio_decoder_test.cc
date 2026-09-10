@@ -66,8 +66,6 @@ DecodedAudio ConsolidateDecodedAudios(
   for (const auto& decoded_audio : decoded_audios) {
     SB_DCHECK_EQ(decoded_audio.channels(), channels);
     SB_DCHECK_EQ(decoded_audio.sample_type(), sample_type);
-    SB_DCHECK_EQ(decoded_audio.storage_type(),
-                 kSbMediaAudioFrameStorageTypeInterleaved);
     total_size_in_bytes += decoded_audio.size_in_bytes();
   }
 
@@ -826,8 +824,6 @@ TEST_P(AudioDecoderTest, PartialAudio) {
 
     ASSERT_EQ(reference_decoded_audio.sample_type(),
               partial_decoded_audio.sample_type());
-    ASSERT_EQ(reference_decoded_audio.storage_type(),
-              partial_decoded_audio.storage_type());
     ASSERT_GT(reference_decoded_audio.frames(), partial_decoded_audio.frames());
 
     auto bytes_per_frame = reference_decoded_audio.size_in_bytes() /

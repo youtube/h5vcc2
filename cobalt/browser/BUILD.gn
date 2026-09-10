@@ -36,6 +36,8 @@ source_set("browser") {
     "h5vcc_settings_impl.h",
     "memory_ablation.cc",
     "memory_ablation.h",
+    "metrics/cobalt_stability_metrics_helper.cc",
+    "metrics/cobalt_stability_metrics_helper.h",
   ]
 
   if (is_androidtv) {
@@ -53,6 +55,7 @@ source_set("browser") {
   }
 
   public_deps = [
+    "//cobalt/browser/h5vcc_memory",
     "//cobalt/browser/h5vcc_metrics",
     "//cobalt/browser/h5vcc_runtime",
     "//cobalt/browser/lifecycle",
@@ -73,6 +76,8 @@ source_set("browser") {
     "//cobalt/browser/h5vcc_accessibility/public/mojom",
     "//cobalt/browser/h5vcc_experiments",
     "//cobalt/browser/h5vcc_experiments/public/mojom",
+    "//cobalt/browser/h5vcc_memory",
+    "//cobalt/browser/h5vcc_memory/public/mojom",
     "//cobalt/browser/h5vcc_metrics/public/mojom",
     "//cobalt/browser/h5vcc_native_stability",
     "//cobalt/browser/h5vcc_native_stability/public/mojom",
@@ -119,6 +124,7 @@ source_set("browser") {
     deps += [
       "//cobalt/android:jni_headers",
       "//cobalt/android:pip_jni_headers",
+      "//components/crash/content/browser",
       "//components/embedder_support/android:web_contents_delegate",
       "//components/thin_webview",
       "//components/thin_webview/internal",

@@ -76,7 +76,7 @@ class NdkAudioTrack final : public AudioTrack {
   void SetVolume(double volume) override;
 
   int64_t GetAudioTimestamp(int64_t* updated_at) override;
-  bool GetAndResetHasAudioDeviceChanged() override;
+  AudioDeviceChange GetAndResetAudioDeviceChange() override;
   int GetUnderrunCount() override;
   int GetStartThresholdInFrames() override;
   PlayState GetPlayState() override;

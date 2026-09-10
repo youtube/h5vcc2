@@ -95,5 +95,5 @@ document provides an overview of Starboard's compliance test suite.
 Developers can use the setup instructions for
 [Linux](development/setup-linux.md),
 [RDK](development/setup-rdk.md), or
-[Android](development/setup-android.md) to set up their Cobalt development
+[AOSP](development/setup-aosp.md) to set up their Cobalt development
 environment, clone the repository, and build a binary.

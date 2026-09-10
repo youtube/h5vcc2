@@ -113,9 +113,9 @@ EOF
   # Build Cobalt.
   local out_dir="${WORKSPACE_COBALT}/out/${TARGET_PLATFORM}_${CONFIG}"
 
-  # Extract test targets from JSON for non-nightly (e.g. presubmit) builds.
+  # Extract test targets from JSON for non-release configs (e.g. devel).
   local json_targets=""
-  if ! is_nightly_build; then
+  if ! is_release_config; then
     local test_targets_json="${WORKSPACE_COBALT}/cobalt/build/testing/targets/${TARGET_PLATFORM}/test_targets.json"
     if [[ -f "${test_targets_json}" ]]; then
       # Extract test targets from the JSON file (list of dicts schema)

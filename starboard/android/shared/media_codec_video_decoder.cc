@@ -46,7 +46,6 @@
 #include "starboard/shared/starboard/media/media_tracing.h"
 #include "starboard/shared/starboard/media/mime_type.h"
 #include "starboard/shared/starboard/player/filter/video_frame_internal.h"
-#include "starboard/shared/starboard/player/pooled_allocator.h"
 #include "third_party/jni_zero/jni_zero.h"
 
 namespace starboard {
@@ -57,31 +56,9 @@ using jni_zero::JavaRef;
 using std::placeholders::_1;
 using std::placeholders::_2;
 
-std::atomic<PooledAllocator*> g_video_allocator_ptr{nullptr};
-std::atomic<bool> g_video_frame_pool_enabled{false};
-
-PooledAllocator* GetVideoFrameAllocator();
-
 class VideoFrameImpl final : public VideoFrame {
  public:
   typedef std::function<void()> VideoFrameReleaseCallback;
-
-  void* operator new(size_t size) {
-    if (g_video_frame_pool_enabled.load(std::memory_order_relaxed)) {
-      return GetVideoFrameAllocator()->Allocate(size);
-    }
-    return ::operator new(size);
-  }
-
-  void operator delete(void* ptr) {
-    PooledAllocator* allocator =
-        g_video_allocator_ptr.load(std::memory_order_acquire);
-    if (allocator) {
-      allocator->Free(ptr);
-    } else {
-      ::operator delete(ptr);
-    }
-  }
 
   VideoFrameImpl(const DequeueOutputResult& dequeue_output_result,
                  MediaCodec* media_codec_bridge,
@@ -146,23 +123,6 @@ constexpr int kDefaultMaxPendingInputsSize = 128;
 constexpr int kVideoFrameTrackerMargin = 100;
 
 const int kFpsGuesstimateRequiredInputBufferCount = 3;
-
-// kPoolSize (20) is chosen to accommodate the maximum number of video frames
-// that can be in-flight concurrently in the decoder and renderer pipeline.
-// This is a safe margin to avoid fallback to heap allocation (peak observed:
-// 9).
-constexpr size_t kPoolSize = 20;
-
-PooledAllocator* GetVideoFrameAllocator() {
-  static PooledAllocator* allocator_ptr = [] {
-    static NoDestructor<PooledAllocator> allocator(
-        "VideoFramePool", sizeof(VideoFrameImpl), kPoolSize);
-    PooledAllocator* a = allocator.get();
-    g_video_allocator_ptr.store(a, std::memory_order_release);
-    return a;
-  }();
-  return allocator_ptr;
-}
 
 void StubDrmSessionUpdateRequestFunc(SbDrmSystem drm_system,
                                      void* context,
@@ -341,11 +301,6 @@ MediaCodecVideoDecoder::CreateInternal(
   }
   return video_decoder;
 }
-// static
-void MediaCodecVideoDecoder::SetVideoFramePoolEnabled(bool enabled) {
-  g_video_frame_pool_enabled.store(enabled, std::memory_order_relaxed);
-}
-
 MediaCodecVideoDecoder::MediaCodecVideoDecoder(
     PassKey<MediaCodecVideoDecoder>,
     std::unique_ptr<MediaCodec::Factory> media_codec_factory,

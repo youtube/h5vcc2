@@ -45,6 +45,13 @@ class AudioTrack {
     kPlaying = 3,
   };
 
+  // GENERATED_JAVA_ENUM_PACKAGE: dev.cobalt.media
+  enum class AudioDeviceChange {
+    kNone,
+    kResetAndContinue,  // Seamless: flush & re-feed without destroying player
+    kRestartPlayer,     // Capability changed: tear down player & recreate
+  };
+
   // The maximum number of frames that can be written to android audio track per
   // write request.
   static constexpr int kMaxFramesPerRequest = 65'536;
@@ -88,11 +95,13 @@ class AudioTrack {
   // |updated_at| contains the timestamp when the audio timestamp is updated on
   // return.  It can be nullptr.
   virtual int64_t GetAudioTimestamp(int64_t* updated_at) = 0;
-  virtual bool GetAndResetHasAudioDeviceChanged() = 0;
+  virtual AudioDeviceChange GetAndResetAudioDeviceChange() = 0;
   virtual int GetUnderrunCount() = 0;
   virtual int GetStartThresholdInFrames() = 0;
   virtual PlayState GetPlayState() = 0;
 };
+
+using AudioDeviceChange = AudioTrack::AudioDeviceChange;
 
 }  // namespace starboard
 

@@ -568,7 +568,6 @@ void AudioRendererPcm::UpdateVariablesOnSinkThread_Locked(
 
 void AudioRendererPcm::OnFirstOutput(
     const SbMediaAudioSampleType decoded_sample_type,
-    const SbMediaAudioFrameStorageType decoded_storage_type,
     const int decoded_sample_rate) {
   SB_CHECK(BelongsToCurrentThread());
   SB_DCHECK(!decoder_sample_rate_);
@@ -667,8 +666,7 @@ void AudioRendererPcm::ProcessAudioData() {
         decoded_audio->AdjustForSeekTime(decoded_audio_sample_rate,
                                          seeking_to_time_);
       }
-      OnFirstOutput(decoded_audio->sample_type(), decoded_audio->storage_type(),
-                    decoded_audio_sample_rate);
+      OnFirstOutput(decoded_audio->sample_type(), decoded_audio_sample_rate);
     }
     SB_DCHECK(resampler_);
 
@@ -699,14 +697,10 @@ void AudioRendererPcm::ProcessAudioData() {
     }
 
     if (resampled_audio && resampled_audio->size_in_bytes() > 0) {
-      // |time_stretcher_| only support kSbMediaAudioSampleTypeFloat32 and
-      // kSbMediaAudioFrameStorageTypeInterleaved.
-      if (!resampled_audio->IsFormat(
-              kSbMediaAudioSampleTypeFloat32,
-              kSbMediaAudioFrameStorageTypeInterleaved)) {
-        resampled_audio = resampled_audio->SwitchFormatTo(
-            kSbMediaAudioSampleTypeFloat32,
-            kSbMediaAudioFrameStorageTypeInterleaved);
+      // |time_stretcher_| only support kSbMediaAudioSampleTypeFloat32.
+      if (resampled_audio->sample_type() != kSbMediaAudioSampleTypeFloat32) {
+        resampled_audio =
+            resampled_audio->SwitchFormatTo(kSbMediaAudioSampleTypeFloat32);
       }
       time_stretcher_.EnqueueBuffer(std::move(*resampled_audio));
     }
@@ -781,12 +775,9 @@ bool AudioRendererPcm::AppendAudioToFrameBuffer(bool* is_frame_buffer_full) {
                                    adjusted_playback_rate);
   }
 
-  // |time_stretcher_| only support kSbMediaAudioSampleTypeFloat32 and
-  // kSbMediaAudioFrameStorageTypeInterleaved.
-  if (!decoded_audio.IsFormat(sink_sample_type_,
-                              kSbMediaAudioFrameStorageTypeInterleaved)) {
-    decoded_audio = decoded_audio.SwitchFormatTo(
-        sink_sample_type_, kSbMediaAudioFrameStorageTypeInterleaved);
+  // |time_stretcher_| only support kSbMediaAudioSampleTypeFloat32.
+  if (decoded_audio.sample_type() != sink_sample_type_) {
+    decoded_audio = decoded_audio.SwitchFormatTo(sink_sample_type_);
   }
   const uint8_t* source_buffer = decoded_audio.data();
   int frames_to_append = decoded_audio.frames();

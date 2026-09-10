@@ -18,11 +18,13 @@
 #include <utility>
 
 #include "starboard/android/shared/audio_decoder_passthrough.h"
+#include "starboard/android/shared/media_capabilities_cache.h"
 #include "starboard/android/shared/media_codec_audio_decoder.h"
 #include "starboard/common/check_op.h"
 #include "starboard/common/string.h"
 #include "starboard/common/thread_options.h"
 #include "starboard/common/time.h"
+#include "starboard/shared/starboard/media/mime_supportability_cache.h"
 #include "third_party/jni_zero/jni_zero.h"
 
 namespace starboard {
@@ -471,11 +473,14 @@ void AudioRendererPassthrough::UpdateStatusAndWriteData(
   SB_DCHECK(error_cb_);
   SB_DCHECK(audio_track_bridge_);
 
-  if (audio_track_bridge_->GetAndResetHasAudioDeviceChanged()) {
+  // Encoded passthrough bitstreams (e.g. AC3/E-AC3) cannot be seamlessly routed
+  // across different sinks (e.g. Bluetooth or built-in speakers), so any device
+  // change requires recreating the player to renegotiate audio capabilities.
+  if (audio_track_bridge_->GetAndResetAudioDeviceChange() !=
+      AudioDeviceChange::kNone) {
     SB_LOG(INFO) << "Audio device changed, raising a capability changed error "
                     "to restart playback.";
-    error_cb_(kSbPlayerErrorCapabilityChanged,
-              "Audio device capability changed");
+    ReportCapabilityChanged();
     audio_track_bridge_->PauseAndFlush();
     return;
   }
@@ -551,8 +556,7 @@ void AudioRendererPassthrough::UpdateStatusAndWriteData(
           SB_LOG(INFO)
               << "Write error for dead audio track, audio device capability "
                  "has likely changed. Restarting playback.";
-          error_cb_(kSbPlayerErrorCapabilityChanged,
-                    "Audio device capability changed");
+          ReportCapabilityChanged();
         } else {
           // `kSbPlayerErrorDecode` is used for general SbPlayer error, there is
           // no error code corresponding to audio sink.
@@ -607,6 +611,14 @@ void AudioRendererPassthrough::UpdateStatusAndWriteData(
       std::bind(&AudioRendererPassthrough::UpdateStatusAndWriteData, this,
                 current_state),
       fully_written ? 0 : kAudioTrackUpdateInternal);
+}
+
+void AudioRendererPassthrough::ReportCapabilityChanged() {
+  // Invalidate caches so subsequent isTypeSupported() queries see live state.
+  MediaCapabilitiesCache::GetInstance()->ClearCache();
+  MimeSupportabilityCache::GetInstance()->ClearCachedMimeSupportabilities();
+
+  error_cb_(kSbPlayerErrorCapabilityChanged, "Audio device capability changed");
 }
 
 // This function can be called from *any* threads.

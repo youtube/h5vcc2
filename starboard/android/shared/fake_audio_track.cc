@@ -50,6 +50,7 @@ void FakeAudioTrack::PauseAndFlush() {
   play_state_ = PlayState::kPaused;
   written_frames_ = 0;
   consumed_frames_ = 0;
+  ++pause_and_flush_count_;
 }
 
 int FakeAudioTrack::WriteSample(Span<const float> samples) {
@@ -104,11 +105,11 @@ int64_t FakeAudioTrack::GetAudioTimestamp(int64_t* updated_at) {
   return consumed_frames_;
 }
 
-bool FakeAudioTrack::GetAndResetHasAudioDeviceChanged() {
+AudioTrack::AudioDeviceChange FakeAudioTrack::GetAndResetAudioDeviceChange() {
   std::lock_guard lock(mutex_);
-  bool changed = device_changed_;
-  device_changed_ = false;
-  return changed;
+  AudioDeviceChange change = device_change_;
+  device_change_ = AudioDeviceChange::kNone;
+  return change;
 }
 
 int FakeAudioTrack::GetUnderrunCount() {
@@ -151,14 +152,24 @@ AudioTrack::PlayState FakeAudioTrack::play_state() const {
   return play_state_;
 }
 
+int FakeAudioTrack::pause_and_flush_count() const {
+  std::lock_guard lock(mutex_);
+  return pause_and_flush_count_;
+}
+
 void FakeAudioTrack::set_consumed_frames(int64_t consumed) {
   std::lock_guard lock(mutex_);
   consumed_frames_ = consumed;
 }
 
-void FakeAudioTrack::simulate_device_change(bool changed) {
+void FakeAudioTrack::simulate_device_change(AudioDeviceChange change) {
   std::lock_guard lock(mutex_);
-  device_changed_ = changed;
+  device_change_ = change;
+}
+
+void FakeAudioTrack::simulate_device_change(bool changed) {
+  simulate_device_change(changed ? AudioDeviceChange::kRestartPlayer
+                                 : AudioDeviceChange::kNone);
 }
 
 void FakeAudioTrack::set_underrun_count(int count) {

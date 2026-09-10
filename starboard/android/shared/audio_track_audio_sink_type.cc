@@ -282,28 +282,44 @@ void AudioTrackAudioSink::AudioThreadFunc() {
   bool release_frames_after_audio_starts = false;
 #endif
 
+  auto reset_and_flush = [&]() {
+    audio_track_->PauseAndFlush();
+    frames_in_audio_track = 0;
+    // Set to -1 to ignore the first playback head position read after a
+    // flush. This avoids using a stale value from before the reset, which
+    // could lead to incorrect frame consumption calculations.
+    last_playback_head_position = -1;
+    last_playback_head_event_at = -1;
+    is_flushed_ = true;
+  };
+
   while (!quit_) {
     if (flush_requested_) {
-      audio_track_->PauseAndFlush();
-      frames_in_audio_track = 0;
+      reset_and_flush();
       accumulated_written_frames = 0;
-      last_playback_head_event_at = -1;
-      // Set to -1 to ignore the first playback head position read after a
-      // flush. This avoids using a stale value from before the reset, which
-      // could lead to incorrect frame consumption calculations.
-      last_playback_head_position = -1;
-      is_flushed_ = true;
       flush_requested_ = false;
       continue;
     }
 
     int64_t playback_head_position = 0;
     int64_t frames_consumed_at = 0;
-    if (audio_track_->GetAndResetHasAudioDeviceChanged()) {
+    AudioDeviceChange device_change =
+        audio_track_->GetAndResetAudioDeviceChange();
+    if (device_change == AudioDeviceChange::kRestartPlayer) {
       SB_LOG(INFO) << "Audio device changed, raising a capability changed "
                       "error to restart playback.";
       ReportError(true, "Audio device capability changed");
       break;
+    }
+    if (device_change == AudioDeviceChange::kResetAndContinue) {
+      SB_LOG(INFO) << "Seamless audio device changed, resetting audio track "
+                      "and sink buffer.";
+      // On seamless route switches (e.g., 2-ch speaker <-> Bluetooth), flush
+      // queued audio to reset timestamps and latency. Unconsumed frames in the
+      // buffer will be re-fed on the next iteration when playback resumes.
+      reset_and_flush();
+      was_playing = false;
+      continue;
     }
 
     if (pause_using_audio_track_state_) {

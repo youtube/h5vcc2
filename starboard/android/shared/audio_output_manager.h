@@ -27,6 +27,8 @@ namespace starboard {
 
 class AudioOutputManager {
  public:
+  static void SetSeamlessAudioSwitching(bool enable);
+
   // Returns the singleton.
   static AudioOutputManager* GetInstance();
 
@@ -56,8 +58,6 @@ class AudioOutputManager {
                                SbMediaAudioSampleType sample_type,
                                int channels,
                                int sampling_frequency_hz);
-
-  bool GetAndResetHasAudioDeviceChanged(JNIEnv* env);
 
   std::optional<int> GenerateTunnelModeAudioSessionId(JNIEnv* env,
                                                       int numberOfChannels);

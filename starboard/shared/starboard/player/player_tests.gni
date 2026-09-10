@@ -17,5 +17,4 @@ player_tests_sources = [
   "//starboard/shared/starboard/player/decoded_audio_test_internal.cc",
   "//starboard/shared/starboard/player/job_queue_test.cc",
   "//starboard/shared/starboard/player/job_thread_test.cc",
-  "//starboard/shared/starboard/player/pooled_allocator_test.cc",
 ]

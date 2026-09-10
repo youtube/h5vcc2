@@ -149,7 +149,6 @@ class AudioRendererPcm : public AudioRenderer,
       int64_t system_time_on_consume_frames);
 
   void OnFirstOutput(const SbMediaAudioSampleType decoded_sample_type,
-                     const SbMediaAudioFrameStorageType decoded_storage_type,
                      const int decoded_sample_rate);
   bool IsEndOfStreamPlayed_Locked() const;
 

@@ -71,7 +71,6 @@ DecodedAudio DecodedAudio::CreateEOSBuffer() {
 DecodedAudio::DecodedAudio()
     : channels_(0),
       sample_type_(kSbMediaAudioSampleTypeInt16Deprecated),
-      storage_type_(kSbMediaAudioFrameStorageTypeInterleaved),
       timestamp_(0),
       offset_in_bytes_(0),
       size_in_bytes_(0) {}
@@ -114,7 +113,6 @@ DecodedAudio::DecodedAudio(int channels,
 DecodedAudio::DecodedAudio(DecodedAudio&& other) noexcept
     : channels_(std::exchange(other.channels_, 0)),
       sample_type_(other.sample_type_),
-      storage_type_(other.storage_type_),
       timestamp_(std::exchange(other.timestamp_, 0)),
       storage_(std::move(other.storage_)),
       offset_in_bytes_(std::exchange(other.offset_in_bytes_, 0)),
@@ -127,7 +125,6 @@ DecodedAudio& DecodedAudio::operator=(DecodedAudio&& other) noexcept {
 
   channels_ = std::exchange(other.channels_, 0);
   sample_type_ = other.sample_type_;
-  storage_type_ = other.storage_type_;
   timestamp_ = std::exchange(other.timestamp_, 0);
   storage_ = std::move(other.storage_);
   offset_in_bytes_ = std::exchange(other.offset_in_bytes_, 0);
@@ -170,31 +167,11 @@ void DecodedAudio::AdjustForSeekTime(int sample_rate, int64_t seeking_to_time) {
   const auto bytes_per_sample = GetBytesPerSample(sample_type_);
   const auto bytes_per_frame = bytes_per_sample * channels();
 
-  if (storage_type_ == kSbMediaAudioFrameStorageTypeInterleaved) {
+  if (frames_to_skip > 0) {
     offset_in_bytes_ += frames_to_skip * bytes_per_frame;
     size_in_bytes_ -= frames_to_skip * bytes_per_frame;
     timestamp_ += AudioFramesToDuration(frames_to_skip, sample_rate);
-    return;
   }
-
-  SB_DCHECK_EQ(storage_type_, kSbMediaAudioFrameStorageTypePlanar);
-
-  Buffer new_storage(size_in_bytes_ - frames_to_skip * bytes_per_frame);
-  const auto new_frames = frames() - frames_to_skip;
-
-  const uint8_t* source_addr = data();
-  uint8_t* dest_addr = new_storage.data();
-  for (int channel = 0; channel < channels(); ++channel) {
-    memcpy(dest_addr, source_addr + bytes_per_sample * frames_to_skip,
-           new_frames * bytes_per_frame);
-    source_addr += frames() * bytes_per_sample;
-    dest_addr += new_frames * bytes_per_sample;
-  }
-
-  storage_ = std::move(new_storage);
-  timestamp_ += AudioFramesToDuration(frames_to_skip, sample_rate);
-  offset_in_bytes_ = 0;
-  size_in_bytes_ = new_frames * bytes_per_frame;
 }
 
 void DecodedAudio::AdjustForDiscardedDurations(
@@ -211,7 +188,6 @@ void DecodedAudio::AdjustForDiscardedDurations(
                     << discarded_duration_from_back << ". Setting to 0.";
     discarded_duration_from_back = 0;
   }
-  SB_DCHECK_EQ(storage_type(), kSbMediaAudioFrameStorageTypeInterleaved);
 
   if (discarded_duration_from_front == 0 && discarded_duration_from_back == 0) {
     return;
@@ -236,103 +212,19 @@ void DecodedAudio::AdjustForDiscardedDurations(
   size_in_bytes_ -= bytes_per_frame * discarded_frames_from_back;
 }
 
-bool DecodedAudio::IsFormat(SbMediaAudioSampleType sample_type,
-                            SbMediaAudioFrameStorageType storage_type) const {
-  return sample_type_ == sample_type && storage_type_ == storage_type;
-}
-
 DecodedAudio DecodedAudio::SwitchFormatTo(
     SbMediaAudioSampleType new_sample_type,
-    SbMediaAudioFrameStorageType new_storage_type,
-    std::optional<bool> force_simd) const {
-  // The caller should call IsFormat() to check before calling SwitchFormatTo(),
+    [[maybe_unused]] std::optional<bool> force_simd) const {
+  // The caller should check sample type before calling SwitchFormatTo(),
   // as SwitchFormatTo() always copies the whole buffer and is not optimal.
-  SB_DCHECK(new_sample_type != sample_type_ ||
-            new_storage_type != storage_type_);
+  SB_DCHECK_NE(new_sample_type, sample_type_);
 
   bool enable_simd = false;
 #if defined(USE_NEON_FOR_AUDIO)
   enable_simd = force_simd.value_or(GetSimdBasedAudioFormatSwitchingSetting());
 #endif  // defined(USE_NEON_FOR_AUDIO)
 
-  if (new_storage_type == storage_type_) {
-    return SwitchSampleTypeTo(new_sample_type, enable_simd);
-  }
-
-  if (new_sample_type == sample_type_) {
-    return SwitchStorageTypeTo(new_storage_type, enable_simd);
-  }
-
-  // Both sample types and storage types are different, use the slowest way.
-  int new_size = GetBytesPerSample(new_sample_type) * frames() * channels();
-  DecodedAudio new_decoded_audio(channels(), new_sample_type, timestamp(),
-                                 new_size);
-
-#if defined(USE_NEON_FOR_AUDIO)
-  if (enable_simd && channels() == 2 && IsAligned(frames(), 8)) {
-    if (SwitchFormatTo_NEON(new_sample_type, new_storage_type,
-                            &new_decoded_audio)) {
-      return new_decoded_audio;
-    }
-    SB_LOG(WARNING) << "SIMD format switching requested and aligned, but not "
-                       "implemented in NEON for "
-                    << GetMediaAudioSampleTypeName(sample_type_) << " ("
-                    << GetMediaAudioStorageTypeName(storage_type_) << ") -> "
-                    << GetMediaAudioSampleTypeName(new_sample_type) << " ("
-                    << GetMediaAudioStorageTypeName(new_storage_type)
-                    << "). Falling back to C++ scalar.";
-  }
-#endif  // USE_NEON_FOR_AUDIO
-
-#define InterleavedSampleAddr(start_addr, channel, frame) \
-  (start_addr + (frame * channels() + channel))
-#define PlanarSampleAddr(start_addr, channel, frame) \
-  (start_addr + (channel * frames() + frame))
-#define GetSampleAddr(StorageType, start_addr, channel, frame) \
-  (StorageType##SampleAddr(start_addr, channel, frame))
-#define SwitchTo(OldSampleType, OldStorageType, NewSampleType, NewStorageType) \
-  do {                                                                         \
-    const OldSampleType* old_samples =                                         \
-        reinterpret_cast<const OldSampleType*>(this->data());                  \
-    NewSampleType* new_samples =                                               \
-        reinterpret_cast<NewSampleType*>(new_decoded_audio.data());            \
-                                                                               \
-    for (int channel = 0; channel < channels(); ++channel) {                   \
-      for (int frame = 0; frame < frames(); ++frame) {                         \
-        const OldSampleType* old_sample =                                      \
-            GetSampleAddr(OldStorageType, old_samples, channel, frame);        \
-        NewSampleType* new_sample =                                            \
-            GetSampleAddr(NewStorageType, new_samples, channel, frame);        \
-        ConvertSample(old_sample, new_sample);                                 \
-      }                                                                        \
-    }                                                                          \
-  } while (false)
-
-  if (sample_type_ == kSbMediaAudioSampleTypeInt16Deprecated &&
-      storage_type_ == kSbMediaAudioFrameStorageTypeInterleaved &&
-      new_sample_type == kSbMediaAudioSampleTypeFloat32 &&
-      new_storage_type == kSbMediaAudioFrameStorageTypePlanar) {
-    SwitchTo(int16_t, Interleaved, float, Planar);
-  } else if (sample_type_ == kSbMediaAudioSampleTypeInt16Deprecated &&
-             storage_type_ == kSbMediaAudioFrameStorageTypePlanar &&
-             new_sample_type == kSbMediaAudioSampleTypeFloat32 &&
-             new_storage_type == kSbMediaAudioFrameStorageTypeInterleaved) {
-    SwitchTo(int16_t, Planar, float, Interleaved);
-  } else if (sample_type_ == kSbMediaAudioSampleTypeFloat32 &&
-             storage_type_ == kSbMediaAudioFrameStorageTypeInterleaved &&
-             new_sample_type == kSbMediaAudioSampleTypeInt16Deprecated &&
-             new_storage_type == kSbMediaAudioFrameStorageTypePlanar) {
-    SwitchTo(float, Interleaved, int16_t, Planar);
-  } else if (sample_type_ == kSbMediaAudioSampleTypeFloat32 &&
-             storage_type_ == kSbMediaAudioFrameStorageTypePlanar &&
-             new_sample_type == kSbMediaAudioSampleTypeInt16Deprecated &&
-             new_storage_type == kSbMediaAudioFrameStorageTypeInterleaved) {
-    SwitchTo(float, Planar, int16_t, Interleaved);
-  } else {
-    SB_NOTREACHED();
-  }
-
-  return new_decoded_audio;
+  return SwitchSampleTypeTo(new_sample_type, enable_simd);
 }
 
 DecodedAudio DecodedAudio::CloneForTesting() const {
@@ -391,52 +283,6 @@ DecodedAudio DecodedAudio::SwitchSampleTypeTo(
   return new_decoded_audio;
 }
 
-// TODO: b/272837615 - Remove SwitchStorageTypeTo and planar format switching
-// support once planar audio frame cleanup is completed.
-DecodedAudio DecodedAudio::SwitchStorageTypeTo(
-    SbMediaAudioFrameStorageType new_storage_type,
-    bool enable_simd) const {
-  DecodedAudio new_decoded_audio(channels(), sample_type(), timestamp(),
-                                 size_in_bytes());
-  int bytes_per_sample = GetBytesPerSample(sample_type());
-  const uint8_t* old_samples = this->data();
-  uint8_t* new_samples = new_decoded_audio.data();
-
-#if defined(USE_NEON_FOR_AUDIO)
-  if (enable_simd && channels() == 2 && IsAligned(frames(), 8)) {
-    if (SwitchStorageTypeTo_NEON(new_storage_type, &new_decoded_audio)) {
-      return new_decoded_audio;
-    }
-  }
-#endif  // USE_NEON_FOR_AUDIO
-
-  if (storage_type_ == kSbMediaAudioFrameStorageTypeInterleaved &&
-      new_storage_type == kSbMediaAudioFrameStorageTypePlanar) {
-    for (int channel = 0; channel < channels(); ++channel) {
-      for (int frame = 0; frame < frames(); ++frame) {
-        const uint8_t* old_sample =
-            old_samples + (frame * channels() + channel) * bytes_per_sample;
-        uint8_t* new_sample =
-            new_samples + (channel * frames() + frame) * bytes_per_sample;
-        memcpy(new_sample, old_sample, bytes_per_sample);
-      }
-    }
-  } else if (storage_type_ == kSbMediaAudioFrameStorageTypePlanar &&
-             new_storage_type == kSbMediaAudioFrameStorageTypeInterleaved) {
-    for (int channel = 0; channel < channels(); ++channel) {
-      for (int frame = 0; frame < frames(); ++frame) {
-        const uint8_t* old_sample =
-            old_samples + (channel * frames() + frame) * bytes_per_sample;
-        uint8_t* new_sample =
-            new_samples + (frame * channels() + channel) * bytes_per_sample;
-        memcpy(new_sample, old_sample, bytes_per_sample);
-      }
-    }
-  }
-
-  return new_decoded_audio;
-}
-
 bool operator==(const DecodedAudio& left, const DecodedAudio& right) {
   if (left.is_end_of_stream() && right.is_end_of_stream()) {
     return true;
@@ -448,7 +294,6 @@ bool operator==(const DecodedAudio& left, const DecodedAudio& right) {
   return left.timestamp() == right.timestamp() &&
          left.channels() == right.channels() &&
          left.sample_type() == right.sample_type() &&
-         left.storage_type() == right.storage_type() &&
          left.size_in_bytes() == right.size_in_bytes() &&
          memcmp(left.data(), right.data(), right.size_in_bytes()) == 0;
 }
@@ -464,104 +309,10 @@ std::ostream& operator<<(std::ostream& os, const DecodedAudio& decoded_audio) {
   return os << "timestamp: " << decoded_audio.timestamp()
             << ", channels: " << decoded_audio.channels() << ", sample type: "
             << GetMediaAudioSampleTypeName(decoded_audio.sample_type())
-            << ", storage type: "
-            << GetMediaAudioStorageTypeName(decoded_audio.storage_type())
             << ", frames: " << decoded_audio.frames();
 }
 
 #if defined(USE_NEON_FOR_AUDIO)
-bool DecodedAudio::SwitchFormatTo_NEON(
-    SbMediaAudioSampleType new_sample_type,
-    SbMediaAudioFrameStorageType new_storage_type,
-    DecodedAudio* destination_audio) const {
-  SB_DCHECK_EQ(channels(), 2);
-  SB_DCHECK_EQ(frames() % 8, 0);
-
-  if (sample_type_ == kSbMediaAudioSampleTypeInt16Deprecated &&
-      storage_type_ == kSbMediaAudioFrameStorageTypePlanar &&
-      new_sample_type == kSbMediaAudioSampleTypeFloat32 &&
-      new_storage_type == kSbMediaAudioFrameStorageTypeInterleaved) {
-    const int16_t* left_planar = reinterpret_cast<const int16_t*>(data());
-    const int16_t* right_planar = left_planar + frames();
-    float* interleaved_dst =
-        reinterpret_cast<float*>(destination_audio->data());
-    int num_frames = frames();
-
-    for (int i = 0; i + 7 < num_frames; i += 8) {
-      int16x8_t left_s16 = vld1q_s16(left_planar + i);
-      int16x8_t right_s16 = vld1q_s16(right_planar + i);
-
-      int32x4_t left_low_s32 = vmovl_s16(vget_low_s16(left_s16));
-      int32x4_t left_high_s32 = vmovl_s16(vget_high_s16(left_s16));
-      float32x4_t left_low_f32 = vcvtq_n_f32_s32(left_low_s32, 15);
-      float32x4_t left_high_f32 = vcvtq_n_f32_s32(left_high_s32, 15);
-
-      int32x4_t right_low_s32 = vmovl_s16(vget_low_s16(right_s16));
-      int32x4_t right_high_s32 = vmovl_s16(vget_high_s16(right_s16));
-      float32x4_t right_low_f32 = vcvtq_n_f32_s32(right_low_s32, 15);
-      float32x4_t right_high_f32 = vcvtq_n_f32_s32(right_high_s32, 15);
-
-      float32x4x2_t out_low;
-      out_low.val[0] = left_low_f32;
-      out_low.val[1] = right_low_f32;
-      float32x4x2_t out_high;
-      out_high.val[0] = left_high_f32;
-      out_high.val[1] = right_high_f32;
-
-      vst2q_f32(interleaved_dst + i * 2, out_low);
-      vst2q_f32(interleaved_dst + i * 2 + 8, out_high);
-    }
-    return true;
-  } else if (sample_type_ == kSbMediaAudioSampleTypeFloat32 &&
-             storage_type_ == kSbMediaAudioFrameStorageTypeInterleaved &&
-             new_sample_type == kSbMediaAudioSampleTypeInt16Deprecated &&
-             new_storage_type == kSbMediaAudioFrameStorageTypePlanar) {
-    const float* interleaved_src = reinterpret_cast<const float*>(data());
-    int16_t* left_planar =
-        reinterpret_cast<int16_t*>(destination_audio->data());
-    int16_t* right_planar = left_planar + destination_audio->frames();
-    int num_frames = destination_audio->frames();
-
-    float32x4_t min_val = vdupq_n_f32(-1.0f);
-    float32x4_t max_val = vdupq_n_f32(1.0f);
-    float32x4_t scale = vdupq_n_f32(32767.f);
-    for (int i = 0; i + 7 < num_frames; i += 8) {
-      float32x4x2_t src_low = vld2q_f32(interleaved_src + i * 2);
-      float32x4x2_t src_high = vld2q_f32(interleaved_src + i * 2 + 8);
-
-      float32x4_t left_low_clamp =
-          vminq_f32(vmaxq_f32(src_low.val[0], min_val), max_val);
-      int32x4_t left_low_s32 = vcvtq_s32_f32(vmulq_f32(left_low_clamp, scale));
-
-      float32x4_t left_high_clamp =
-          vminq_f32(vmaxq_f32(src_high.val[0], min_val), max_val);
-      int32x4_t left_high_s32 =
-          vcvtq_s32_f32(vmulq_f32(left_high_clamp, scale));
-
-      int16x4_t left_low_s16 = vqmovn_s32(left_low_s32);
-      int16x4_t left_high_s16 = vqmovn_s32(left_high_s32);
-      int16x8_t left_s16 = vcombine_s16(left_low_s16, left_high_s16);
-      vst1q_s16(left_planar + i, left_s16);
-
-      float32x4_t right_low_clamp =
-          vminq_f32(vmaxq_f32(src_low.val[1], min_val), max_val);
-      int32x4_t right_low_s32 =
-          vcvtq_s32_f32(vmulq_f32(right_low_clamp, scale));
-
-      float32x4_t right_high_clamp =
-          vminq_f32(vmaxq_f32(src_high.val[1], min_val), max_val);
-      int32x4_t right_high_s32 =
-          vcvtq_s32_f32(vmulq_f32(right_high_clamp, scale));
-
-      int16x4_t right_low_s16 = vqmovn_s32(right_low_s32);
-      int16x4_t right_high_s16 = vqmovn_s32(right_high_s32);
-      int16x8_t right_s16 = vcombine_s16(right_low_s16, right_high_s16);
-      vst1q_s16(right_planar + i, right_s16);
-    }
-    return true;
-  }
-  return false;
-}
 
 bool DecodedAudio::SwitchSampleTypeTo_NEON(
     SbMediaAudioSampleType new_sample_type,
@@ -627,80 +378,6 @@ bool DecodedAudio::SwitchSampleTypeTo_NEON(
   return false;
 }
 
-bool DecodedAudio::SwitchStorageTypeTo_NEON(
-    SbMediaAudioFrameStorageType new_storage_type,
-    DecodedAudio* destination_audio) const {
-  SB_DCHECK_EQ(channels(), 2);
-  SB_DCHECK_EQ(frames() % 8, 0);
-
-  const uint8_t* old_samples = data();
-  uint8_t* new_samples = destination_audio->data();
-
-  if (storage_type_ == kSbMediaAudioFrameStorageTypeInterleaved &&
-      new_storage_type == kSbMediaAudioFrameStorageTypePlanar) {
-    if (sample_type_ == kSbMediaAudioSampleTypeInt16Deprecated) {
-      const int16_t* interleaved_src =
-          reinterpret_cast<const int16_t*>(old_samples);
-      int16_t* left_planar = reinterpret_cast<int16_t*>(new_samples);
-      int16_t* right_planar = left_planar + frames();
-      int num_frames = frames();
-      for (int i = 0; i + 7 < num_frames; i += 8) {
-        int16x8x2_t src = vld2q_s16(interleaved_src + i * 2);
-        vst1q_s16(left_planar + i, src.val[0]);
-        vst1q_s16(right_planar + i, src.val[1]);
-      }
-      return true;
-    } else if (sample_type_ == kSbMediaAudioSampleTypeFloat32) {
-      const float* interleaved_src =
-          reinterpret_cast<const float*>(old_samples);
-      float* left_planar = reinterpret_cast<float*>(new_samples);
-      float* right_planar = left_planar + frames();
-      int num_frames = frames();
-      for (int i = 0; i + 7 < num_frames; i += 8) {
-        float32x4x2_t src0 = vld2q_f32(interleaved_src + i * 2);
-        float32x4x2_t src1 = vld2q_f32(interleaved_src + i * 2 + 8);
-        vst1q_f32(left_planar + i, src0.val[0]);
-        vst1q_f32(right_planar + i, src0.val[1]);
-        vst1q_f32(left_planar + i + 4, src1.val[0]);
-        vst1q_f32(right_planar + i + 4, src1.val[1]);
-      }
-      return true;
-    }
-  } else if (storage_type_ == kSbMediaAudioFrameStorageTypePlanar &&
-             new_storage_type == kSbMediaAudioFrameStorageTypeInterleaved) {
-    if (sample_type_ == kSbMediaAudioSampleTypeInt16Deprecated) {
-      const int16_t* left_planar =
-          reinterpret_cast<const int16_t*>(old_samples);
-      const int16_t* right_planar = left_planar + frames();
-      int16_t* interleaved_dst = reinterpret_cast<int16_t*>(new_samples);
-      int num_frames = frames();
-      for (int i = 0; i + 7 < num_frames; i += 8) {
-        int16x8x2_t src;
-        src.val[0] = vld1q_s16(left_planar + i);
-        src.val[1] = vld1q_s16(right_planar + i);
-        vst2q_s16(interleaved_dst + i * 2, src);
-      }
-      return true;
-    } else if (sample_type_ == kSbMediaAudioSampleTypeFloat32) {
-      const float* left_planar = reinterpret_cast<const float*>(old_samples);
-      const float* right_planar = left_planar + frames();
-      float* interleaved_dst = reinterpret_cast<float*>(new_samples);
-      int num_frames = frames();
-      for (int i = 0; i + 7 < num_frames; i += 8) {
-        float32x4x2_t src0;
-        src0.val[0] = vld1q_f32(left_planar + i);
-        src0.val[1] = vld1q_f32(right_planar + i);
-        float32x4x2_t src1;
-        src1.val[0] = vld1q_f32(left_planar + i + 4);
-        src1.val[1] = vld1q_f32(right_planar + i + 4);
-        vst2q_f32(interleaved_dst + i * 2, src0);
-        vst2q_f32(interleaved_dst + i * 2 + 8, src1);
-      }
-      return true;
-    }
-  }
-  return false;
-}
 #endif  // defined(USE_NEON_FOR_AUDIO)
 
 }  // namespace starboard

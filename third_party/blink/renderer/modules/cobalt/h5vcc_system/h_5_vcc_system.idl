@@ -77,4 +77,10 @@ interface H5vccSystem : EventTarget {
 
   // Requests that the system splash screen be hidden on systems that support a splash screen.
   void hideSplashScreen();
+
+  // Returns true if the previous Cobalt session was killed by the system due to
+  // memory pressure. Returns false if the platform does not report LMK or does
+  // not implement the LowMemoryKill extension.
+  [CallWith=ScriptState]
+  Promise<boolean> wasLowMemoryKilled();
 };

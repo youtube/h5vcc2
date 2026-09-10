@@ -98,6 +98,7 @@ class AudioRendererPassthrough : public AudioRenderer,
   void CreateAudioTrackAndStartProcessing();
   void FlushAudioTrackAndStopProcessing(int64_t seek_to_time);
   void UpdateStatusAndWriteData(const AudioTrackState previous_state);
+  void ReportCapabilityChanged();
   void OnDecoderConsumed();
   void OnDecoderOutput();
 

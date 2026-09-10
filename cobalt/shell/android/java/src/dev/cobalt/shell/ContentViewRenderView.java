@@ -61,12 +61,14 @@ public class ContentViewRenderView extends FrameLayout {
   }
 
   protected SurfaceBridge createSurfaceBridge() {
-    if (CommandLine.getInstance().hasSwitch("use-window-surface-for-ui")) {
-      Log.i(TAG, "ContentViewRenderView: created using WindowSurfaceBridge");
-      return new WindowSurfaceBridge();
+    // TODO: b/542337082 - Remove legacy SurfaceViewBridge and --use-surface-view-for-ui after
+    // 09/17.
+    if (CommandLine.getInstance().hasSwitch("use-surface-view-for-ui")) {
+      Log.i(TAG, "ContentViewRenderView: created with SurfaceView");
+      return new SurfaceViewBridge();
     }
-    Log.i(TAG, "ContentViewRenderView: created with SurfaceView");
-    return new SurfaceViewBridge();
+    Log.i(TAG, "ContentViewRenderView: created using WindowSurfaceBridge");
+    return new WindowSurfaceBridge();
   }
 
   /**

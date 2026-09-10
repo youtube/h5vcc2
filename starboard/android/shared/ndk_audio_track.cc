@@ -265,16 +265,17 @@ int64_t NdkAudioTrack::GetAudioTimestamp(int64_t* updated_at) {
   return frames_read;
 }
 
-bool NdkAudioTrack::GetAndResetHasAudioDeviceChanged() {
+// TODO: b/523148108 - Implement seamless switch for NDK.
+AudioTrack::AudioDeviceChange NdkAudioTrack::GetAndResetAudioDeviceChange() {
   if (has_reported_device_changed_) {
-    return false;
+    return AudioDeviceChange::kNone;
   }
   aaudio_stream_state_t state = AAudio::Stream_GetState(stream_.get());
   if (state == AAUDIO_STREAM_STATE_DISCONNECTED) {
     has_reported_device_changed_ = true;
-    return true;
+    return AudioDeviceChange::kRestartPlayer;
   }
-  return false;
+  return AudioDeviceChange::kNone;
 }
 
 int NdkAudioTrack::GetUnderrunCount() {

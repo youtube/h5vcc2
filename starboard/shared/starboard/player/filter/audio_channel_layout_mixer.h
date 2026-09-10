@@ -32,7 +32,6 @@ class AudioChannelLayoutMixer {
 
   static std::unique_ptr<AudioChannelLayoutMixer> Create(
       SbMediaAudioSampleType sample_type,
-      SbMediaAudioFrameStorageType storage_type,
       int output_channels);
 };
 

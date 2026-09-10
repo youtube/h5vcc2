@@ -102,8 +102,6 @@ class MediaCodecVideoDecoder : public VideoDecoder,
                    const PipelineConfig& pipeline_config,
                    const PlatformOptions& platform_options);
 
-  static void SetVideoFramePoolEnabled(bool enabled);
-
   MediaCodecVideoDecoder(
       PassKey<MediaCodecVideoDecoder>,
       std::unique_ptr<MediaCodec::Factory> media_codec_factory,

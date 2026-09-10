@@ -74,7 +74,7 @@ public class JavaSwitchesTest {
     switches.put(JavaSwitches.COBALT_BYPASS_RESOURCE_LOAD_SCHEDULER, "1");
     switches.put(JavaSwitches.COBALT_BYPASS_HTML_PRELOAD_SCANNER, "1");
     switches.put(JavaSwitches.ENABLE_COBALT_MMAP_FONT_CACHE, "1");
-    switches.put(JavaSwitches.DIRECT_WINDOW_RENDERING, "1");
+    switches.put(JavaSwitches.SURFACE_VIEW_UI_RENDERING, "1");
     switches.put(JavaSwitches.AREA_BASED_VIDEO_BUFFER_BUDGET, "1");
     switches.put(JavaSwitches.ALLOW_CRITICAL_MEMORY_PRESSURE_HANDLING_IN_FOREGROUND, "1");
     switches.put(JavaSwitches.EVICT_MEMORY_CACHE_ON_CRITICAL_MEMORY_PRESSURE, "1");
@@ -105,7 +105,7 @@ public class JavaSwitchesTest {
     assertThat(args).contains("--enable-features=CobaltBypassResourceLoadScheduler");
     assertThat(args).contains("--enable-features=CobaltBypassHTMLPreloadScanner");
     assertThat(args).contains("--enable-features=CobaltMmapFontCache");
-    assertThat(args).contains("--use-window-surface-for-ui");
+    assertThat(args).contains("--use-surface-view-for-ui");
     assertThat(args).contains("--enable-features=AreaBasedVideoBufferBudget");
     assertThat(args).contains("--allow-critical-memory-pressure-handling-in-foreground");
     assertThat(args).contains("--enable-features=EvictMemoryCacheOnCriticalMemoryPressure");

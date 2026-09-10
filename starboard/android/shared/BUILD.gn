@@ -474,6 +474,7 @@ test("starboard_platform_tests") {
 
 java_cpp_enum("java_enums") {
   sources = [
+    "audio_track.h",
     "media_codec.h",
     "media_common.h",
     "media_drm_bridge.h",

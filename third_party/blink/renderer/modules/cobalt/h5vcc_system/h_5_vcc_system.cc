@@ -203,6 +203,26 @@ void H5vccSystem::hideSplashScreen() {
   remote_h5vcc_system_->HideSplashScreen();
 }
 
+ScriptPromise<IDLBoolean> H5vccSystem::wasLowMemoryKilled(
+    ScriptState* script_state) {
+  auto* resolver =
+      MakeGarbageCollected<ScriptPromiseResolver<IDLBoolean>>(script_state);
+
+  EnsureReceiverIsBound();
+
+  remote_h5vcc_system_->GetWasLowMemoryKilled(
+      WTF::BindOnce(&H5vccSystem::OnGetWasLowMemoryKilled, WrapPersistent(this),
+                    WrapPersistent(resolver)));
+
+  return resolver->Promise();
+}
+
+void H5vccSystem::OnGetWasLowMemoryKilled(
+    ScriptPromiseResolver<IDLBoolean>* resolver,
+    bool result) {
+  resolver->Resolve(result);
+}
+
 void H5vccSystem::EnsureReceiverIsBound() {
   DCHECK(GetExecutionContext());
 

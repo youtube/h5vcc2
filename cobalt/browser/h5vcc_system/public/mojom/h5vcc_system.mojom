@@ -50,4 +50,9 @@ interface H5vccSystem {
 
   // YouTube request to hide the splash screen.
   HideSplashScreen();
+
+  // Returns true if the previous Cobalt session was killed by the system due to
+  // memory pressure. If the platform does not implement the LowMemoryKill
+  // extension or does not report LMK, this resolves to false.
+  GetWasLowMemoryKilled() => (bool was_low_memory_killed);
 };

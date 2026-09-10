@@ -61,6 +61,7 @@ class MODULES_EXPORT H5vccSystem final
   void exit();
   uint32_t userOnExitStrategy();
   void hideSplashScreen();
+  ScriptPromise<IDLBoolean> wasLowMemoryKilled(ScriptState*);
 
   void Trace(Visitor*) const override;
 
@@ -73,6 +74,7 @@ class MODULES_EXPORT H5vccSystem final
                                         const String&);
   void OnRequestTrackingAuthorization(ScriptPromiseResolver<IDLUndefined>*,
                                       bool);
+  void OnGetWasLowMemoryKilled(ScriptPromiseResolver<IDLBoolean>*, bool);
   void EnsureReceiverIsBound();
   HeapMojoRemote<h5vcc_system::mojom::blink::H5vccSystem> remote_h5vcc_system_;
 

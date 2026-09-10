@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "build/build_config.h"
 #include "base/check.h"
 #include "base/check_op.h"
 #include "base/metrics/histogram_functions.h"
@@ -91,6 +92,34 @@ bool DawnYCbCrVkDescriptorsAreCompatible(const wgpu::YCbCrVkDescriptor& left,
 SkColor4f GetFallbackColorForPlane(viz::SharedImageFormat format,
                                    int plane_index) {
   DCHECK(format.IsValidPlaneIndex(plane_index));
+#if BUILDFLAG(IS_COBALT)
+  // In single-planar RGBA textures, SkColors::kBlack (0.0, 0.0, 0.0, 1.0) is
+  // opaque black.
+  // In multiplanar YUV formats, plane 0 is luma (Y), while subsequent planes
+  // are chroma (U, V) and optionally alpha (A). In normalized YUV, Y=0 is
+  // minimum brightness, but neutral chroma is at U=0.5, V=0.5. Filling chroma
+  // with 0.0 would introduce a strong green color cast in RGB. Filling Y with
+  // SkColors::kBlack (0.0), U/V with SkColors::kGray (0.5), and A with
+  // SkColors::kWhite (1.0) ensures multiplanar fallback textures decode to
+  // neutral opaque black.
+  if (format.is_single_plane()) {
+    return SkColors::kBlack;
+  }
+  switch (format.plane_config()) {
+    case viz::SharedImageFormat::PlaneConfig::kY_U_V:
+    case viz::SharedImageFormat::PlaneConfig::kY_V_U:
+    case viz::SharedImageFormat::PlaneConfig::kY_UV:
+      return plane_index == 0 ? SkColors::kBlack : SkColors::kGray;
+    case viz::SharedImageFormat::PlaneConfig::kY_U_V_A:
+      return plane_index == 0 ? SkColors::kBlack
+             : plane_index == 3 ? SkColors::kWhite
+                                : SkColors::kGray;
+    case viz::SharedImageFormat::PlaneConfig::kY_UV_A:
+      return plane_index == 0 ? SkColors::kBlack
+             : plane_index == 1 ? SkColors::kGray
+                                : SkColors::kWhite;
+  }
+#else
   // For DCHECKed builds return: 1) kRed for single planar formats; 2) kWhite
   // for all multiplanar format planes that translates to Purple/Magenta color
   // in RGB space. For non-DCHECKed builds return: 1) kWhite for single planar
@@ -113,6 +142,7 @@ SkColor4f GetFallbackColorForPlane(viz::SharedImageFormat format,
     case viz::SharedImageFormat::PlaneConfig::kY_UV_A:
       return plane_index == 1 ? SkColors::kGray : SkColors::kWhite;
   }
+#endif
 #endif
 }
 

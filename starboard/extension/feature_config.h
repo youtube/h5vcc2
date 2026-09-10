@@ -150,6 +150,9 @@ STARBOARD_FEATURE(kReleaseVideoFramesAfterAudioStarts,
 // By default, stub audio decoder is disabled.
 STARBOARD_FEATURE(kUseStubAudioDecoder, "UseStubAudioDecoder", false)
 
+// By default, stub audio sink is disabled.
+STARBOARD_FEATURE(kUseStubAudioSink, "UseStubAudioSink", false)
+
 // By default, stub video decoder is disabled.
 STARBOARD_FEATURE(kUseStubVideoDecoder, "UseStubVideoDecoder", false)
 

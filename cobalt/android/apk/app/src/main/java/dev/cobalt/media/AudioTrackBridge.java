@@ -28,8 +28,10 @@ import dev.cobalt.util.Log;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Locale;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.jni_zero.CalledByNative;
 import org.jni_zero.JNINamespace;
+import org.jni_zero.JniType;
 
 /**
  * A wrapper of the android AudioTrack class. Android AudioTrack would not start playing until the
@@ -56,14 +58,30 @@ public class AudioTrackBridge {
   private long mMaxFramePositionSoFar = 0;
 
   private final boolean mTunnelModeEnabled;
+  private final int mSampleType;
   // The following variables are used only when |tunnelModeEnabled| is true.
   private ByteBuffer mAvSyncHeader;
   private int mAvSyncPacketBytesRemaining;
+
+  private final AtomicInteger mAudioDeviceChange = new AtomicInteger(AudioDeviceChange.NONE);
+
+  public void onAudioDeviceChanged(@AudioDeviceChange int change) {
+    mAudioDeviceChange.accumulateAndGet(change, Math::max);
+  }
+
+  @CalledByNative
+  private @JniType("starboard::AudioDeviceChange") int getAndResetAudioDeviceChange() {
+    return mAudioDeviceChange.getAndSet(AudioDeviceChange.NONE);
+  }
 
   // Pre-allocated byte[] or float[] shared with C++ via getPreAllocatedAudioDataAs*Array() to avoid
   // allocation on every WriteSample(). C++ writes directly to this array,
   // which is then passed back to Java write*() methods.
   private Object mPreAllocatedAudioData;
+
+  public int getSampleType() {
+    return mSampleType;
+  }
 
   private static int getBytesPerSample(int audioFormat) {
     switch (audioFormat) {
@@ -102,6 +120,7 @@ public class AudioTrackBridge {
       int preferredBufferSizeInBytes,
       int tunnelModeAudioSessionId,
       boolean isWebAudio) {
+    mSampleType = sampleType;
 
     mTunnelModeEnabled = tunnelModeAudioSessionId != TunnelModeAudioSessionId.NONE;
     int channelConfig;

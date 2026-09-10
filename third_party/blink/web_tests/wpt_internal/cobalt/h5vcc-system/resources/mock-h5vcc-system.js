@@ -29,6 +29,7 @@ class MockH5vccSystem {
   STUB_KEY_SCREEN_DIAGONAL = 'screenDiagonal';
   STUB_KEY_TRACKING_AUTHORIZATION_STATUS = 'trackingAuthorizationStatus';
   STUB_KEY_USER_ON_EXIT_STRATEGY = 'userOnExitStrategy';
+  STUB_KEY_WAS_LOW_MEMORY_KILLED = 'wasLowMemoryKilled';
 
   incrementExitCallCount() {
     this.callCount_[EXIT_METHOD_NAME] += 1;
@@ -90,6 +91,10 @@ class MockH5vccSystem {
     this.stubResult(this.STUB_KEY_USER_ON_EXIT_STRATEGY, USER_ON_EXIT_STRATEGY_NO_EXIT);
   }
 
+  stubWasLowMemoryKilled(wasLowMemoryKilled) {
+    this.stubResult(this.STUB_KEY_WAS_LOW_MEMORY_KILLED, wasLowMemoryKilled);
+  }
+
   // h5vcc_system.mojom.H5vccSystem impl.
   getAdvertisingId() {
     // VERY IMPORTANT: this should return (a resolved Promise with) a dictionary
@@ -140,6 +145,13 @@ class MockH5vccSystem {
   }
 
   hideSplashScreen() {}
+
+  getWasLowMemoryKilled() {
+    return Promise.resolve({
+      wasLowMemoryKilled:
+          this.stub_result_.get(this.STUB_KEY_WAS_LOW_MEMORY_KILLED) ?? false
+    });
+  }
 }
 
 export const mockH5vccSystem = new MockH5vccSystem();

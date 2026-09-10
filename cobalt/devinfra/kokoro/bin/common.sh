@@ -124,11 +124,6 @@ is_release_build () {
 }
 
 
-is_nightly_build () {
-  is_release_build || [[ "${KOKORO_JOB_NAME:-}" == *nightly* ]] || [[ "${KOKORO_ROOT_JOB_NAME:-}" == *nightly* ]]
-}
-
-
 is_release_config () {
   [[ "${RELEASE_CONFIGS}" =~ "${CONFIG}" ]]
 }

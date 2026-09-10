@@ -14,7 +14,7 @@ This guide provides an overview of the supported platforms, their target hardwar
 | Platform / Tooling | Type | Target Architecture & Hardware | Primary Purpose & Intended Use | Setup Guide |
 | :--- | :--- | :--- | :--- | :--- |
 | **Linux** | Target OS | **x86_64 Desktop** (Ubuntu / X11 / Wayland) | **Developer Workstation Environment**. Provides the fastest compile-and-debug iteration cycle for core logic, Web APIs, and Starboard verification (`nplb`), without requiring embedded TV hardware. | [setup-linux.md](setup-linux.md) |
-| **Android TV (ATV)** | Target OS | **ARM / ARM64 / x86** (Smart TVs, Streaming Sticks) | **Android TV Production Target**. Compiles native engine (`libchrobalt.so`) and packages into standard Android application package (`Cobalt.apk`, `dev.cobalt.coat`). | [setup-android.md](setup-android.md) |
+| **AOSP** | Target OS | **ARM / ARM64** (Android Reference Hardware, AOSP) | **AOSP Evergreen Reference Target**. Compiles the thin Cobalt Loader (`cobalt_loader`, `cobalt.apk`) to dynamically load Cobalt Core (`libcobalt.so` / `libcobalt.lz4`) from Evergreen packages. | [setup-aosp.md](setup-aosp.md) |
 | **RDK** | Target OS | **ARM / ARM64** (Pay-TV Set-Top Boxes, STB reference hardware) | **Pay-TV & STB Platform Target**. Integrates Starboard for RDK (`evergreen-arm-hardfp-rdk`) for operator-managed set-top box deployments. | [setup-rdk.md](setup-rdk.md) |
 | **Docker** | Host Tooling | **Linux x86_64 Host** (Containerized Builder) | **Build Environment Consistency**. Containerized build host tool that standardizes dependencies and tools across developer workstations to avoid host OS version conflicts. | [setup-docker.md](setup-docker.md) |
 
@@ -30,10 +30,10 @@ To maximize development efficiency, we recommend following a 3-stage development
 
 2. **Stage 2: Standardized Host Build Environment**
    - **Tooling**: `Docker`
-   - **Why**: Use containerized build definitions to build for cross-compiled targets (like RDK or Android) without polluting or conflicting with your local host environment.
+   - **Why**: Use containerized build definitions to build for cross-compiled targets (like RDK or AOSP) without polluting or conflicting with your local host environment.
 
 3. **Stage 3: Target Device & Media Integration Validation**
-   - **Platform**: `Android TV` or `RDK`
+   - **Platform**: `AOSP` or `RDK`
    - **Why**: Final testing of hardware video/audio decoding, platform lifecycle (suspend/resume), remote control input handling, and system-level performance.
 
 ---

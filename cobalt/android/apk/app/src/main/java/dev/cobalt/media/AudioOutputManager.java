@@ -24,13 +24,13 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 import android.os.Build;
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import dev.cobalt.util.Log;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.jni_zero.CalledByNative;
 import org.jni_zero.JNINamespace;
 import org.jni_zero.NativeMethods;
@@ -38,15 +38,15 @@ import org.jni_zero.NativeMethods;
 /** Creates and destroys AudioTrackBridge and handles the volume change. */
 @JNINamespace("starboard")
 public class AudioOutputManager {
-  private List<AudioTrackBridge> mAudioTrackBridgeList;
+  @NonNull private final List<AudioTrackBridge> mAudioTrackBridgeList;
   private Context mContext;
 
-  AtomicBoolean mHasAudioDeviceChanged = new AtomicBoolean(false);
   boolean mHasRegisteredAudioDeviceCallback = false;
 
   public AudioOutputManager(Context context) {
     mContext = context;
-    mAudioTrackBridgeList = new ArrayList<AudioTrackBridge>();
+    // CopyOnWriteArrayList allows thread-safe UI iteration without locking native threads.
+    mAudioTrackBridgeList = new CopyOnWriteArrayList<AudioTrackBridge>();
   }
 
   @CalledByNative
@@ -72,7 +72,6 @@ public class AudioOutputManager {
       return null;
     }
     mAudioTrackBridgeList.add(audioTrackBridge);
-    mHasAudioDeviceChanged.set(false);
 
     if (mHasRegisteredAudioDeviceCallback || isWebAudio) {
       return audioTrackBridge;
@@ -82,26 +81,56 @@ public class AudioOutputManager {
     audioManager.registerAudioDeviceCallback(
         new AudioDeviceCallback() {
           // Since registering a callback triggers an immediate call to onAudioDevicesAdded() with
-          // current devices, don't set |mHasAudioDeviceChanged| for this initial call.
+          // current devices, don't notify tracks for this initial call.
           private boolean mInitialDevicesAdded = false;
 
-          private void handleConnectedDeviceChange(AudioDeviceInfo[] devices) {
+          private void handleConnectedDeviceChange(AudioDeviceInfo[] devices, boolean isAdded) {
+            AudioDeviceInfo relevantDevice = null;
             for (AudioDeviceInfo info : devices) {
               // TODO: Determine if AudioDeviceInfo.TYPE_HDMI_EARC should be checked in API 31.
               if (info.isSink()
                   && (info.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
                       || info.getType() == AudioDeviceInfo.TYPE_HDMI_ARC
                       || info.getType() == AudioDeviceInfo.TYPE_HDMI)) {
-                // TODO: Avoid destroying the AudioTrack if the new devices can support the current
-                // AudioFormat.
-                Log.v(
-                    TAG,
-                    "Setting |mHasAudioDeviceChanged| to true for audio device %s, %s.",
-                    info.getProductName(),
-                    getDeviceTypeName(info.getType()));
-                mHasAudioDeviceChanged.set(true);
+                relevantDevice = info;
                 break;
               }
+            }
+            if (relevantDevice == null) {
+              return;
+            }
+
+            String eventName = isAdded ? "added" : "removed";
+            // If all active audio tracks are PCM and seamless switching is enabled, Android OS
+            // automatically handles dynamic routing (e.g. to Bluetooth A2DP or built-in speakers)
+            // without requiring player recreation. While player recreation is avoided, an audio
+            // sink flush (RESET_AND_CONTINUE) is still performed to reset timestamps and latency.
+            // Only flag player recreation (RESTART_PLAYER) if seamless switching is disabled or
+            // there is an active passthrough track that cannot be routed to incompatible sinks.
+            if (AudioOutputManagerJni.get().isSeamlessAudioSwitchingEnabled()
+                && !hasActivePassthroughTrack(mAudioTrackBridgeList)) {
+              Log.i(
+                  TAG,
+                  "Audio device %s: %s (%s). Notifying active tracks (RESET_AND_CONTINUE) "
+                      + "for seamless PCM playback.",
+                  eventName,
+                  relevantDevice.getProductName(),
+                  getDeviceTypeName(relevantDevice.getType()));
+              for (AudioTrackBridge bridge : mAudioTrackBridgeList) {
+                bridge.onAudioDeviceChanged(AudioDeviceChange.RESET_AND_CONTINUE);
+              }
+              return;
+            }
+
+            Log.i(
+                TAG,
+                "Audio device %s: %s (%s). Notifying active tracks (RESTART_PLAYER) "
+                    + "to renegotiate audio capabilities.",
+                eventName,
+                relevantDevice.getProductName(),
+                getDeviceTypeName(relevantDevice.getType()));
+            for (AudioTrackBridge bridge : mAudioTrackBridgeList) {
+              bridge.onAudioDeviceChanged(AudioDeviceChange.RESTART_PLAYER);
             }
           }
 
@@ -112,7 +141,7 @@ public class AudioOutputManager {
                 "onAudioDevicesAdded() called, |mInitialDevicesAdded| is: %b.",
                 mInitialDevicesAdded);
             if (mInitialDevicesAdded) {
-              handleConnectedDeviceChange(addedDevices);
+              handleConnectedDeviceChange(addedDevices, /* isAdded= */ true);
               return;
             }
             mInitialDevicesAdded = true;
@@ -121,7 +150,7 @@ public class AudioOutputManager {
           @Override
           public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
             Log.v(TAG, "onAudioDevicesRemoved() called.");
-            handleConnectedDeviceChange(removedDevices);
+            handleConnectedDeviceChange(removedDevices, /* isAdded= */ false);
           }
         },
         null);
@@ -190,6 +219,22 @@ public class AudioOutputManager {
       return true;
     }
 
+    return false;
+  }
+
+  private static boolean isPassthroughEncoding(int encoding) {
+    return encoding == AudioFormat.ENCODING_AC3
+        || encoding == AudioFormat.ENCODING_E_AC3
+        || encoding == AudioFormat.ENCODING_E_AC3_JOC;
+  }
+
+  private static boolean hasActivePassthroughTrack(
+      @NonNull List<AudioTrackBridge> audioTrackBridges) {
+    for (AudioTrackBridge bridge : audioTrackBridges) {
+      if (isPassthroughEncoding(bridge.getSampleType())) {
+        return true;
+      }
+    }
     return false;
   }
 
@@ -485,9 +530,7 @@ public class AudioOutputManager {
   @RequiresApi(29)
   /** Returns whether direct playback on surround `encoding` is supported for API 29 and above. */
   private boolean hasDirectSurroundPlaybackSupportForV29(int encoding, int sampleRate) {
-    if (encoding != AudioFormat.ENCODING_AC3
-        && encoding != AudioFormat.ENCODING_E_AC3
-        && encoding != AudioFormat.ENCODING_E_AC3_JOC) {
+    if (!isPassthroughEncoding(encoding)) {
       Log.w(
           TAG,
           "hasDirectSurroundPlaybackSupportForV29() encountered unsupported encoding %d.",
@@ -521,11 +564,6 @@ public class AudioOutputManager {
         .build();
   }
 
-  @CalledByNative
-  private boolean getAndResetHasAudioDeviceChanged() {
-    return mHasAudioDeviceChanged.getAndSet(false);
-  }
-
   private static AudioDeviceCallback sAudioDeviceCallback =
       new AudioDeviceCallback() {
         @Override
@@ -554,5 +592,7 @@ public class AudioOutputManager {
   @NativeMethods
   interface Natives {
     void onAudioDeviceChanged();
+
+    boolean isSeamlessAudioSwitchingEnabled();
   }
 }

@@ -96,7 +96,6 @@ class DecoderBufferAllocator : public DecoderBuffer::Allocator,
 
   static DecoderBufferAllocator* Get();
 
-  void ReleaseIdleMemory();
   void DecommitAllDecommitableBlocks();
 
   // DecoderBuffer::Allocator methods.
@@ -165,7 +164,6 @@ class DecoderBufferAllocator : public DecoderBuffer::Allocator,
       bool enable_decommit_on_suspend,
       bool periodic_decommit);
   static void EnableMediaBufferPoolStrategy();
-  static void EnableReleaseIdleMemory();
 
   void EnsureStrategyIsCreated() EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   void EnablePeriodicDecommitLoop();
@@ -183,11 +181,6 @@ class DecoderBufferAllocator : public DecoderBuffer::Allocator,
   mutable base::Lock mutex_;
   std::unique_ptr<Strategy> strategy_ GUARDED_BY(mutex_);
   bool is_strategy_switch_pending_ GUARDED_BY(mutex_) = false;
-  // ReleaseIdleMemory() can be called on the UI thread while buffers are still
-  // actively decoding on the media thread. We defer idle memory reclamation
-  // until buffers drain in Free().
-  bool has_pending_release_ GUARDED_BY(mutex_) = false;
-  bool should_release_idle_memory_ GUARDED_BY(mutex_) = false;
   StrategyCreateCB experimental_strategy_create_cb_ GUARDED_BY(mutex_);
   scoped_refptr<PeriodicDecommitState> periodic_decommit_state_
       GUARDED_BY(mutex_);

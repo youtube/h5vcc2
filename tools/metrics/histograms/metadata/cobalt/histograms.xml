@@ -374,6 +374,17 @@ Always run the pretty print utility on this file after editing:
   </summary>
 </histogram>
 
+<histogram name="Cobalt.Stability.Android.SystemExitReason"
+    enum="AndroidProcessExitReason" expires_after="never">
+  <owner>avvall@google.com</owner>
+  <summary>
+    Reason given by Android ActivityManager for the exit of the previous Cobalt
+    browser process, recorded on startup for Android R+ (API 30+) devices.
+    Extracted from the previous session's persistent memory allocator file PID.
+    Records Android API failed when ActivityManager does not return a reason.
+  </summary>
+</histogram>
+
 <histogram name="Cobalt.StabilityMetrics.IsNearCapacity" enum="Boolean"
     expires_after="never">
   <owner>avvall@google.com</owner>

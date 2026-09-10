@@ -73,7 +73,7 @@ class AudioTrackBridge : public AudioTrack {
   // |updated_at| contains the timestamp when the audio timestamp is updated on
   // return.  It can be nullptr.
   int64_t GetAudioTimestamp(int64_t* updated_at) override;
-  bool GetAndResetHasAudioDeviceChanged() override;
+  AudioDeviceChange GetAndResetAudioDeviceChange() override;
   int GetUnderrunCount() override;
   int GetStartThresholdInFrames() override;
   PlayState GetPlayState() override;

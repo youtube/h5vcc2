@@ -13,7 +13,6 @@
 # limitations under the License.
 
 common_player_sources = [
-  "//starboard/shared/starboard/player/buffer_internal.cc",
   "//starboard/shared/starboard/player/buffer_internal.h",
   "//starboard/shared/starboard/player/decoded_audio_internal.cc",
   "//starboard/shared/starboard/player/decoded_audio_internal.h",
@@ -40,6 +39,4 @@ common_player_sources = [
   "//starboard/shared/starboard/player/player_worker.h",
   "//starboard/shared/starboard/player/player_write_end_of_stream.cc",
   "//starboard/shared/starboard/player/player_write_samples.cc",
-  "//starboard/shared/starboard/player/pooled_allocator.cc",
-  "//starboard/shared/starboard/player/pooled_allocator.h",
 ]

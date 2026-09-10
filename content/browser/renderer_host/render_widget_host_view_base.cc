@@ -308,7 +308,11 @@ void RenderWidgetHostViewBase::SetBackgroundColor(SkColor color) {
 std::optional<SkColor> RenderWidgetHostViewBase::GetBackgroundColor() {
   if (content_background_color_)
     return content_background_color_;
+#if BUILDFLAG(IS_COBALT)
+  return default_background_color_.value_or(SK_ColorBLACK);
+#else
   return default_background_color_;
+#endif
 }
 
 bool RenderWidgetHostViewBase::IsBackgroundColorOpaque() {

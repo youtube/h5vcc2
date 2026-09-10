@@ -18,6 +18,7 @@
 #include "cobalt/browser/h5vcc_system/h5vcc_system_impl_base.h"
 #include "cobalt/configuration/configuration.h"
 #include "starboard/common/system_property.h"
+#include "starboard/extension/low_memory_kill.h"
 #include "starboard/system.h"
 #include "starboard/window.h"
 
@@ -62,6 +63,20 @@ bool GetLimitAdTrackingShared() {
 
 std::string GetTrackingAuthorizationStatusShared() {
   return "NOT_SUPPORTED";
+}
+
+bool GetWasLowMemoryKilledShared() {
+  const auto* low_memory_kill_extension =
+      static_cast<const StarboardExtensionLowMemoryKillApi*>(
+          SbSystemGetExtension(kStarboardExtensionLowMemoryKillName));
+  if (!low_memory_kill_extension || !low_memory_kill_extension->name ||
+      strcmp(low_memory_kill_extension->name,
+             kStarboardExtensionLowMemoryKillName) != 0 ||
+      low_memory_kill_extension->version < 1 ||
+      !low_memory_kill_extension->WasLowMemoryKilled) {
+    return false;
+  }
+  return low_memory_kill_extension->WasLowMemoryKilled();
 }
 
 }  // namespace
@@ -131,6 +146,12 @@ void H5vccSystemImpl::GetUserOnExitStrategy(
 }
 
 void H5vccSystemImpl::HideSplashScreen() {}
+
+void H5vccSystemImpl::GetWasLowMemoryKilled(
+    GetWasLowMemoryKilledCallback callback) {
+  CHECK_CALLED_ON_VALID_THREAD(thread_checker_);
+  std::move(callback).Run(GetWasLowMemoryKilledShared());
+}
 
 void H5vccSystemImpl::PerformExitStrategy() {
   auto strategy = GetUserOnExitStrategyInternal();

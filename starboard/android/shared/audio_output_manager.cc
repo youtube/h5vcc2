@@ -14,10 +14,13 @@
 
 #include "starboard/android/shared/audio_output_manager.h"
 
+#include <atomic>
+
 #include "starboard/android/shared/media_capabilities_cache.h"
 #include "starboard/android/shared/media_common.h"
 #include "starboard/android/shared/starboard_bridge.h"
 #include "starboard/common/log.h"
+#include "starboard/common/string.h"
 #include "starboard/media.h"
 #include "starboard/shared/starboard/media/media_util.h"
 #include "starboard/shared/starboard/media/mime_supportability_cache.h"
@@ -65,6 +68,8 @@ constexpr int TYPE_USB_DEVICE = 11;
 constexpr int TYPE_USB_HEADSET = 22;
 constexpr int TYPE_WIRED_HEADPHONES = 4;
 constexpr int TYPE_WIRED_HEADSET = 3;
+
+std::atomic<bool> g_enable_seamless_audio_switching = false;
 
 SbMediaAudioConnector GetConnectorFromAndroidOutputType(
     int android_output_device_type) {
@@ -200,10 +205,8 @@ int AudioOutputManager::GetMinBufferSizeInFrames(
          GetBytesPerSample(sample_type);
 }
 
-bool AudioOutputManager::GetAndResetHasAudioDeviceChanged(JNIEnv* env) {
-  SB_DCHECK(env);
-  return Java_AudioOutputManager_getAndResetHasAudioDeviceChanged(
-             env, j_audio_output_manager_) == JNI_TRUE;
+void AudioOutputManager::SetSeamlessAudioSwitching(bool enable) {
+  g_enable_seamless_audio_switching.store(enable, std::memory_order_relaxed);
 }
 
 std::optional<int> AudioOutputManager::GenerateTunnelModeAudioSessionId(
@@ -267,6 +270,10 @@ void JNI_AudioOutputManager_OnAudioDeviceChanged(JNIEnv* env) {
   // so we have to reload codec capabilities.
   MediaCapabilitiesCache::GetInstance()->ClearCache();
   MimeSupportabilityCache::GetInstance()->ClearCachedMimeSupportabilities();
+}
+
+jboolean JNI_AudioOutputManager_IsSeamlessAudioSwitchingEnabled(JNIEnv* env) {
+  return g_enable_seamless_audio_switching.load(std::memory_order_relaxed);
 }
 
 }  // namespace starboard

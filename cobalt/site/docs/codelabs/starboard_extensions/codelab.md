@@ -24,7 +24,7 @@ To build and run Cobalt during the exercises, set up your development
 environment first. See the setup guides for
 [Linux](../../development/setup-linux.md),
 [RDK](../../development/setup-rdk.md), and
-[Android](../../development/setup-android.md) developers
+[AOSP](../../development/setup-aosp.md) developers
 for details. Although the exercise solutions assume a Linux environment, the
 implementation steps are similar for other platforms.
 
