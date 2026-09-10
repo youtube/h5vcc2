@@ -45,7 +45,6 @@ base::OnceClosure InstallOperation(
     std::unique_ptr<CrxInstaller::InstallParams> install_params,
 #if BUILDFLAG(IS_STARBOARD)
     PersistedData* metadata,
-    const std::string& next_version,
 #endif
     base::RepeatingCallback<void(base::Value::Dict)> event_adder,
     base::RepeatingCallback<void(ComponentState)> state_tracker,

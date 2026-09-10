@@ -38,6 +38,7 @@
 
 #if BUILDFLAG(IS_STARBOARD)
 #include "components/update_client/cobalt_slot_management.h"
+#include "components/update_client/utils.h"
 #include "starboard/extension/installation_manager.h"
 #endif
 
@@ -143,7 +144,6 @@ void Install(base::OnceCallback<void(const CrxInstaller::Result&)> callback,
              CrxInstaller::ProgressCallback progress_callback,
 #if BUILDFLAG(IS_STARBOARD)
              PersistedData* metadata,
-             const std::string& next_version,
              const std::string& id,
              const OperationResult& crx_operation_result,
 #endif
@@ -190,9 +190,14 @@ void Install(base::OnceCallback<void(const CrxInstaller::Result&)> callback,
     install_error = InstallError::GENERIC_ERROR;
   } else {
     char app_key[IM_EXT_MAX_APP_KEY_LENGTH];
+    base::Version manifest_version = ReadEvergreenVersion(result.unpack_path);
+
     if (installation_api->GetAppKey(app_key, IM_EXT_MAX_APP_KEY_LENGTH) ==
         IM_EXT_ERROR) {
       LOG(ERROR) << "Failed to get app key.";
+      install_error = InstallError::GENERIC_ERROR;
+    } else if (!manifest_version.IsValid()) {
+      LOG(ERROR) << "Invalid Evergreen manifest. Installation aborted.";
       install_error = InstallError::GENERIC_ERROR;
     } else if (CobaltFinishInstallation(
                    installation_api, crx_operation_result.installation_index,
@@ -200,7 +205,7 @@ void Install(base::OnceCallback<void(const CrxInstaller::Result&)> callback,
       // Write the version of the unpacked update package to the persisted data.
       if (metadata != nullptr) {
         metadata->SetLastInstalledEgAndSbVersion(
-            id, next_version, std::to_string(SB_API_VERSION));
+            id, manifest_version.GetString(), std::to_string(SB_API_VERSION));
       }
     } else {
       LOG(ERROR) << "CobaltFinishInstallation failed.";
@@ -309,7 +314,6 @@ base::OnceClosure InstallOperation(
     std::unique_ptr<CrxInstaller::InstallParams> install_params,
 #if BUILDFLAG(IS_STARBOARD)
     PersistedData* metadata,
-    const std::string& next_version,
 #endif
     base::RepeatingCallback<void(base::Value::Dict)> event_adder,
     base::RepeatingCallback<void(ComponentState)> state_tracker,
@@ -333,7 +337,7 @@ base::OnceClosure InstallOperation(
                          std::move(callback), event_adder,
                          crx_operation_result),
           std::move(install_params), installer, progress_callback,
-          metadata, next_version, id,
+          metadata, id,
           crx_operation_result),
       crx_operation_result, std::move(unzipper), pk_hash, crx_format,
       base::unexpected(UnpackerError::kCrxCacheNotProvided));

@@ -182,7 +182,6 @@ void Component::SetUpdateCheckResult(std::optional<ProtocolParser::App> result,
 #endif
 #if BUILDFLAG(IS_STARBOARD)
         update_context_->update_checker->GetPersistedData(),
-        next_version_.GetString(),
 #endif
         base::BindRepeating(
             [](base::raw_ref<Component> component, ComponentState state) {

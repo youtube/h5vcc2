@@ -86,7 +86,6 @@ void MakePipeline(
 #endif
 #if BUILDFLAG(IS_STARBOARD)
     PersistedData* metadata,
-    const std::string& next_version,
 #endif
     base::RepeatingCallback<void(ComponentState)> state_tracker,
     base::RepeatingCallback<void(base::Value::Dict)> event_adder,
