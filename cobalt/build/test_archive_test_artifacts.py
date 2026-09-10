@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 # Copyright 2025 The Cobalt Authors. All Rights Reserved.
 #
-# Tests for archive_test_artifacts.py.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Tests for the archive_test_artifacts script."""
 
 import os
@@ -91,13 +101,9 @@ class TestArchiveTestArtifacts(unittest.TestCase):
     # Since out_dir is absolute and we are in test_dir:
     # it will be 'src/out/base_unittests'
     self.assertIn(
-        os.path.relpath(os.path.join(self.out_dir, 'base_unittests')),
-        file_list)
-    # Rebase all files to be relative to their respective root (source or
-    # out dir) to be able to flatten them below. Chromium test runners
-    # have access to the source directory in '../..' which ours (ODTs
-    # especially) do not.
-    # rel_path = os.path.relpath(os.path.join(tar_root, line.strip()))
+        os.path.relpath(
+            os.path.join(self.out_dir, 'base_unittests'),
+            start=self.source_dir), file_list)
     self.assertIn('cobalt/test/data/file.txt', file_list)
 
   @mock.patch('archive_test_artifacts._make_tar')
@@ -292,6 +298,82 @@ class TestArchiveTestArtifacts(unittest.TestCase):
     self.assertFalse(mock_run.called)
     self.assertTrue(mock_make_tar.called)
 
+  @mock.patch(
+      'archive_test_artifacts._find_strip_tool',
+      return_value='/fake/llvm-strip')
+  @mock.patch('subprocess.run')
+  @mock.patch('archive_test_artifacts._make_tar')
+  def test_create_archive_linux_style_with_strip(self, mock_make_tar, mock_run,
+                                                 mock_strip_tool):
+    del mock_strip_tool
+    target_name = 'my_test'
+    deps_file = os.path.join(self.out_dir, f'{target_name}.runtime_deps')
+    with open(deps_file, 'w', encoding='utf-8') as f:
+      f.write('base_unittests\n')
+      f.write('../../cobalt/test/data/file.txt\n')
+
+    binary_path = os.path.join(self.out_dir, 'base_unittests')
+    with open(binary_path, 'w', encoding='utf-8') as f:
+      f.write('dummy elf binary content')
+    os.chmod(binary_path, 0o755)
+
+    data_path = os.path.join(self.source_dir, 'cobalt', 'test', 'data',
+                             'file.txt')
+    os.makedirs(os.path.dirname(data_path), exist_ok=True)
+    with open(data_path, 'w', encoding='utf-8') as f:
+      f.write('dummy test data')
+
+    mock_run.return_value.returncode = 0
+
+    archive_test_artifacts.create_archive(
+        targets=['cobalt/test:my_test'],
+        source_dir=self.source_dir,
+        out_dir=self.out_dir,
+        destination_dir=self.dest_dir,
+        archive_per_target=False,
+        use_android_deps_path=False,
+        compression='gz',
+        compression_level=1,
+        flatten_deps=False,
+        strip_binaries=True)
+
+    self.assertTrue(mock_run.called)
+    strip_cmd = mock_run.call_args[0][0]
+    self.assertEqual(strip_cmd[0], '/fake/llvm-strip')
+    self.assertEqual(strip_cmd[1], '--strip-unneeded')
+    self.assertEqual(strip_cmd[2], '-o')
+    self.assertEqual(strip_cmd[4], os.path.abspath(binary_path))
+
+    self.assertTrue(mock_make_tar.called)
+    file_lists = mock_make_tar.call_args[0][3]
+    self.assertEqual(len(file_lists), 2)
+
+    stripped_list, staged_dir = file_lists[0]
+    unstripped_list, src_dir = file_lists[1]
+
+    rel_binary = os.path.relpath(binary_path, start=self.source_dir)
+    self.assertIn(rel_binary, stripped_list)
+    self.assertIn('stripped_host_', staged_dir)
+
+    self.assertIn('cobalt/test/data/file.txt', unstripped_list)
+    self.assertEqual(src_dir, self.source_dir)
+
+  @mock.patch(
+      'subprocess.run', side_effect=OSError('strip tool not executable'))
+  def test_strip_binary_oserror_handled(self, mock_run):
+    del mock_run
+    binary_path = os.path.join(self.out_dir, 'sample_binary')
+    with open(binary_path, 'w', encoding='utf-8') as f:
+      f.write('binary content')
+    os.chmod(binary_path, 0o755)
+
+    dest_path = os.path.join(self.test_dir, 'staged', 'sample_binary')
+    # pylint: disable=protected-access
+    result = archive_test_artifacts._strip_binary(binary_path, dest_path,
+                                                  '/fake/llvm-strip')
+    self.assertFalse(result)
+    self.assertFalse(os.path.exists(dest_path))
+
   @mock.patch('archive_test_artifacts._make_tar')
   def test_create_archive_linux_style_per_target(self, mock_make_tar):
     target_name = 'my_test'
@@ -321,9 +403,73 @@ class TestArchiveTestArtifacts(unittest.TestCase):
     target_deps, src_dir = file_lists[0]
     self.assertEqual(src_dir, self.source_dir)
     self.assertIn(
-        os.path.relpath(os.path.join(self.out_dir, 'base_unittests')),
-        target_deps)
+        os.path.relpath(
+            os.path.join(self.out_dir, 'base_unittests'),
+            start=self.source_dir), target_deps)
     self.assertIn('cobalt/test/data/file.txt', target_deps)
+
+  @mock.patch(
+      'archive_test_artifacts._find_strip_tool',
+      return_value='/fake/llvm-strip')
+  @mock.patch('subprocess.run')
+  @mock.patch('archive_test_artifacts._make_tar')
+  def test_create_archive_linux_style_per_target_with_strip(
+      self, mock_make_tar, mock_run, mock_strip_tool):
+    del mock_strip_tool
+    target_name = 'my_test'
+    deps_file = os.path.join(self.out_dir, f'{target_name}.runtime_deps')
+    with open(deps_file, 'w', encoding='utf-8') as f:
+      f.write('base_unittests\n')
+      f.write('../../cobalt/test/data/file.txt\n')
+
+    binary_path = os.path.join(self.out_dir, 'base_unittests')
+    with open(binary_path, 'w', encoding='utf-8') as f:
+      f.write('dummy elf binary content')
+    os.chmod(binary_path, 0o755)
+
+    data_path = os.path.join(self.source_dir, 'cobalt', 'test', 'data',
+                             'file.txt')
+    os.makedirs(os.path.dirname(data_path), exist_ok=True)
+    with open(data_path, 'w', encoding='utf-8') as f:
+      f.write('dummy test data')
+
+    mock_run.return_value.returncode = 0
+
+    archive_test_artifacts.create_archive(
+        targets=['cobalt/test:my_test'],
+        source_dir=self.source_dir,
+        out_dir=self.out_dir,
+        destination_dir=self.dest_dir,
+        archive_per_target=True,
+        use_android_deps_path=False,
+        compression='gz',
+        compression_level=1,
+        flatten_deps=False,
+        strip_binaries=True)
+
+    self.assertTrue(mock_run.called)
+    strip_cmd = mock_run.call_args[0][0]
+    self.assertEqual(strip_cmd[0], '/fake/llvm-strip')
+    self.assertEqual(strip_cmd[1], '--strip-unneeded')
+    self.assertEqual(strip_cmd[2], '-o')
+    self.assertEqual(strip_cmd[4], os.path.abspath(binary_path))
+
+    self.assertTrue(mock_make_tar.called)
+    archive_path = mock_make_tar.call_args[0][0]
+    self.assertTrue(archive_path.endswith('my_test_deps.tar.gz'))
+
+    file_lists = mock_make_tar.call_args[0][3]
+    self.assertEqual(len(file_lists), 2)
+
+    stripped_list, staged_dir = file_lists[0]
+    unstripped_list, src_dir = file_lists[1]
+
+    rel_binary = os.path.relpath(binary_path, start=self.source_dir)
+    self.assertIn(rel_binary, stripped_list)
+    self.assertIn('stripped_host_', staged_dir)
+
+    self.assertIn('cobalt/test/data/file.txt', unstripped_list)
+    self.assertEqual(src_dir, self.source_dir)
 
 
 if __name__ == '__main__':

@@ -48,25 +48,29 @@ def _find_strip_tool(source_dir: str) -> Optional[str]:
   return shutil.which('llvm-strip') or shutil.which('strip')
 
 
-def _copy_or_strip(deps: set[str], src_dir: str, dest_dir: str,
-                   strip_tool: str):
-  """Copies and strips dependencies from src_dir into dest_dir."""
-  for dep in deps:
-    src = os.path.join(src_dir, dep)
-    if not os.path.exists(src):
-      continue
-    dest = os.path.join(dest_dir, dep)
-    os.makedirs(os.path.dirname(dest), exist_ok=True)
-    is_bin = os.path.isfile(src) and (src.endswith('.so') or
-                                      os.access(src, os.X_OK))
-    if os.path.isdir(src):
-      shutil.copytree(src, dest, dirs_exist_ok=True)
-    elif is_bin and subprocess.run(
-        [strip_tool, '--strip-unneeded', '-o', dest, src],
-        check=False).returncode == 0:
-      continue
-    else:
-      shutil.copy2(src, dest)
+def _strip_binary(src: str, dest: str, strip_tool: str) -> bool:
+  """Attempts to strip an ELF binary into dest using strip_tool."""
+  if os.path.islink(src) or not os.path.isfile(src):
+    return False
+  if not (src.endswith('.so') or os.access(src, os.X_OK)):
+    return False
+  os.makedirs(os.path.dirname(dest), exist_ok=True)
+  try:
+    res = subprocess.run([strip_tool, '--strip-unneeded', '-o', dest, src],
+                         check=False,
+                         stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL,
+                         timeout=60)
+    if res.returncode == 0:
+      return True
+  except (OSError, subprocess.TimeoutExpired):
+    pass
+  if os.path.exists(dest):
+    try:
+      os.remove(dest)
+    except OSError:
+      pass
+  return False
 
 
 def _make_tar(archive_path: str, compression: str, compression_level: int,
@@ -99,6 +103,13 @@ def _make_tar(archive_path: str, compression: str, compression_level: int,
     # Change the tar working directory and add the file list.
     # Use absolute path for base_dir to avoid issues with cumulative -C flags.
     tar_cmd += ['-C', os.path.abspath(base_dir), '-T', tmp_file.name]
+
+  if not tmp_files:
+    # Ensure tar does not fail when all dependency sets are empty.
+    # pylint: disable=consider-using-with
+    empty_tmp = tempfile.NamedTemporaryFile(mode='w', encoding='utf-8')
+    tmp_files.append(empty_tmp)
+    tar_cmd += ['-T', empty_tmp.name]
 
   print(f'Running `{" ".join(tar_cmd)}`')  # pylint: disable=inconsistent-quotes
   subprocess.check_call(tar_cmd)
@@ -163,8 +174,7 @@ def _find_deps_file(*, target: str, target_name: str, target_path: str,
 
   if found_path:
     return found_path
-  else:
-    raise FileNotFoundError(f'Runtime deps file not found for {target}')
+  raise FileNotFoundError(f'Runtime deps file not found for {target}')
 
 
 def create_archive(
@@ -189,17 +199,23 @@ def create_archive(
     else:
       print('Warning: --strip requested but no strip tool found.')
 
-  combined_deps = set()
-  for target in targets:
-    # TODO(b/483460300): Unify unittest and browsertest packaging
-    if target.endswith(':cobalt_browsertests'):
-      if not use_android_deps_path:
-        _handle_browsertests(source_dir, out_dir, destination_dir, compression)
-        # If this was the only target, we are done.
-        if len(targets) == 1:
-          return
-        continue
-      else:
+  out_base = out_dir if flatten_deps else source_dir
+  abs_out_dir = os.path.abspath(out_dir)
+
+  with (tempfile.TemporaryDirectory(prefix='stripped_host_') if strip_tool else
+        contextlib.nullcontext()) as staged_dir:
+    combined_deps = set()
+    stripped_deps = set()
+    for target in targets:
+      # TODO(b/483460300): Unify unittest and browsertest packaging
+      if target.endswith(':cobalt_browsertests'):
+        if not use_android_deps_path:
+          _handle_browsertests(source_dir, out_dir, destination_dir,
+                               compression)
+          # If this was the only target, we are done.
+          if len(targets) == 1:
+            return
+          continue
         # Generate host runner archive and lightweight device archive
         _handle_browsertests(
             source_dir,
@@ -208,103 +224,143 @@ def create_archive(
             compression,
             archive_name='cobalt_browsertests_host_deps')
 
-    # Junit tests have some exceptions to normal packaging steps.
-    is_junit_test = 'junit' in target
-    target_path, target_name = target.split(':')
-    target_path = target_path.lstrip('/')
-    # Paths are configured in test.gni:
-    # https://github.com/youtube/cobalt/blob/main/testing/test.gni
-    deps_file = _find_deps_file(
-        target=target,
-        target_name=target_name,
-        target_path=target_path,
-        out_dir=out_dir,
-        use_android_deps_path=use_android_deps_path,
-        is_junit_test=is_junit_test)
+      # Junit tests have some exceptions to normal packaging steps.
+      is_junit_test = 'junit' in target
+      target_path, target_name = target.split(':')
+      target_path = target_path.lstrip('/')
+      # Paths are configured in test.gni:
+      # https://github.com/youtube/cobalt/blob/main/testing/test.gni
+      deps_file = _find_deps_file(
+          target=target,
+          target_name=target_name,
+          target_path=target_path,
+          out_dir=out_dir,
+          use_android_deps_path=use_android_deps_path,
+          is_junit_test=is_junit_test)
 
-    with open(deps_file, 'r', encoding='utf-8') as runtime_deps_file:
-      # The paths in the runtime_deps files are relative to the out folder.
-      # Android tests expects files both in the out and source root folders
-      # to be in the working directory of the archive whereas Linux tests
-      # expect it relative to the binary.
-      tar_root = '.' if flatten_deps else out_dir
-      target_deps = set()
-      target_src_root_deps = set()
+      with open(deps_file, 'r', encoding='utf-8') as runtime_deps_file:
+        # The paths in the runtime_deps files are relative to the out folder.
+        # Android tests expects files both in the out and source root folders
+        # to be in the working directory of the archive whereas Linux tests
+        # expect it relative to the binary.
+        target_deps = set()
+        target_src_root_deps = set()
 
-      # Add test_targets.json to archive so that test runners know what to run.
-      test_targets_json = os.path.join(out_dir, 'test_targets.json')
-      if os.path.exists(test_targets_json):
-        target_deps.add(os.path.join(tar_root, 'test_targets.json'))
+        # Add test_targets.json to archive so that test runners know what
+        # to run.
+        test_targets_json = os.path.join(out_dir, 'test_targets.json')
+        if os.path.exists(test_targets_json):
+          target_deps.add(
+              os.path.relpath(
+                  test_targets_json,
+                  start=out_base))
 
-      # Add JUnit wrapper scripts if they exist (special case for these
-      # since they are missing from the runtime deps file).
-      # TODO(b/524712602): This special case handling could be removed with GN
-      # refactoring of the Robolectric binary.
-      if is_junit_test:
-        print(f'Adding Junit-specific test runner scripts for {target}.')
-        junit_wrapper = os.path.join('bin', f'run_{target_name}')
-        junit_helper = os.path.join('bin', 'helper', target_name)
-        if os.path.exists(os.path.join(out_dir, junit_wrapper)):
-          target_deps.add(os.path.join(tar_root, junit_wrapper))
-        if os.path.exists(os.path.join(out_dir, junit_helper)):
-          target_deps.add(os.path.join(tar_root, junit_helper))
+        # Add JUnit wrapper scripts if they exist (special case for these
+        # since they are missing from the runtime deps file).
+        # TODO(b/524712602): This special case handling could be removed with GN
+        # refactoring of the Robolectric binary.
+        if is_junit_test:
+          print(f'Adding Junit-specific test runner scripts for {target}.')
+          junit_wrapper = os.path.join('bin', f'run_{target_name}')
+          junit_helper = os.path.join('bin', 'helper', target_name)
+          if os.path.exists(os.path.join(out_dir, junit_wrapper)):
+            target_deps.add(
+                os.path.relpath(
+                    os.path.join(out_dir, junit_wrapper),
+                    start=out_base))
+          if os.path.exists(os.path.join(out_dir, junit_helper)):
+            target_deps.add(
+                os.path.relpath(
+                    os.path.join(out_dir, junit_helper),
+                    start=out_base))
 
-      exclude_dirs = _EXCLUDE_DIRS_DEFAULT
-      if is_junit_test:
-        exclude_dirs = _EXCLUDE_DIRS_JUNIT
+        exclude_dirs = _EXCLUDE_DIRS_DEFAULT
+        if is_junit_test:
+          exclude_dirs = _EXCLUDE_DIRS_JUNIT
 
-      raw_lines = [line.strip() for line in runtime_deps_file if line.strip()]
-      has_uncompressed_so = any(l.endswith('.so') for l in raw_lines)
+        raw_lines = [line.strip() for line in runtime_deps_file if line.strip()]
+        has_uncompressed_so = any(
+            raw_line.endswith('.so') for raw_line in raw_lines)
 
-      for line in raw_lines:
-        if any(line.startswith(path) for path in exclude_dirs):
-          continue
+        for line in raw_lines:
+          if any(line.startswith(path) for path in exclude_dirs):
+            continue
 
-        if line.endswith(_EXCLUDE_EXTENSIONS):
-          continue
+          if line.endswith(_EXCLUDE_EXTENSIONS):
+            continue
 
-        # Skip redundant compressed libraries if uncompressed .so is included.
-        if has_uncompressed_so and (line.endswith('.lz4') or
-                                    line.endswith('.zst')):
-          continue
+          # Skip redundant compressed libraries if uncompressed .so is included.
+          if has_uncompressed_so and (line.endswith('.lz4') or
+                                      line.endswith('.zst')):
+            continue
 
-        if flatten_deps and line.startswith('../../'):
-          target_src_root_deps.add(line[6:])
-        else:
-          # Rebase all files to be relative to their respective root (source or
-          # out dir) to be able to flatten them below. Chromium test runners
-          # have access to the source directory in '../..' which ours (ODTs
-          # especially) do not.
-          rel_path = os.path.relpath(os.path.join(tar_root, line))
-          target_deps.add(rel_path)
+          if flatten_deps and line.startswith('../../'):
+            src_path = line[6:]
+            rel_src = os.path.relpath(
+                os.path.join(source_dir, src_path), start=source_dir)
+            if (rel_src == '.' or rel_src.startswith('..' + os.sep) or
+                rel_src == '..'):
+              continue
+            target_src_root_deps.add(rel_src)
+          else:
+            # Rebase all files to be relative to their respective root (source
+            # or out dir) to be able to flatten them below. Chromium test
+            # runners have access to the source directory in '../..' which
+            # ours (ODTs especially) do not.
+            if line.startswith('../../'):
+              rel_path = os.path.relpath(
+                  os.path.join(source_dir, line[6:]), start=out_base)
+            else:
+              rel_path = os.path.relpath(
+                  os.path.join(out_dir, line), start=out_base)
+            if (rel_path == '.' or rel_path.startswith('..' + os.sep) or
+                rel_path == '..'):
+              continue
+            target_deps.add(rel_path)
 
-      # Optionally strip binaries into staged temp directory before archiving.
-      with (tempfile.TemporaryDirectory(prefix='stripped_deps_') if strip_tool
-            else contextlib.nullcontext(out_dir)) as staged_out_dir:
+        target_stripped_deps = set()
         if strip_tool:
-          _copy_or_strip(target_deps, out_dir, staged_out_dir, strip_tool)
+          for dep in target_deps:
+            src = os.path.abspath(os.path.join(out_base, dep))
+            if not flatten_deps:
+              try:
+                if os.path.commonpath([src, abs_out_dir]) != abs_out_dir:
+                  continue
+              except ValueError:
+                continue
+            dest = os.path.join(staged_dir, dep)
+            if _strip_binary(src, dest, strip_tool):
+              stripped_deps.add(dep)
+              target_stripped_deps.add(dep)
 
         combined_deps |= target_deps
 
         if archive_per_target:
           output_path = os.path.join(destination_dir,
                                      f'{target_name}_deps.tar.{compression}')
-          file_lists = ([(target_deps, staged_out_dir),
-                         (target_src_root_deps,
-                          source_dir)] if flatten_deps else [(target_deps,
-                                                              source_dir)])
+          file_lists = []
+          if target_stripped_deps:
+            file_lists.append((target_stripped_deps, staged_dir))
+          target_unstripped_deps = target_deps - target_stripped_deps
+          if target_unstripped_deps or not file_lists:
+            file_lists.append((target_unstripped_deps, out_base))
+          if target_src_root_deps:
+            file_lists.append((target_src_root_deps, source_dir))
+
           _make_tar(output_path, compression, compression_level, file_lists)
 
-  # Linux tests and deps are all bundled into a single tar file.
-  if not archive_per_target:
-    output_path = os.path.join(destination_dir,
-                               f'test_artifacts.tar.{compression}')
-    _make_tar(
-        output_path,
-        compression,
-        compression_level,
-        [(combined_deps, source_dir)],
-    )
+    # Linux tests and deps are all bundled into a single tar file.
+    if not archive_per_target:
+      output_path = os.path.join(destination_dir,
+                                 f'test_artifacts.tar.{compression}')
+      file_lists = []
+      if stripped_deps:
+        file_lists.append((stripped_deps, staged_dir))
+        file_lists.append((combined_deps - stripped_deps, source_dir))
+      else:
+        file_lists.append((combined_deps, source_dir))
+
+      _make_tar(output_path, compression, compression_level, file_lists)
 
 
 def main():
