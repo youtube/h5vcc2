@@ -17,8 +17,7 @@
   ],
   "browser_test_targets": [
     {
-      "target": "cobalt/testing/browser_tests:cobalt_browsertests",
-      "test_attempts": "3"
+      "target": "cobalt/testing/browser_tests:cobalt_browsertests"
     }
   ],
   "build_configs": [
