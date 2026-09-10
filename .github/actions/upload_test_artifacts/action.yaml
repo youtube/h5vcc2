@@ -34,7 +34,7 @@ runs:
       env:
         PLATFORM: ${{ inputs.platform }}
       run: |
-        host_archive_flags="--compression zstd --compression-level=9"
+        host_archive_flags="--compression zstd --compression-level=9 --archive-per-target"
         android_archive_flags="--compression gz --archive-per-target --use-android-deps-path --flatten-deps"
         rdk_archive_flags="--compression gz --archive-per-target --flatten-deps"
         rdk_browser_archive_flags="--compression gz --archive-per-target --flatten-deps --strip"

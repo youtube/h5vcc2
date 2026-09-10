@@ -292,6 +292,39 @@ class TestArchiveTestArtifacts(unittest.TestCase):
     self.assertFalse(mock_run.called)
     self.assertTrue(mock_make_tar.called)
 
+  @mock.patch('archive_test_artifacts._make_tar')
+  def test_create_archive_linux_style_per_target(self, mock_make_tar):
+    target_name = 'my_test'
+    deps_file = os.path.join(self.out_dir, f'{target_name}.runtime_deps')
+    with open(deps_file, 'w', encoding='utf-8') as f:
+      f.write('base_unittests\n')
+      f.write('../../cobalt/test/data/file.txt\n')
+
+    archive_test_artifacts.create_archive(
+        targets=['cobalt/test:my_test'],
+        source_dir=self.source_dir,
+        out_dir=self.out_dir,
+        destination_dir=self.dest_dir,
+        archive_per_target=True,
+        use_android_deps_path=False,
+        compression='gz',
+        compression_level=1,
+        flatten_deps=False,
+        strip_binaries=False)
+
+    self.assertTrue(mock_make_tar.called)
+    archive_path = mock_make_tar.call_args[0][0]
+    self.assertTrue(archive_path.endswith('my_test_deps.tar.gz'))
+
+    file_lists = mock_make_tar.call_args[0][3]
+    self.assertEqual(len(file_lists), 1)
+    target_deps, src_dir = file_lists[0]
+    self.assertEqual(src_dir, self.source_dir)
+    self.assertIn(
+        os.path.relpath(os.path.join(self.out_dir, 'base_unittests')),
+        target_deps)
+    self.assertIn('cobalt/test/data/file.txt', target_deps)
+
 
 if __name__ == '__main__':
   unittest.main()

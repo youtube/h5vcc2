@@ -38,19 +38,6 @@ runs:
         git config --global --add safe.directory "${GITHUB_WORKSPACE}"
         git sparse-checkout add --skip-checks testing build third_party/catapult third_party/logdog
         git submodule update --init third_party/catapult
-    - name: Download and Extract Test Artifacts from GCS
-      shell: bash
-      env:
-        WORKFLOW: ${{ github.workflow }}
-        PLATFORM: ${{ matrix.platform }}
-      run: |
-        set -eux
-        project_name=$(gcloud config get-value project)
-        gcloud storage cp \
-          "gs://${project_name}-test-artifacts/${WORKFLOW}/${GITHUB_RUN_NUMBER}/${PLATFORM}/test_artifacts.tar.zstd" \
-          test_artifacts.tar.zstd
-        tar -I 'zstd -T0' -xf test_artifacts.tar.zstd
-        rm -f test_artifacts.tar.zstd
     - name: Prepare Test Filters
       id: prepare-test-filters
       uses: ./.github/actions/prepare_test_filters
@@ -100,8 +87,19 @@ runs:
         TEST_EXECUTABLES_JSON: ${{ inputs.test_executables_json }}
         PLATFORM: ${{ matrix.platform }}
         FILTER_DIR: ${{ steps.prepare-test-filters.outputs.filter_dir }}
+        WORKFLOW: ${{ github.workflow }}
       run: |
         set -exo pipefail
+
+        project_name=$(gcloud config get-value project)
+        gcs_bucket="gs://${project_name}-test-artifacts/${WORKFLOW}/${GITHUB_RUN_NUMBER}/${PLATFORM}"
+
+        download_archive() {
+          local archive="$1_deps.tar.zstd"
+          gcloud storage cp "${gcs_bucket}/${archive}" "${archive}"
+          tar -I 'zstd -T0' -xf "${archive}"
+          rm -f "${archive}"
+        }
 
         failed_suites=""
 
@@ -123,6 +121,21 @@ runs:
 
           echo "Test filter evaluated to: ${test_filter}"
 
+          xml_path="${test_output}/${test_executable}_result.xml"
+          log_path="${test_output}/${test_executable}_log.txt"
+
+          if [[ "${test_filter}" == "-*" ]]; then
+            echo "Skipped due to test filter." > "${log_path}"
+            printf '<?xml version="1.0" encoding="UTF-8"?>\n<testsuites tests="0" failures="0" errors="0" time="0"></testsuites>\n' > "${xml_path}"
+            continue
+          fi
+
+          # Download and extract target archive if not already extracted.
+          wrapper_path="$(dirname "${test_executable_path}")/bin/run_${test_executable}"
+          if [[ ! -x "${wrapper_path}" && ! -x "./${test_executable_path}" ]]; then
+            download_archive "${test_executable_name}"
+          fi
+
           gtest_shard_index="${GTEST_SHARD_INDEX}"
           gtest_total_shards="${GTEST_TOTAL_SHARDS}"
           if [[ "${test_filter}" != -* && "${test_filter}" != "*" ]]; then
@@ -131,38 +144,28 @@ runs:
             gtest_total_shards="1"
           fi
 
-          xml_path="${test_output}/${test_executable}_result.xml"
-          log_path="${test_output}/${test_executable}_log.txt"
-          # TODO: Investigate test_runner.py
-
           # Check if a wrapper script was generated for the test (e.g. by test_runner_script).
           # If so, use it as the entrypoint to run tests.
-          wrapper_path="$(dirname "${test_executable_path}")/bin/run_${test_executable}"
           if [[ -x "${wrapper_path}" ]]; then
             ENTRYPOINT="./${wrapper_path}"
           else
             ENTRYPOINT="./${test_executable_path}"
           fi
 
-          if [ "${test_filter}" == "-*" ]; then
-            echo "Skipped due to test filter." > "${log_path}"
-            printf '<?xml version="1.0" encoding="UTF-8"?>\n<testsuites tests="0" failures="0" errors="0" time="0"></testsuites>\n' > "${xml_path}"
-          else
-            /usr/bin/xvfb-run -a --server-args="${XVFB_SERVER_ARGS}" \
-                stdbuf -i0 -o0 -e0 "${ENTRYPOINT}" \
-                --single-process-tests \
-                --gtest_shard_index="${gtest_shard_index}" \
-                --gtest_total_shards="${gtest_total_shards}" \
-                --gtest_output="xml:${xml_path}" \
-                --gtest_filter="${test_filter}" 2>&1 | tee "${log_path}" || {
-              failed_suites="${failed_suites} ${test_executable}"
-            }
+          /usr/bin/xvfb-run -a --server-args="${XVFB_SERVER_ARGS}" \
+              stdbuf -i0 -o0 -e0 "${ENTRYPOINT}" \
+              --single-process-tests \
+              --gtest_shard_index="${gtest_shard_index}" \
+              --gtest_total_shards="${gtest_total_shards}" \
+              --gtest_output="xml:${xml_path}" \
+              --gtest_filter="${test_filter}" 2>&1 | tee "${log_path}" || {
+            failed_suites="${failed_suites} ${test_executable}"
+          }
 
-            if [[ ! -f "${xml_path}" ]]; then
-              # Test binary crashed. Generate a fake JUnit XML report with the last run test.
-              if [ -f "${log_path}" ]; then
-                python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${log_path}" "${xml_path}"
-              fi
+          if [[ ! -f "${xml_path}" ]]; then
+            # Test binary crashed. Generate a fake JUnit XML report with the last run test.
+            if [[ -f "${log_path}" ]]; then
+              python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${log_path}" "${xml_path}"
             fi
           fi
         done
@@ -181,9 +184,21 @@ runs:
       env:
         TEST_EXECUTABLES_JSON: ${{ inputs.test_executables_json }}
         GTEST_SHARD_INDEX: ${{ matrix.shard }}
+        PLATFORM: ${{ matrix.platform }}
         FILTER_DIR: ${{ steps.prepare-test-filters.outputs.filter_dir }}
+        WORKFLOW: ${{ github.workflow }}
       run: |
         set -exo pipefail
+
+        project_name=$(gcloud config get-value project)
+        gcs_bucket="gs://${project_name}-test-artifacts/${WORKFLOW}/${GITHUB_RUN_NUMBER}/${PLATFORM}"
+
+        download_archive() {
+          local archive="$1_deps.tar.zstd"
+          gcloud storage cp "${gcs_bucket}/${archive}" "${archive}"
+          tar -I 'zstd -T0' -xf "${archive}"
+          rm -f "${archive}"
+        }
 
         failed_suites=""
 
@@ -206,23 +221,29 @@ runs:
           xml_path="${test_output}/${test_executable_name}_result.xml"
           log_path="${test_output}/${test_executable_name}_log.txt"
 
-          if [ "${test_filter}" == "-*" ]; then
+          if [[ "${test_filter}" == "-*" ]]; then
             echo "Skipped due to test filter." > "${log_path}"
             printf '<?xml version="1.0" encoding="UTF-8"?>\n<testsuites tests="0" failures="0" errors="0" time="0"></testsuites>\n' > "${xml_path}"
-          else
-            echo "Running tests for target: ${test_executable_name}"
+            continue
+          fi
 
-            # Run JUnit tests and generate JSON report, then convert to XML.
-            # TODO(b/524653685): Eventually refactor tests to output JSON natively and remove this XML conversion shortcut.
-            json_path="${test_output}/${test_executable_name}_result.json"
-            stdbuf -i0 -o0 -e0 ./"${test_executable_path}" --json-results-file="${json_path}" 2>&1 | tee "${log_path}" || {
-              failed_suites="${failed_suites} ${test_executable_name}"
-            }
-            if [[ -f "${json_path}" ]]; then
-              python3 "${GITHUB_WORKSPACE}/.github/scripts/convert_json_to_junit_xml.py" "${json_path}" "${xml_path}"
-            elif [ -f "${log_path}" ]; then
-              python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${log_path}" "${xml_path}"
-            fi
+          echo "Running tests for target: ${test_executable_name}"
+
+          # Download and extract target archive if not already extracted.
+          if [[ ! -x "./${test_executable_path}" ]]; then
+            download_archive "${test_executable_name}"
+          fi
+
+          # Run JUnit tests and generate JSON report, then convert to XML.
+          # TODO(b/524653685): Eventually refactor tests to output JSON natively and remove this XML conversion shortcut.
+          json_path="${test_output}/${test_executable_name}_result.json"
+          stdbuf -i0 -o0 -e0 ./"${test_executable_path}" --json-results-file="${json_path}" 2>&1 | tee "${log_path}" || {
+            failed_suites="${failed_suites} ${test_executable_name}"
+          }
+          if [[ -f "${json_path}" ]]; then
+            python3 "${GITHUB_WORKSPACE}/.github/scripts/convert_json_to_junit_xml.py" "${json_path}" "${xml_path}"
+          elif [[ -f "${log_path}" ]]; then
+            python3 "${GITHUB_WORKSPACE}/.github/scripts/generate_crash_report.py" "${log_path}" "${xml_path}"
           fi
         done
 

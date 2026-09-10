@@ -289,16 +289,11 @@ def create_archive(
         if archive_per_target:
           output_path = os.path.join(destination_dir,
                                      f'{target_name}_deps.tar.{compression}')
-          if flatten_deps:
-            _make_tar(
-                output_path,
-                compression,
-                compression_level,
-                [(target_deps, staged_out_dir),
-                 (target_src_root_deps, source_dir)],
-            )
-          else:
-            raise ValueError('Unsupported configuration.')
+          file_lists = ([(target_deps, staged_out_dir),
+                         (target_src_root_deps,
+                          source_dir)] if flatten_deps else [(target_deps,
+                                                              source_dir)])
+          _make_tar(output_path, compression, compression_level, file_lists)
 
   # Linux tests and deps are all bundled into a single tar file.
   if not archive_per_target:
@@ -364,8 +359,9 @@ def main():
       'directories both at the root of the deps archive.')
   args = parser.parse_args()
 
-  if args.flatten_deps != args.archive_per_target:
-    raise ValueError('Unsupported configuration.')
+  if args.flatten_deps and not args.archive_per_target:
+    raise ValueError(
+        'Unsupported configuration: flatten_deps requires archive_per_target.')
 
   create_archive(
       targets=args.targets,

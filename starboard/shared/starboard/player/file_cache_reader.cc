@@ -49,9 +49,15 @@ std::string ResolveTestFileName(const char* filename) {
   if (!does_path_exist) {
     // If |path| doesn't exist it could be due to |content_path_as_string| not
     // including the starboard_toolchain's output folder, i.e. it's e.g.
-    // out/linux.../content when it should be out/linux.../starboard/content.
+    // out/linux.../content when it should be out/linux.../starboard/content,
+    // or out/linux... when test assets are under out/linux.../starboard.
     // TODO(b/384819454): Use EvergreenConfig here to overwrite the path. For
-    // the time being, just try inserting "starboard" in the path and try again.
+    // the time being, try appending "starboard" or inserting "starboard".
+    path = content_path_as_string + kSbFileSepChar + "starboard" +
+           path_inside_content;
+    does_path_exist = stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode);
+  }
+  if (!does_path_exist) {
     std::size_t last_separation_char_pos =
         content_path_as_string.find_last_of(kSbFileSepChar);
     path = content_path_as_string.substr(0, last_separation_char_pos) +
