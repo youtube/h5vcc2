@@ -4,6 +4,9 @@ let mockH5vccExperiments = undefined;
 
 function h5vcc_experiments_tests(func, name, properties) {
   promise_test(async (test) => {
+    // Wait for any previous connection error to propagate.
+    await new Promise(resolve => test.step_timeout(resolve, 200));
+
     assert_implements(window.h5vcc.experiments,
                       'missing window.h5vcc.experiments');
     if (mockH5vccExperiments === undefined) {

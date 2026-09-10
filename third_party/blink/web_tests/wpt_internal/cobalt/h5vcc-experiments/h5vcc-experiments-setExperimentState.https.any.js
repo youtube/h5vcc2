@@ -18,7 +18,7 @@ const test_experiment_config = {
 
 const test_experiment_config_2 = {
   "features": {
-    "fake_feature": true
+    "fake_feature": false
   },
   "featureParams": {
   },
@@ -26,7 +26,6 @@ const test_experiment_config_2 = {
   "latestExperimentConfigHashData": "test_config_hash",
 }
 
-// TODO(b/416325838) - Investigate issues with multiple test cases.
 h5vcc_experiments_tests(async (t, mockH5vccExperiments) => {
   await window.h5vcc.experiments.setExperimentState(test_experiment_config);
   assert_true(mockH5vccExperiments.hasCalledSetExperimentState());
@@ -39,6 +38,13 @@ h5vcc_experiments_tests(async (t, mockH5vccExperiments) => {
   assert_equals(mockH5vccExperiments.getStubResult('fake_feature_param_4'), "true");
   assert_equals(mockH5vccExperiments.getStubResult('fake_feature_param_5'), "test_param_string");
 }, 'setExperimentState() sends expected config content to browser endpoint');
+
+h5vcc_experiments_tests(async (t, mockH5vccExperiments) => {
+  await window.h5vcc.experiments.setExperimentState(test_experiment_config_2);
+  assert_true(mockH5vccExperiments.hasCalledSetExperimentState());
+
+  assert_false(mockH5vccExperiments.getStubResult('fake_feature'));
+}, 'setExperimentState() sends a second config to browser endpoint');
 
 h5vcc_experiments_mojo_disconnection_tests(async (t) => {
   return promise_rejects_exactly(t, 'Mojo connection error.',
