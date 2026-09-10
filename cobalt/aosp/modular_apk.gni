@@ -87,6 +87,7 @@ template("modular_apk") {
     # finds them. The suite is the `<name>_loader` target CI builds, so the
     # apk, deps archive and filter names all derive from that one target.
     if (_testonly) {
+      create_apk_script = false
       final_apk_path =
           "$root_build_dir/${_name}_loader_apk/${_name}_loader-debug.apk"
     }

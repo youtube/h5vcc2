@@ -38,6 +38,19 @@ _EXCLUDE_DIRS_JUNIT = [
 
 _EXCLUDE_EXTENSIONS = ('.map',)
 
+# Secondary toolchains write their outputs to a subfolder of the out dir.
+_TOOLCHAIN_SUBDIRS = ('starboard', 'native_target')
+
+
+def _under_toolchain_subdirs(exclude_dirs: list[str]) -> list[str]:
+  """Also matches the out dir relative `exclude_dirs` under the subfolders."""
+  out_dir_relative = [d for d in exclude_dirs if not d.startswith('../../')]
+  return exclude_dirs + [
+      os.path.join(subdir, d.removeprefix('./'))
+      for subdir in _TOOLCHAIN_SUBDIRS
+      for d in out_dir_relative
+  ]
+
 
 def _find_strip_tool(source_dir: str) -> Optional[str]:
   """Locates llvm-strip or system strip tool."""
@@ -255,6 +268,7 @@ def create_archive(
         exclude_dirs = _EXCLUDE_DIRS_DEFAULT + [
             'test/starboard/shared/starboard/player/'
         ]
+      exclude_dirs = _under_toolchain_subdirs(exclude_dirs)
 
       raw_lines = [line.strip() for line in runtime_deps_file if line.strip()]
       has_uncompressed_so = any(l.endswith('.so') for l in raw_lines)
