@@ -1,0 +1,93 @@
+[SignalHandlTh/2757482:0909/002302.313880(UTC):INFO:thread.cc(154)] Thread started: name=SignalHandlTh, priority=(default)
+[loader_app/2757477:0909/002302.313897(UTC):INFO:audio_sink_type_dispatcher.cc(32)] Use ALSA
+[NetworkNotifier/2757483:0909/002302.314208(UTC):INFO:thread.cc(154)] Thread started: name=NetworkNotifier, priority=1
+[LinkReceiver/2757484:0909/002302.314270(UTC):INFO:thread.cc(154)] Thread started: name=LinkReceiver, priority=(default)
+[loader_app/2757477:0909/002302.315009(UTC):INFO:loader_app.cc(277)] is_evergreen_lite=0
+[loader_app/2757477:0909/002302.315032(UTC):INFO:loader_app.cc(287)] alternative_content=
+[loader_app/2757477:0909/002302.315047(UTC):INFO:loader_app.cc(291)] use_memory_mapped_file=0
+[TimeZoneMonitor/2757485:0909/002302.315032(UTC):INFO:thread.cc(154)] Thread started: name=TimeZoneMonitor, priority=(default)
+[TimeZoneMonitor/2757485:0909/002302.315112(UTC):INFO:time_zone_monitor.cc(156)] Monitoring /etc/localtime for time zone changes.
+[loader_app/2757477:0909/002302.319754(UTC):INFO:installation_manager.cc(108)] InstallationManager: app_key=aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=
+[loader_app/2757477:0909/002302.319813(UTC):INFO:installation_manager.cc(660)] StorePath=/home/user/.cobalt_storage/installation_store_aHR0cHM6Ly93d3cueW91dHViZS5jb20vdHY=.pb
+[loader_app/2757477:0909/002302.322810(UTC):INFO:slot_management.cc(291)] Try to load the Cobalt binary
+[loader_app/2757477:0909/002302.322828(UTC):INFO:slot_management.cc(292)] current_installation=0
+[loader_app/2757477:0909/002302.322876(UTC):WARNING:read_evergreen_version.cc(40)] Failed to open the manifest file at the installation path.
+[loader_app/2757477:0909/002302.322887(UTC):WARNING:slot_management.cc(123)] Failed to read the Evergreen version of installation index 0
+[loader_app/2757477:0909/002302.322896(UTC):WARNING:slot_management.cc(213)] Failed to get the Evergreen version of installation index 0, not adding to Crashpad
+[loader_app/2757477:0909/002302.322915(UTC):INFO:slot_management.cc(395)] lib_path=/home/user/cobalt.main/src/out/evergreen-x64_devel/app/cobalt/lib/libcobalt.lz4
+[loader_app/2757477:0909/002302.322930(UTC):INFO:slot_management.cc(408)] content=/home/user/cobalt.main/src/out/evergreen-x64_devel/app/cobalt/content
+[loader_app/2757477:0909/002302.322978(UTC):INFO:elf_loader.cc(83)] evergreen_config: content_path=/home/user/cobalt.main/src/out/evergreen-x64_devel/app/cobalt/content
+[loader_app/2757477:0909/002302.322994(UTC):INFO:elf_loader_impl.cc(53)] Loading /home/user/cobalt.main/src/out/evergreen-x64_devel/app/cobalt/lib/libcobalt.lz4 using LZ4 decompression
+[loader_app/2757477:0909/002303.151636(UTC):INFO:lz4_file_impl.cc(122)] Decompression took: 828 ms
+[loader_app/2757477:0909/002303.151756(UTC):INFO:program_table.cc(426)] Load start=0x7f48e7a44000 base_memory_address=0x7f48e7a44000
+[loader_app/2757477:0909/002303.377293(UTC):INFO:elf_loader.cc(84)] Loading completed: elapsed(usec)=1'054'284
+[0908/172303.377387:INFO:crashpad_client_linux.cc(421)] Added evergreen info: --evergreen-information=0x564860430e48
+[loader_app/2757477:0909/002303.377404(UTC):INFO:slot_management.cc(433)] Loaded Cobalt library information into Crashpad.
+[loader_app/2757477:0909/002303.377419(UTC):ERROR:slot_management.cc(457)] Failed to get user agent string
+[0908/172303.377483:INFO:crashpad_client_linux.cc(101)] Added annotation: --annotation=application_state=kInitial
+[2757477:/2757477:0908/172303.379087:INFO:cobalt/media/audio/cobalt_audio_device_factory.cc:24] Register CobaltAudioDeviceFactory
+[2757477:/2757477:0908/172303.383684:ERROR:base/starboard/debugger_starboard.cc:27] Not implemented reached in void base::debug::VerifyDebugger()
+[2757477:/2757477:0908/172303.384604:ERROR:base/process/launch_starboard.cc:12] Not implemented reached in void base::CheckPThreadStackMinIsSafe()
+[2757477:/2757477:0908/172303.394907:WARNING:cobalt/common/features/starboard_features_initialization.cc:168] Optional kStarboardExtension 'kStarboardExtensionFeaturesName' is not present. No features or parameters have been pushed to Starboard.
+[2757477:/2757477:0908/172303.394970:INFO:base/threading/hang_watcher.cc:540] Freeze detection: HangWatcher initialized
+[2757477:/2757477:0908/172303.400972:ERROR:base/process/process_metrics_posix_starboard_stub.cc:33] Not implemented reached in void base::IncreaseFdLimitTo(unsigned int)
+[2757477:CrBrowserMain/2757477:0908/172303.401435:INFO:cobalt/browser/cobalt_browser_main_parts.cc:316] === COBALT_STACK_DUMP_COLLECTION_START ===
+	<unknown> [0x29b4ef9]
+	<unknown> [0x5a97ded]
+	<unknown> [0x2bc6431]
+	<unknown> [0x6165119]
+	<unknown> [0x5a98359]
+	<unknown> [0x5a9a85e]
+	<unknown> [0x29a9c8d]
+	<unknown> [0x689df6e]
+	<unknown> [0x689f6a0]
+	<unknown> [0x689f1a8]
+	<unknown> [0x689d822]
+	<unknown> [0x29a8be3]
+	<unknown> [0x29a7ddd]
+	<unknown> [0x29a555b]
+	<unknown> [0x29a547f]
+	SbEventHandle [0x564821e3cf8c]
+	starboard::Application::HandleEventAndUpdateState() [0x5648223cf374]
+	starboard::Application::DispatchAndDelete() [0x5648223cef1b]
+	starboard::Application::DispatchStart() [0x5648223ce9a2]
+	starboard::Application::RunLoop() [0x5648223cddf0]
+	starboard::Application::Run() [0x5648223ce0fa]
+	SbRunStarboardMain [0x5648223b2626]
+	<unknown> [0x7f495c032fba]
+	__libc_start_main [0x7f495c0330d7]
+	_start [0x564821e3ce2a]
+[0908/172303.499209:INFO:handler_main.cc(587)] Crashpad logging initialized in HandlerMain.
+[0908/172303.499718:INFO:crash_report_exception_handler.cc(132)] Crashpad handler processing exception for PID: 2757477
+[0908/172303.506651:ERROR:file_io_posix.cc(145)] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq: No such file or directory (2)
+[0908/172303.506684:ERROR:file_io_posix.cc(145)] open /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq: No such file or directory (2)
+[0908/172303.509419:INFO:crash_report_exception_handler.cc(238)] Minidump successfully written to database. ReportID: 4cb6bdfd-0822-4fa2-a57a-9ad5f3d03360
+[0908/172303.511276:ERROR:directory_reader_posix.cc(43)] opendir /home/user/.cache/cobalt/crashpad_database/attachments/4cb6bdfd-0822-4fa2-a57a-9ad5f3d03360: No such file or directory (2)
+
+Caught signal: SIGSEGV (11)
+	<unknown> [0x7f495c049b70]
+	<unknown> [0x29b4ef9]
+	<unknown> [0x5a97ded]
+	<unknown> [0x2bc6431]
+	<unknown> [0x6165119]
+	<unknown> [0x5a98359]
+	<unknown> [0x5a9a85e]
+	<unknown> [0x29a9c8d]
+	<unknown> [0x689df6e]
+	<unknown> [0x689f6a0]
+	<unknown> [0x689f1a8]
+	<unknown> [0x689d822]
+	<unknown> [0x29a8be3]
+	<unknown> [0x29a7ddd]
+	<unknown> [0x29a555b]
+	<unknown> [0x29a547f]
+	SbEventHandle [0x564821e3cf8c]
+	starboard::Application::HandleEventAndUpdateState() [0x5648223cf374]
+	starboard::Application::DispatchAndDelete() [0x5648223cef1b]
+	starboard::Application::DispatchStart() [0x5648223ce9a2]
+	starboard::Application::RunLoop() [0x5648223cddf0]
+	starboard::Application::Run() [0x5648223ce0fa]
+	SbRunStarboardMain [0x5648223b2626]
+	<unknown> [0x7f495c032fba]
+	__libc_start_main [0x7f495c0330d7]
+	_start [0x564821e3ce2a]

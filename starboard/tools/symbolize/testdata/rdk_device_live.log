@@ -1,0 +1,46 @@
+-- Logs begin at Tue 2026-09-08 17:38:12 UTC, end at Wed 2026-09-09 01:24:59 UTC. --
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: Process ID BE5 : TID F523D010 : PerfModuleInit(97) : GST performance process initialize BE5 named /data/test/loader_app
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: PerfModuleInit(97) : GST performance process initialize BE5 named /data/test/loader_app
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [SignalHandlTh/3049:0909/012456.291802(UTC):INFO:thread.cc(154)] Thread started: name=SignalHandlTh, priority=(default)
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: Essos Info: westeros (essos) version 1.01.52
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: Essos Info: westeros (essos) config supports: direct 1 wayland 1
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: Essos Info: auto set mode: isWayland 0
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: 1788917096343: ERROR: ../git/drm/westeros-gl/westeros-gl.c:9320 westeros-gl: wstGLInit: unable to resolve eglGetDisplay
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [loader_app/3045:0909/012456.343860(UTC):ERROR:application_rdk.cc(421)] Essos error: 'Error.  Failed to create a platform context'
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [loader_app/3045:0909/012456.343900(UTC):ERROR:application_rdk.cc(427)] Exiting due to fatal error.
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [loader_app/3045:0909/012456.344474(UTC):INFO:platform_interface.cc(140)] device.chipset: (not set)
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [loader_app/3045:0909/012456.344527(UTC):INFO:platform_interface.cc(152)] device.firmware_version: (not set)
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [loader_app/3045:0909/012456.344551(UTC):INFO:platform_interface.cc(134)] device.brand_name: (not set)
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [loader_app/3045:0909/012456.345921(UTC):ERROR:elf_loader_sandbox.cc(51)] Library must be specified with --evergreen_library=path/to/library/relative/to/loader/content.
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [loader_app/3045:0909/012456.345973(UTC):FATAL:elf_loader_sandbox.cc(150)] Check failed: g_sb_event_func.
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         SbEventHandle [0x9c17b5]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0e2bf]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0e665]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0e89f]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0ea6f]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0ed83]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         SbRunStarboardMain [0x9f32e1]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         __libc_start_main [0xf56e8a0f]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [0909/012456.356873:INFO:handler_main.cc(587)] Crashpad logging initialized in HandlerMain.
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [0909/012456.358095:INFO:crash_report_exception_handler.cc(132)] Crashpad handler processing exception for PID: 3045
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [0909/012456.370281:ERROR:elf_dynamic_array_reader.h(64)] tag not found
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [0909/012456.371722:ERROR:elf_dynamic_array_reader.h(64)] tag not found
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [0909/012456.372062:ERROR:elf_dynamic_array_reader.h(64)] tag not found
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [0909/012456.372777:ERROR:process_memory_linux.cc(50)] pread64: Input/output error (5)
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [0909/012456.372824:ERROR:process_snapshot_linux.cc(369)] Could not read evergreen info
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: [0909/012456.377701:INFO:crash_report_exception_handler.cc(238)] Minidump successfully written to database. ReportID: 73b8d8dd-8965-4f31-af17-90db9e03e3fc
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]: Caught signal: SIGABRT (6)
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xf56e8c16]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         gsignal [0xf56f4d05]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         abort [0xf56e875d]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0x9c0909]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0x9ddadd]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         SbEventHandle [0x9c17b5]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0e2bf]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0e665]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0e89f]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0ea6f]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         <unknown> [0xa0ed83]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         SbRunStarboardMain [0x9f32e1]
+Sep 09 01:24:56 AmlogicFirebolt YouTube[3046]:         __libc_start_main [0xf56e8a0f]

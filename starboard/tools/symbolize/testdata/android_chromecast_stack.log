@@ -1,0 +1,74 @@
+09-08 17:27:44.381  8169  8169 I cobalt  : [8169:8169:0908/172744.381559:INFO:cobalt/browser/cobalt_browser_main_parts.cc:316] === COBALT_STACK_DUMP_COLLECTION_START ===
+09-08 17:27:44.416  8169  8169 E chromium: #00 pc 0x03bef795 /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #01 pc 0x01115613 /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #02 pc 0x01b1d165 /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #03 pc 0x012321e3 /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #04 pc 0x01e2c947 /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #05 pc 0x01111953 /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #06 pc 0x03b7682d /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #07 pc 0x03b95a2f /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #08 pc 0x03b952b3 /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #09 pc 0x03bdb2db /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #10 pc 0x03bdb26f /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #11 pc 0x03bdaf9f /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so
+09-08 17:27:44.416  8169  8169 E chromium: #12 pc 0x00000a23 /system/lib/libutils.so
+09-08 17:27:44.416  8169  8169 E chromium: #13 pc 0x0006e955 /system/lib/libandroid_runtime.so
+09-08 17:27:44.421  8169  8169 I starboard: 	<unknown> [0xe4b5e23a]
+09-08 17:27:44.425  8169  8169 I starboard: 	<unknown> [0xe185c61e]
+09-08 17:27:44.429  8169  8169 I starboard: 	<unknown> [0xe2264166]
+09-08 17:27:44.433  8169  8169 I starboard: 	<unknown> [0xe19791e4]
+09-08 17:27:44.438  8169  8169 I starboard: 	<unknown> [0xe2573948]
+09-08 17:27:44.442  8169  8169 I starboard: 	<unknown> [0xe1858954]
+09-08 17:27:44.446  8169  8169 I starboard: 	<unknown> [0xe42bd82e]
+09-08 17:27:44.450  8169  8169 I starboard: 	<unknown> [0xe42dca30]
+09-08 17:27:44.455  8169  8169 I starboard: 	<unknown> [0xe42dc2b4]
+09-08 17:27:44.459  8169  8169 I starboard: 	<unknown> [0xe43222dc]
+09-08 17:27:44.463  8169  8169 I starboard: 	<unknown> [0xe4322270]
+09-08 17:27:44.467  8169  8169 I starboard: 	<unknown> [0xe4321fa0]
+09-08 17:27:44.475  8169  8169 I starboard: 	<unknown> [0xefd23a24]
+09-08 17:27:44.482  8169  8169 I starboard: 	<unknown> [0xee0e2956]
+--------- beginning of crash
+09-08 17:27:44.482  8169  8169 F libc    : Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0 in tid 8169 (dev.cobalt.coat), pid 8169 (dev.cobalt.coat)
+09-08 17:27:44.612  1214  1214 V MediaPlayerList: mPackageChangedBroadcastReceiver: action: android.intent.action.PACKAGE_CHANGED
+09-08 17:27:44.623 25066 25078 I PermissionControllerServiceImpl: Updating user sensitive for uid 10082
+09-08 17:27:44.649   727   860 W Searchables: No web search activity found
+09-08 17:27:44.653   727   911 I RoleService: Granting default roles...
+09-08 17:27:44.663   727   921 I InputReader: Reconfiguring input devices, changes=KEYBOARD_LAYOUTS
+09-08 17:27:44.668   727   855 W IPCThreadState: Sending oneway calls to frozen process.
+09-08 17:27:44.678  8283  8283 I crash_dump32: obtaining output fd from tombstoned, type: kDebuggerdTombstoneProto
+09-08 17:27:46.387  8283  8283 F DEBUG   : backtrace:
+09-08 17:27:46.387  8283  8283 F DEBUG   :       #00 pc 01115620  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.387  8283  8283 F DEBUG   :       #01 pc 01b1d165  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.387  8283  8283 F DEBUG   :       #02 pc 012321e3  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.387  8283  8283 F DEBUG   :       #03 pc 01e2c947  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #04 pc 01111953  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #05 pc 03b7682d  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #06 pc 03b95a2d  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #07 pc 03b952b1  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #08 pc 03bdb2db  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #09 pc 03bdb26f  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #10 pc 03bdaf9f  /data/app/~~m6N3--kd6a43szDWFoWNrA==/dev.cobalt.coat-VI9N_mdrTrFKiy2VnNlGhg==/lib/arm/libchrobalt.so (BuildId: 3abe18465c4b9e2b)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #11 pc 0000aa23  /system/lib/libutils.so (android::Looper::pollOnce(int, int*, int*, void**)+290) (BuildId: 3e9c1252cc1b4b3a0e3d3742827d7faa)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #12 pc 000f3953  /system/lib/libandroid_runtime.so (android::android_os_MessageQueue_nativePollOnce(_JNIEnv*, _jobject*, long long, int)+24) (BuildId: 70667bf66c3e601cad095e6dedb19bb7)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #13 pc 02045dff  /memfd:jit-cache (deleted) (offset 0x2000000) (art_jni_trampoline+102)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #14 pc 00143bd5  /apex/com.android.art/lib/libart.so (art_quick_invoke_stub_internal+68) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #15 pc 001bdcc7  /apex/com.android.art/lib/libart.so (art::ArtMethod::Invoke(art::Thread*, unsigned int*, unsigned int, art::JValue*, char const*)+454) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #16 pc 00179817  /apex/com.android.art/lib/libart.so (art::interpreter::ArtInterpreterToCompiledCodeBridge(art::Thread*, art::ArtMethod*, art::ShadowFrame*, unsigned short, art::JValue*)+90) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #17 pc 0024f5c7  /apex/com.android.art/lib/libart.so (art::PerformCall(art::Thread*, art::CodeItemDataAccessor const&, art::ArtMethod*, unsigned int, art::ShadowFrame*, art::JValue*, bool)+74) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #18 pc 0024ef9d  /apex/com.android.art/lib/libart.so (bool art::interpreter::DoCall<false>(art::ArtMethod*, art::Thread*, art::ShadowFrame&, art::Instruction const*, unsigned short, bool, art::JValue*)+336) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.388  8283  8283 F DEBUG   :       #19 pc 002aedb5  /apex/com.android.art/lib/libart.so (void art::interpreter::ExecuteSwitchImplCpp<false>(art::interpreter::SwitchImplContext*)+16492) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #20 pc 0014bc75  /apex/com.android.art/lib/libart.so (ExecuteSwitchImplAsm+4) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #21 pc 001ef954  /system/framework/framework.jar (android.os.MessageQueue.next+0)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #22 pc 003a529f  /apex/com.android.art/lib/libart.so (art::interpreter::Execute(art::Thread*, art::CodeItemDataAccessor const&, art::ShadowFrame&, art::JValue, bool, bool) (.__uniq.112435418011751916792819755956732575238.llvm.1778553785398770233)+498) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #23 pc 003aa1ad  /apex/com.android.art/lib/libart.so (art::interpreter::ArtInterpreterToInterpreterBridge(art::Thread*, art::CodeItemDataAccessor const&, art::ShadowFrame*, art::JValue*)+76) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #24 pc 0024ef9d  /apex/com.android.art/lib/libart.so (bool art::interpreter::DoCall<false>(art::ArtMethod*, art::Thread*, art::ShadowFrame&, art::Instruction const*, unsigned short, bool, art::JValue*)+336) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #25 pc 002aedb5  /apex/com.android.art/lib/libart.so (void art::interpreter::ExecuteSwitchImplCpp<false>(art::interpreter::SwitchImplContext*)+16492) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #26 pc 0014bc75  /apex/com.android.art/lib/libart.so (ExecuteSwitchImplAsm+4) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #27 pc 001eea0c  /system/framework/framework.jar (android.os.Looper.loopOnce+0)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #28 pc 003a529f  /apex/com.android.art/lib/libart.so (art::interpreter::Execute(art::Thread*, art::CodeItemDataAccessor const&, art::ShadowFrame&, art::JValue, bool, bool) (.__uniq.112435418011751916792819755956732575238.llvm.1778553785398770233)+498) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #29 pc 003aa1ad  /apex/com.android.art/lib/libart.so (art::interpreter::ArtInterpreterToInterpreterBridge(art::Thread*, art::CodeItemDataAccessor const&, art::ShadowFrame*, art::JValue*)+76) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #30 pc 0024ef9d  /apex/com.android.art/lib/libart.so (bool art::interpreter::DoCall<false>(art::ArtMethod*, art::Thread*, art::ShadowFrame&, art::Instruction const*, unsigned short, bool, art::JValue*)+336) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #31 pc 002aedb5  /apex/com.android.art/lib/libart.so (void art::interpreter::ExecuteSwitchImplCpp<false>(art::interpreter::SwitchImplContext*)+16492) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #32 pc 0014bc75  /apex/com.android.art/lib/libart.so (ExecuteSwitchImplAsm+4) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)
+09-08 17:27:46.389  8283  8283 F DEBUG   :       #33 pc 001ef0c4  /system/framework/framework.jar (android.os.Looper.loop+0)
+09-08 17:27:46.390  8283  8283 F DEBUG   :       #34 pc 003a529f  /apex/com.android.art/lib/libart.so (art::interpreter::Execute(art::Thread*, art::CodeItemDataAccessor const&, art::ShadowFrame&, art::JValue, bool, bool) (.__uniq.112435418011751916792819755956732575238.llvm.1778553785398770233)+498) (BuildId: 4bd03f747c304599809b5b4cb9ef7547)

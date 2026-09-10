@@ -572,6 +572,10 @@ jobs:
         uses: ./.github/actions/api_leak_detector
         if: inputs.run_api_leak_detector
 
+      - name: Run Symbolize Tests
+        uses: ./.github/actions/symbolize_test
+        if: matrix.platform == 'linux-x64x11' && matrix.config == 'devel'
+
 
   on-device-test:
     needs: [initialize, build]
