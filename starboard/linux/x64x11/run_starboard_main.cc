@@ -31,8 +31,18 @@
 #include "starboard/shared/x11/application_x11.h"
 
 int SbRunStarboardMain(int argc, char** argv, SbEventHandleCallback callback) {
-  // Set M_ARENA_MAX to a low value to slow memory growth due to fragmentation.
+  // Set M_ARENA_MAX to 2 to limit fragmentation without single-arena lock
+  // contention.
   mallopt(M_ARENA_MAX, 2);
+  // Return free memory at the top of the heap to the OS at 32 KB (vs 128 KB
+  // default).
+  mallopt(M_TRIM_THRESHOLD, 32768);
+  // Retain 32 KB resident padding after trimming (vs 128 KB default).
+  mallopt(M_TOP_PAD, 32768);
+  // Route >= 64 KB allocations via direct mmap/munmap (disabling dynamic
+  // threshold growth) to instantly return physical pages to the OS without VMA
+  // exhaustion.
+  mallopt(M_MMAP_THRESHOLD, 65536);
 
   tzset();
   starboard::InstallCrashSignalHandlers();
