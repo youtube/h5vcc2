@@ -61,6 +61,7 @@ namespace {
 
 using features::FeatureList;
 using jni_zero::AttachCurrentThread;
+using MimeParam = MimeType::Param;
 
 constexpr int kAndroidApiLevelU = 34;
 
@@ -389,11 +390,12 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
     if (creation_parameters.video_codec() != kSbMediaVideoCodecNone &&
         !creation_parameters.video_mime().empty()) {
       auto video_mime_type = MimeType::Create(creation_parameters.video_mime());
-      if (video_mime_type &&
-          video_mime_type->ValidateBoolParameter("enableflushduringseek")) {
+      if (video_mime_type && video_mime_type->ValidateBoolParameter(
+                                 MimeParam::kEnableFlushDuringSeek)) {
         enable_flush_during_seek =
             enable_flush_during_seek ||
-            video_mime_type->GetParamBoolValue("enableflushduringseek", false);
+            video_mime_type->GetParamBoolValue(
+                MimeParam::kEnableFlushDuringSeek, false);
       }
     }
     SB_LOG_IF(INFO, enable_flush_during_seek)
@@ -461,9 +463,11 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
     auto video_mime_type = MimeType::Create(video_mime);
     if (!video_mime.empty() &&
         (!video_mime_type ||
-         !video_mime_type->ValidateBoolParameter("tunnelmode") ||
-         !video_mime_type->ValidateBoolParameter("enableflushduringseek") ||
-         !video_mime_type->ValidateBoolParameter("enableresetaudiodecoder"))) {
+         !video_mime_type->ValidateBoolParameter(MimeParam::kTunnelMode) ||
+         !video_mime_type->ValidateBoolParameter(
+             MimeParam::kEnableFlushDuringSeek) ||
+         !video_mime_type->ValidateBoolParameter(
+             MimeParam::kEnableResetAudioDecoder))) {
       return Failure("Invalid video MIME: '" + video_mime + "'");
     }
 
@@ -480,14 +484,16 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
       enable_tunnel_mode =
           force_tunnel_mode ||
           (video_mime_type &&
-           video_mime_type->GetParamBoolValue("tunnelmode", false));
+           video_mime_type->GetParamBoolValue(MimeParam::kTunnelMode, false));
 
       SB_LOG(INFO) << "Tunnel mode is "
                    << (enable_tunnel_mode ? "enabled. " : "disabled. ")
-                   << "Video mime parameter \"tunnelmode\" value: "
-                   << (video_mime_type ? video_mime_type->GetParamStringValue(
-                                             "tunnelmode", "<not provided>")
-                                       : "<not provided>")
+                   << "Video mime parameter \"" << MimeParam::kTunnelMode
+                   << "\" value: "
+                   << (video_mime_type
+                           ? video_mime_type->GetParamStringValue(
+                                 MimeParam::kTunnelMode, "<not provided>")
+                           : "<not provided>")
                    << (force_tunnel_mode ? ", force tunnel mode is on." : ".");
     } else {
       SB_LOG(INFO) << "Tunnel mode requires both an audio and video stream. "
@@ -524,28 +530,30 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
         creation_parameters.experimental_features();
     bool enable_reset_audio_decoder =
         ShouldEnableResetAudioDecoder(experimental_features) ||
-        (video_mime_type &&
-         video_mime_type->GetParamBoolValue("enableresetaudiodecoder", false));
+        (video_mime_type && video_mime_type->GetParamBoolValue(
+                                MimeParam::kEnableResetAudioDecoder, false));
     SB_LOG_IF(INFO, enable_reset_audio_decoder)
         << "`enable_reset_audio_decoder` is set to true, force resetting"
-        << " audio decoder during Reset(). Video mime parameter "
-        << "\"enableresetaudiodecoder\" value: "
-        << (video_mime_type ? video_mime_type->GetParamStringValue(
-                                  "enableresetaudiodecoder", "<not provided>")
-                            : "<not provided>")
+        << " audio decoder during Reset(). Video mime parameter \""
+        << MimeParam::kEnableResetAudioDecoder << "\" value: "
+        << (video_mime_type
+                ? video_mime_type->GetParamStringValue(
+                      MimeParam::kEnableResetAudioDecoder, "<not provided>")
+                : "<not provided>")
         << ".";
 
     bool enable_flush_during_seek =
         ShouldEnableFlushDuringSeek(experimental_features) ||
-        (video_mime_type &&
-         video_mime_type->GetParamBoolValue("enableflushduringseek", false));
+        (video_mime_type && video_mime_type->GetParamBoolValue(
+                                MimeParam::kEnableFlushDuringSeek, false));
     SB_LOG_IF(INFO, enable_flush_during_seek)
         << "`enable_flush_during_seek` is set to true, force flushing"
-        << " audio decoder during Reset(). Video mime parameter "
-        << "\"enableflushduringseek\" value: "
-        << (video_mime_type ? video_mime_type->GetParamStringValue(
-                                  "enableflushduringseek", "<not provided>")
-                            : "<not provided>")
+        << " audio decoder during Reset(). Video mime parameter \""
+        << MimeParam::kEnableFlushDuringSeek << "\" value: "
+        << (video_mime_type
+                ? video_mime_type->GetParamStringValue(
+                      MimeParam::kEnableFlushDuringSeek, "<not provided>")
+                : "<not provided>")
         << ".";
 
 #if !BUILDFLAG(IS_STARBOARD)
@@ -677,11 +685,12 @@ class PlayerComponentsFactory : public PlayerComponents::Factory {
     if (creation_parameters.video_codec() != kSbMediaVideoCodecNone &&
         !creation_parameters.video_mime().empty()) {
       auto video_mime_type = MimeType::Create(creation_parameters.video_mime());
-      if (video_mime_type &&
-          video_mime_type->ValidateBoolParameter("enableflushduringseek")) {
+      if (video_mime_type && video_mime_type->ValidateBoolParameter(
+                                 MimeParam::kEnableFlushDuringSeek)) {
         enable_flush_during_seek =
             enable_flush_during_seek ||
-            video_mime_type->GetParamBoolValue("enableflushduringseek", false);
+            video_mime_type->GetParamBoolValue(
+                MimeParam::kEnableFlushDuringSeek, false);
       }
     }
 

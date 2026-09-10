@@ -41,7 +41,8 @@ bool IsAudioCodecSupportedByUrlPlayer(const starboard::MimeType& mime_type,
     return false;
   }
 
-  int channels = mime_type.GetParamIntValue("channels", kDefaultAudioChannels);
+  int channels = mime_type.GetParamIntValue(MimeType::Param::kChannels,
+                                            kDefaultAudioChannels);
   if (channels <= kDefaultAudioChannels) {
     return true;
   }

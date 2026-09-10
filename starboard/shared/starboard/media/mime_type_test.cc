@@ -273,20 +273,20 @@ TEST(MimeTypeTest, GetParamIntValueWithName) {
     auto mime_type = MimeType::Create("video/mp4; name=123");
     ASSERT_TRUE(mime_type);
     EXPECT_EQ(123, mime_type->GetParamIntValue("name", 0));
-    EXPECT_EQ(6, mime_type->GetParamIntValue("channels", 6));
+    EXPECT_EQ(6, mime_type->GetParamIntValue(MimeType::Param::kChannels, 6));
   }
 
   {
     auto mime_type = MimeType::Create("video/mp4; width=1920; height=1080");
     ASSERT_TRUE(mime_type);
-    EXPECT_EQ(1920, mime_type->GetParamIntValue("width", 0));
-    EXPECT_EQ(1080, mime_type->GetParamIntValue("height", 0));
+    EXPECT_EQ(1920, mime_type->GetParamIntValue(MimeType::Param::kWidth, 0));
+    EXPECT_EQ(1080, mime_type->GetParamIntValue(MimeType::Param::kHeight, 0));
   }
 
   {
     auto mime_type = MimeType::Create("audio/mp4; channels=6");
     ASSERT_TRUE(mime_type);
-    EXPECT_EQ(6, mime_type->GetParamIntValue("channels", 0));
+    EXPECT_EQ(6, mime_type->GetParamIntValue(MimeType::Param::kChannels, 0));
   }
 }
 
@@ -296,7 +296,8 @@ TEST(MimeTypeTest, GetParamFloatValueWithName) {
     ASSERT_TRUE(mime_type);
     EXPECT_FLOAT_EQ(123.f, mime_type->GetParamFloatValue("name0", 0.f));
     EXPECT_FLOAT_EQ(123.4f, mime_type->GetParamFloatValue("name1", 0.f));
-    EXPECT_FLOAT_EQ(59.96f, mime_type->GetParamFloatValue("framerate", 59.96f));
+    EXPECT_FLOAT_EQ(59.96f, mime_type->GetParamFloatValue(
+                                MimeType::Param::kFramerate, 59.96f));
   }
 }
 
@@ -308,7 +309,8 @@ TEST(MimeTypeTest, GetParamStringValueWithName) {
     EXPECT_EQ("123", mime_type->GetParamStringValue("name0", ""));
     EXPECT_EQ("abc", mime_type->GetParamStringValue("name1", ""));
     EXPECT_EQ("xyz", mime_type->GetParamStringValue("name2", ""));
-    EXPECT_EQ("h263", mime_type->GetParamStringValue("codecs", "h263"));
+    EXPECT_EQ("h263",
+              mime_type->GetParamStringValue(MimeType::Param::kCodecs, "h263"));
   }
 
   {
@@ -474,6 +476,26 @@ TEST(MimeTypeTest, ValidateParamsWithEmptyishPattern) {
 TEST(MimeTypeTest, ValidateParamWithInvalidMimeType) {
   auto mime_type = MimeType::Create("video/mp4; string=");
   ASSERT_FALSE(mime_type);
+}
+
+TEST(MimeTypeTest, ParamConstants) {
+  EXPECT_STREQ(MimeType::Param::kCodecs, "codecs");
+
+  EXPECT_STREQ(MimeType::Param::kWidth, "width");
+  EXPECT_STREQ(MimeType::Param::kHeight, "height");
+  EXPECT_STREQ(MimeType::Param::kFramerate, "framerate");
+  EXPECT_STREQ(MimeType::Param::kBitrate, "bitrate");
+  EXPECT_STREQ(MimeType::Param::kEotf, "eotf");
+  EXPECT_STREQ(MimeType::Param::kChannels, "channels");
+  EXPECT_STREQ(MimeType::Param::kCryptoblockformat, "cryptoblockformat");
+  EXPECT_STREQ(MimeType::Param::kDecodeToTexture, "decode-to-texture");
+  EXPECT_STREQ(MimeType::Param::kExperimental, "experimental");
+  EXPECT_STREQ(MimeType::Param::kTunnelMode, "tunnelmode");
+
+  EXPECT_STREQ(MimeType::Param::kEnableFlushDuringSeek,
+               "enableflushduringseek");
+  EXPECT_STREQ(MimeType::Param::kEnableResetAudioDecoder,
+               "enableresetaudiodecoder");
 }
 
 }  // namespace

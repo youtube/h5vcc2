@@ -53,6 +53,28 @@ class MimeType {
   };
 
   struct Param {
+    // General MIME parameter.
+    static constexpr char kCodecs[] = "codecs";
+
+    // Format capability MIME parameters defined in:
+    // http://google3/video/youtube/web/player/formats/capability.ts;l=9-94;rcl=770319862
+    static constexpr char kWidth[] = "width";
+    static constexpr char kHeight[] = "height";
+    static constexpr char kFramerate[] = "framerate";
+    static constexpr char kBitrate[] = "bitrate";
+    static constexpr char kEotf[] = "eotf";
+    static constexpr char kChannels[] = "channels";
+    static constexpr char kCryptoblockformat[] = "cryptoblockformat";
+    static constexpr char kDecodeToTexture[] = "decode-to-texture";
+    static constexpr char kExperimental[] = "experimental";
+    static constexpr char kTunnelMode[] = "tunnelmode";
+
+    // Cobalt-specific playback experiment MIME parameters defined in:
+    // http://google3/video/youtube/web/player/dash/manifest.ts;l=1112-1125;rcl=954649899
+    static constexpr char kEnableFlushDuringSeek[] = "enableflushduringseek";
+    static constexpr char kEnableResetAudioDecoder[] =
+        "enableresetaudiodecoder";
+
     ParamType type;
     std::string name;
     std::string string_value;

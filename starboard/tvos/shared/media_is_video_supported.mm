@@ -88,11 +88,12 @@ bool MediaIsVideoSupported(SbMediaVideoCodec video_codec,
         // value, `ValidateStringParameter` will cause an early return of
         // `false` from the function. If present and "allowed",
         // `experimental_allowed` is set to true.
-        if (!mime_type->ValidateStringParameter("experimental", "allowed")) {
+        if (!mime_type->ValidateStringParameter(MimeType::Param::kExperimental,
+                                                "allowed")) {
           return false;
         }
         const std::string& experimental_value =
-            mime_type->GetParamStringValue("experimental", "");
+            mime_type->GetParamStringValue(MimeType::Param::kExperimental, "");
         experimental_allowed = experimental_value == "allowed";
       }
 

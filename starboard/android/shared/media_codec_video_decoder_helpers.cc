@@ -53,9 +53,12 @@ bool IsSoftwareDecoderRequired(const std::string& max_video_capabilities) {
   }
 
   bool is_low_resolution =
-      mime_type->GetParamIntValue("width", Resolution::k1080p.width) <= 432 &&
-      mime_type->GetParamIntValue("height", Resolution::k1080p.height) <= 240;
-  bool is_low_fps = mime_type->GetParamIntValue("framerate", 30) <= 15;
+      mime_type->GetParamIntValue(MimeType::Param::kWidth,
+                                  Resolution::k1080p.width) <= 432 &&
+      mime_type->GetParamIntValue(MimeType::Param::kHeight,
+                                  Resolution::k1080p.height) <= 240;
+  bool is_low_fps =
+      mime_type->GetParamIntValue(MimeType::Param::kFramerate, 30) <= 15;
 
   if (!is_low_resolution || !is_low_fps) {
     SB_LOG(INFO)
@@ -91,8 +94,8 @@ std::optional<Size> ParseMaxResolution(
     return std::nullopt;
   }
 
-  int width = mime_type->GetParamIntValue("width", -1);
-  int height = mime_type->GetParamIntValue("height", -1);
+  int width = mime_type->GetParamIntValue(MimeType::Param::kWidth, -1);
+  int height = mime_type->GetParamIntValue(MimeType::Param::kHeight, -1);
   if (width <= 0 && height <= 0) {
     SB_LOG(WARNING) << "Failed to parse max resolutions as either width or "
                        "height isn't set.";
